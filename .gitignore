@@ -1,0 +1,33 @@
+# Node modules
+backend/node_modules/
+frontend/node_modules/
+
+# Archivos de dependencias
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Archivos de log
+*.log
+logs/
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Compilaciones
+dist/
+build/
+
+# Configuraciones del editor
+.vscode/
+.idea/
+*.sublime-*
+
+# Test coverage
+coverage/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

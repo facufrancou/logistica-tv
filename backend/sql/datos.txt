@@ -1,0 +1,9 @@
+bcrypt.hashSync('userpass', 10)
+// → $2b$10$q6hL2gzpN5dcmIbPTgEV8uxI8LFDKOqPMLAlaCW3Rtr/UQwOAi7he
+
+bcrypt.hashSync('adminpass', 10)
+// → $2b$10$gWpQuykDETe5ax8UkdPQtOEzkXzGgONR5CJ5CdIMmZ7bnZtkGz3Ia
+
+
+('Usuario', 'user', '$2b$10$nkMUdKNS.W4HRvJnTCT21uIMRWo5QQItsCGeG5nmCPSuJutfSyZd2', 1),
+('Administrador', 'admin', '$2b$10$7HpZa4w3hETdxv6xBGDOg.kKY8VT97hvQlcr5W75p9YzHdtEE7nwm', 2);
