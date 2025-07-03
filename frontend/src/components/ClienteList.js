@@ -5,6 +5,7 @@ function ClienteList() {
   const [clientes, setClientes] = useState([]);
   const [pagina, setPagina] = useState(0);
   const porPagina = 15;
+  const [busqueda, setBusqueda] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clienteActivo, setClienteActivo] = useState(null);
@@ -18,8 +19,13 @@ function ClienteList() {
     getClientes().then(setClientes);
   };
 
-  const clientesMostrados = clientes.slice(pagina * porPagina, (pagina + 1) * porPagina);
-  const totalPaginas = Math.ceil(clientes.length / porPagina);
+  const clientesFiltrados = clientes.filter(c =>
+    c.cuit?.toString().includes(busqueda) ||
+    c.nombre?.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const clientesMostrados = clientesFiltrados.slice(pagina * porPagina, (pagina + 1) * porPagina);
+  const totalPaginas = Math.ceil(clientesFiltrados.length / porPagina);
 
   const abrirModal = (cliente, modoAccion) => {
     setClienteActivo(
@@ -64,6 +70,14 @@ function ClienteList() {
         </button>
       </div>
 
+      <input
+        type="text"
+        className="form-control mb-3"
+        placeholder="Buscar por nombre o código"
+        value={busqueda}
+        onChange={e => setBusqueda(e.target.value)}
+      />
+
       <table className="table">
         <thead>
           <tr>
@@ -107,15 +121,9 @@ function ClienteList() {
                 <button type="button" className="btn-close" onClick={cerrarModal}></button>
               </div>
               <div className="modal-body">
-                {[
-                  { label: 'Nombre', campo: 'nombre' },
-                  { label: 'Codigo', campo: 'cuit' },
-                  { label: 'Dirección', campo: 'direccion' },
-                  { label: 'Teléfono', campo: 'telefono' },
-                  { label: 'Email', campo: 'email' },
-                ].map(({ label, campo }) => (
+                {[ 'nombre', 'cuit', 'direccion', 'telefono', 'email' ].map(campo => (
                   <div className="mb-2" key={campo}>
-                    <label className="form-label">{label}</label>
+                    <label className="form-label">{campo.charAt(0).toUpperCase() + campo.slice(1)}</label>
                     <input
                       type="text"
                       className="form-control"

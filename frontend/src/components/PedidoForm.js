@@ -11,8 +11,9 @@ function PedidoForm({ onPedidoCreado }) {
   });
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
+  const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
     getClientes().then(setClientes);
@@ -22,12 +23,12 @@ function PedidoForm({ onPedidoCreado }) {
   const handleAgregarProducto = () => {
     if (!productoSeleccionado || cantidadSeleccionada < 1) return;
 
-    const yaExiste = form.productos.find(p => p.id_producto === parseInt(productoSeleccionado));
+    const yaExiste = form.productos.find(p => p.id_producto === productoSeleccionado.id_producto);
     if (yaExiste) {
       setForm(prev => ({
         ...prev,
         productos: prev.productos.map(p =>
-          p.id_producto === parseInt(productoSeleccionado)
+          p.id_producto === productoSeleccionado.id_producto
             ? { ...p, cantidad: cantidadSeleccionada }
             : p
         )
@@ -36,13 +37,14 @@ function PedidoForm({ onPedidoCreado }) {
       setForm(prev => ({
         ...prev,
         productos: [...prev.productos, {
-          id_producto: parseInt(productoSeleccionado),
+          id_producto: productoSeleccionado.id_producto,
           cantidad: cantidadSeleccionada
         }]
       }));
     }
 
-    setProductoSeleccionado('');
+    setProductoSeleccionado(null);
+    setBusqueda('');
     setCantidadSeleccionada(1);
     setModalOpen(false);
   };
@@ -111,15 +113,29 @@ function PedidoForm({ onPedidoCreado }) {
                 <button type="button" className="btn-close" onClick={() => setModalOpen(false)}></button>
               </div>
               <div className="modal-body">
-                <label className="form-label">Producto</label>
-                <select className="form-select mb-2" value={productoSeleccionado} onChange={e => setProductoSeleccionado(e.target.value)}>
-                  <option value="">Seleccione un producto</option>
-                  {productos.map(p => (
-                    <option key={p.id_producto} value={p.id_producto}>
-                      {p.nombre} (${p.precio_unitario})
-                    </option>
+                <label className="form-label">Buscar producto</label>
+                <input
+                  type="text"
+                  className="form-control mb-2"
+                  placeholder="Buscar por nombre o descripción"
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                />
+                <div className="list-group mb-3" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {productos.filter(p =>
+                    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+                    p.descripcion.toLowerCase().includes(busqueda.toLowerCase())
+                  ).map(p => (
+                    <button
+                      type="button"
+                      key={p.id_producto}
+                      className={`list-group-item list-group-item-action ${productoSeleccionado?.id_producto === p.id_producto ? 'active' : ''}`}
+                      onClick={() => setProductoSeleccionado(p)}
+                    >
+                      {p.nombre} (${p.precio_unitario}) - {p.descripcion}
+                    </button>
                   ))}
-                </select>
+                </div>
 
                 <label className="form-label">Cantidad</label>
                 <input type="number" className="form-control" min="1" value={cantidadSeleccionada}

@@ -157,7 +157,7 @@ exports.validarTokenPedido = (req, res) => {
       cuit: rows[0].cuit
     };
 
-    db.query('SELECT id_producto, nombre, precio_unitario FROM productos', (err2, productos) => {
+    db.query('SELECT id_producto, nombre, precio_unitario, descripcion FROM productos', (err2, productos) => {
       if (err2) return res.status(500).send(err2);
 
       res.json({ cliente, productos });

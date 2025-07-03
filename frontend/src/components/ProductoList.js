@@ -5,6 +5,7 @@ function ProductoList() {
   const [productos, setProductos] = useState([]);
   const [pagina, setPagina] = useState(0);
   const porPagina = 15;
+  const [busqueda, setBusqueda] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [productoActivo, setProductoActivo] = useState(null);
@@ -18,8 +19,13 @@ function ProductoList() {
     getProductos().then(setProductos);
   };
 
-  const productosMostrados = productos.slice(pagina * porPagina, (pagina + 1) * porPagina);
-  const totalPaginas = Math.ceil(productos.length / porPagina);
+  const productosFiltrados = productos.filter(p =>
+    p.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    p.descripcion?.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const productosMostrados = productosFiltrados.slice(pagina * porPagina, (pagina + 1) * porPagina);
+  const totalPaginas = Math.ceil(productosFiltrados.length / porPagina);
 
   const abrirModal = (producto, modoAccion) => {
     setProductoActivo(
@@ -61,6 +67,14 @@ function ProductoList() {
           + Agregar Producto
         </button>
       </div>
+
+      <input
+        type="text"
+        className="form-control mb-3"
+        placeholder="Buscar por nombre o descripción"
+        value={busqueda}
+        onChange={e => setBusqueda(e.target.value)}
+      />
 
       <table className="table">
         <thead>

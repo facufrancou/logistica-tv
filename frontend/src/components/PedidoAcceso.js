@@ -8,10 +8,11 @@ function PedidoAcceso() {
   const [cliente, setCliente] = useState(null);
   const [productos, setProductos] = useState([]);
   const [pedido, setPedido] = useState([]);
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
     if (!token) return;
@@ -27,7 +28,7 @@ function PedidoAcceso() {
   const agregarProducto = () => {
     if (!productoSeleccionado || cantidadSeleccionada < 1) return;
 
-    const id_producto = parseInt(productoSeleccionado);
+    const id_producto = productoSeleccionado.id_producto;
     const yaExiste = pedido.find(p => p.id_producto === id_producto);
     if (yaExiste) {
       setPedido(pedido.map(p =>
@@ -37,7 +38,8 @@ function PedidoAcceso() {
       setPedido([...pedido, { id_producto, cantidad: cantidadSeleccionada }]);
     }
 
-    setProductoSeleccionado('');
+    setProductoSeleccionado(null);
+    setBusqueda('');
     setCantidadSeleccionada(1);
     setModalOpen(false);
   };
@@ -127,15 +129,29 @@ function PedidoAcceso() {
                 <button type="button" className="btn-close" onClick={() => setModalOpen(false)}></button>
               </div>
               <div className="modal-body">
-                <label className="form-label">Producto</label>
-                <select className="form-select mb-2" value={productoSeleccionado} onChange={e => setProductoSeleccionado(e.target.value)}>
-                  <option value="">Seleccione un producto</option>
-                  {productos.map(p => (
-                    <option key={p.id_producto} value={p.id_producto}>
-                      {p.nombre} (${p.precio_unitario})
-                    </option>
+                <label className="form-label">Buscar producto</label>
+                <input
+                  type="text"
+                  className="form-control mb-2"
+                  placeholder="Buscar por nombre o descripción"
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                />
+                <div className="list-group mb-3" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {productos.filter(p =>
+                    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+                    p.descripcion.toLowerCase().includes(busqueda.toLowerCase())
+                  ).map(p => (
+                    <button
+                      type="button"
+                      key={p.id_producto}
+                      className={`list-group-item list-group-item-action ${productoSeleccionado?.id_producto === p.id_producto ? 'active' : ''}`}
+                      onClick={() => setProductoSeleccionado(p)}
+                    >
+                      {p.nombre} (${p.precio_unitario}) - {p.descripcion}
+                    </button>
                   ))}
-                </select>
+                </div>
 
                 <label className="form-label">Cantidad</label>
                 <input
