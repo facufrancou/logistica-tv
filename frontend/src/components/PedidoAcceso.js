@@ -15,6 +15,8 @@ function PedidoAcceso() {
   const [modalAviso, setModalAviso] = useState(false);
   const [mensajeAviso, setMensajeAviso] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [ultimoPedidoTemp, setUltimoPedidoTemp] = useState(null);
+  const [modalConfirmacionRepetir, setModalConfirmacionRepetir] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -26,6 +28,28 @@ function PedidoAcceso() {
       })
       .catch(err => setError(err));
   }, [token]);
+
+  const cargarUltimoPedido = () => {
+    if (!cliente?.id_cliente) return;
+    fetch(`http://localhost:3000/pedidos/ultimo/${cliente.id_cliente}`)
+      .then(res => res.ok ? res.json() : Promise.reject('No se pudo cargar el último pedido'))
+      .then(data => {
+        if (Array.isArray(data.productos)) {
+          const filtrados = data.productos.filter(p =>
+            productos.find(prod => prod.id_producto === p.id_producto)
+          );
+          setUltimoPedidoTemp(filtrados);
+          setModalConfirmacionRepetir(true);
+        }
+      })
+      .catch(err => alert(err));
+  };
+
+  const confirmarRepetirPedido = () => {
+    setPedido(ultimoPedidoTemp);
+    setUltimoPedidoTemp(null);
+    setModalConfirmacionRepetir(false);
+  };
 
   const agregarProducto = () => {
     if (!productoSeleccionado || cantidadSeleccionada < 1) return;
@@ -110,6 +134,10 @@ function PedidoAcceso() {
         <input type="text" className="form-control" value={cliente.nombre} disabled />
       </div>
 
+      <div className="d-flex justify-content-end mb-3">
+        <button className="btn btn-outline-info" onClick={cargarUltimoPedido}>↺ Repetir último pedido</button>
+      </div>
+
       <h5>Productos</h5>
       <button className="btn btn-secondary mb-3" onClick={() => setModalOpen(true)}>
         + Agregar Producto
@@ -147,6 +175,35 @@ function PedidoAcceso() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-primary" onClick={() => setModalAviso(false)}>Aceptar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para confirmar repetir pedido */}
+      {modalConfirmacionRepetir && (
+        <div className="modal d-block" style={{ backgroundColor: '#00000099' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Repetir pedido anterior</h5>
+                <button type="button" className="btn-close" onClick={() => setModalConfirmacionRepetir(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>¿Querés repetir el siguiente pedido?</p>
+                <ul className="list-group">
+                  {ultimoPedidoTemp?.map((p, i) => (
+                    <li key={i} className="list-group-item d-flex justify-content-between">
+                      {obtenerNombreProducto(p.id_producto)} (x{p.cantidad})
+                      <span>${(obtenerPrecioProducto(p.id_producto) * p.cantidad).toFixed(2)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModalConfirmacionRepetir(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={confirmarRepetirPedido}>Confirmar</button>
               </div>
             </div>
           </div>

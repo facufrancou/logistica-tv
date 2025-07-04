@@ -102,7 +102,8 @@ function PedidoForm({ onPedidoCreado }) {
 
       <br />
       <button className="btn btn-primary" onClick={handleSubmit}>Crear Pedido</button>
-
+<br />
+<br />
       {/* Modal */}
       {modalOpen && (
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: '#00000099' }}>

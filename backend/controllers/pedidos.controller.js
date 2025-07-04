@@ -3,8 +3,14 @@ const crypto = require('crypto');
 
 exports.getPedidos = (req, res) => {
   const query = `
-    SELECT p.id_pedido, c.nombre AS cliente, u.nombre AS vendedor, 
-           p.fecha_pedido, p.total, p.estado
+    SELECT 
+      p.id_pedido, 
+      c.nombre AS cliente, 
+      u.nombre AS vendedor, 
+      p.fecha_pedido, 
+      p.total, 
+      p.estado,
+      p.seguimiento_dist  -- ✅ agregado
     FROM pedidos p
     JOIN clientes c ON p.id_cliente = c.id_cliente
     JOIN usuarios u ON p.id_usuario = u.id_usuario
@@ -104,7 +110,7 @@ exports.createPedido = (req, res) => {
             return res.status(200).json({
               id_pedido,
               total,
-              advertencia: 'Este cliente está inhabilitado. El pedido fue registrado pero requiere revisión.'
+              advertencia: 'El pedido fue registrado pero requiere revisión. Pónganse en contacto con su distribuidor '
             });
           }
 
@@ -188,7 +194,6 @@ exports.validarTokenPedido = (req, res) => {
   });
 };
 
-
 exports.actualizarPedido = (req, res) => {
   const { id } = req.params;
   const { id_cliente, seguimiento_dist, productos } = req.body;
@@ -255,5 +260,53 @@ exports.getPedidoPorId = (req, res) => {
       pedido.productos = detalle;
       res.json(pedido);
     });
+  });
+};
+
+exports.getPedidoParaRepetir = (req, res) => {
+  const { id } = req.params;
+
+  const queryPedido = 'SELECT id_cliente, seguimiento_dist FROM pedidos WHERE id_pedido = ?';
+  const queryDetalle = 'SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?';
+
+  db.query(queryPedido, [id], (err, pedidos) => {
+    if (err) return res.status(500).send(err);
+    if (pedidos.length === 0) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    const pedido = pedidos[0];
+
+    db.query(queryDetalle, [id], (err2, detalle) => {
+      if (err2) return res.status(500).send(err2);
+      pedido.productos = detalle;
+      res.json(pedido);
+    });
+  });
+};
+
+exports.getUltimoPedidoPorCliente = (req, res) => {
+  const { id_cliente } = req.params;
+
+  const query = `
+    SELECT p.id_pedido
+    FROM pedidos p
+    WHERE p.id_cliente = ?
+    ORDER BY p.fecha_pedido DESC
+    LIMIT 1
+  `;
+
+  db.query(query, [id_cliente], (err, result) => {
+    if (err) return res.status(500).send(err);
+    if (result.length === 0) return res.status(404).json({ error: 'No hay pedidos anteriores' });
+
+    const id_pedido = result[0].id_pedido;
+
+    db.query(
+      'SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?',
+      [id_pedido],
+      (err2, productos) => {
+        if (err2) return res.status(500).send(err2);
+        res.json({ id_pedido, productos });
+      }
+    );
   });
 };
