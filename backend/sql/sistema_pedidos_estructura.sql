@@ -72,3 +72,18 @@ CREATE TABLE pedido_tokens (
   usado BOOLEAN DEFAULT FALSE,
   FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
 );
+
+-- Agregar campo para inhabilitar clientes
+ALTER TABLE clientes ADD COLUMN habilitado BOOLEAN DEFAULT true;
+
+-- Agregar campo de próxima fecha de pedido
+ALTER TABLE clientes ADD COLUMN fecha_proximo_pedido DATE;
+
+-- Crear tabla productos habilitados por cliente
+CREATE TABLE productos_habilitados (
+  id_cliente INT NOT NULL,
+  id_producto INT NOT NULL,
+  PRIMARY KEY (id_cliente, id_producto),
+  FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente),
+  FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
+);

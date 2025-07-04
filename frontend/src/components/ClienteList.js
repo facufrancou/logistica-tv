@@ -1,7 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { getClientes, crearCliente, actualizarCliente } from '../services/api';
+import React, { useEffect, useState, useContext } from 'react';
+import {
+  getClientes,
+  crearCliente,
+  actualizarCliente,
+  getProductos,
+  getProductosHabilitados,
+  setProductosHabilitados
+} from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 function ClienteList() {
+  const { usuario } = useContext(AuthContext);
   const [clientes, setClientes] = useState([]);
   const [pagina, setPagina] = useState(0);
   const porPagina = 15;
@@ -10,6 +19,9 @@ function ClienteList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [clienteActivo, setClienteActivo] = useState(null);
   const [modo, setModo] = useState('ver');
+
+  const [productos, setProductos] = useState([]);
+  const [productosSeleccionados, setProductosSeleccionados] = useState([]);
 
   useEffect(() => {
     cargarClientes();
@@ -27,7 +39,7 @@ function ClienteList() {
   const clientesMostrados = clientesFiltrados.slice(pagina * porPagina, (pagina + 1) * porPagina);
   const totalPaginas = Math.ceil(clientesFiltrados.length / porPagina);
 
-  const abrirModal = (cliente, modoAccion) => {
+  const abrirModal = async (cliente, modoAccion) => {
     setClienteActivo(
       cliente || {
         nombre: '',
@@ -35,10 +47,24 @@ function ClienteList() {
         direccion: '',
         telefono: '',
         email: '',
+        habilitado: true
       }
     );
     setModo(modoAccion);
     setModalOpen(true);
+
+    if (usuario?.rol_id === 2) {
+      const productosTodos = await getProductos();
+      setProductos(productosTodos);
+
+      if (cliente) {
+        const habilitados = await getProductosHabilitados(cliente.id_cliente);
+        const ids = habilitados.map(p => p.id_producto);
+        setProductosSeleccionados(ids);
+      } else {
+        setProductosSeleccionados([]);
+      }
+    }
   };
 
   const cerrarModal = () => {
@@ -46,19 +72,33 @@ function ClienteList() {
     setModalOpen(false);
   };
 
+  const handleInput = (campo, valor) => {
+    setClienteActivo({ ...clienteActivo, [campo]: valor });
+  };
+
+  const handleCheckboxProducto = (idProd) => {
+    setProductosSeleccionados(prev =>
+      prev.includes(idProd)
+        ? prev.filter(id => id !== idProd)
+        : [...prev, idProd]
+    );
+  };
+
   const handleGuardar = async () => {
     if (modo === 'nuevo') {
-      await crearCliente(clienteActivo);
+      const nuevo = await crearCliente(clienteActivo);
+      if (usuario?.rol_id === 2 && productosSeleccionados.length > 0) {
+        await setProductosHabilitados(nuevo.id_cliente, productosSeleccionados);
+      }
     } else if (modo === 'editar') {
       await actualizarCliente(clienteActivo.id_cliente, clienteActivo);
+      if (usuario?.rol_id === 2) {
+        await setProductosHabilitados(clienteActivo.id_cliente, productosSeleccionados);
+      }
     }
 
     cerrarModal();
     cargarClientes();
-  };
-
-  const handleInput = (campo, valor) => {
-    setClienteActivo({ ...clienteActivo, [campo]: valor });
   };
 
   return (
@@ -133,6 +173,42 @@ function ClienteList() {
                     />
                   </div>
                 ))}
+
+                {usuario?.rol_id === 2 && (
+                  <>
+                    <div className="form-check form-switch mb-3 mt-3">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="habilitadoSwitch"
+                        checked={clienteActivo.habilitado ?? true}
+                        onChange={e => handleInput('habilitado', e.target.checked)}
+                        disabled={modo === 'ver'}
+                      />
+                      <label className="form-check-label" htmlFor="habilitadoSwitch">
+                        Cuenta habilitada para realizar pedidos
+                      </label>
+                    </div>
+
+                    <label className="form-label">Productos habilitados</label>
+                    <div className="border p-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                      {productos.map(p => (
+                        <div className="form-check" key={p.id_producto}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id={`prod-${p.id_producto}`}
+                            checked={productosSeleccionados.includes(p.id_producto)}
+                            onChange={() => handleCheckboxProducto(p.id_producto)}
+                          />
+                          <label className="form-check-label" htmlFor={`prod-${p.id_producto}`}>
+                            {p.nombre} – {p.descripcion}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={cerrarModal}>Cerrar</button>

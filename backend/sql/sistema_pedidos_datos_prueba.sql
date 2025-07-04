@@ -117,3 +117,13 @@ INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, s
 (1, 2, 1, 200.00, 200.00),
 (2, 2, 2, 200.00, 400.00),
 (3, 3, 3, 75.00, 225.00);
+
+
+-- Habilitar productos para algunos clientes
+INSERT INTO productos_habilitados (id_cliente, id_producto) VALUES
+(1, 1),
+(1, 2),
+(2, 1),
+(2, 3),
+(3, 5),
+(3, 6);

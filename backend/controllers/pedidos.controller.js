@@ -42,58 +42,74 @@ exports.createPedido = (req, res) => {
     return res.status(400).json({ error: 'Faltan datos del pedido' });
   }
 
-  const fecha_pedido = new Date();
-  const estado = 'pendiente';
-
-  const ids = productos.map(p => p.id_producto);
-  const precioQuery = `SELECT id_producto, precio_unitario FROM productos WHERE id_producto IN (${ids.join(',')})`;
-
-  db.query(precioQuery, (err, rows) => {
+  // Verificar si el cliente está habilitado
+  db.query('SELECT habilitado FROM clientes WHERE id_cliente = ?', [id_cliente], (err, rows) => {
     if (err) return res.status(500).send(err);
+    if (rows.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
 
-    let total = 0;
-    const detalleInsert = [];
+    const clienteHabilitado = rows[0].habilitado === 1;
 
-    productos.forEach(p => {
-      const productoDB = rows.find(r => r.id_producto === p.id_producto);
-      if (!productoDB) return;
+    const fecha_pedido = new Date();
+    const estado = 'pendiente';
 
-      const precio_unitario = productoDB.precio_unitario;
-      const subtotal = precio_unitario * p.cantidad;
-      total += subtotal;
+    const ids = productos.map(p => p.id_producto);
+    const precioQuery = `SELECT id_producto, precio_unitario FROM productos WHERE id_producto IN (${ids.join(',')})`;
 
-      detalleInsert.push({
-        ...p,
-        precio_unitario,
-        subtotal
+    db.query(precioQuery, (err, rows) => {
+      if (err) return res.status(500).send(err);
+
+      let total = 0;
+      const detalleInsert = [];
+
+      productos.forEach(p => {
+        const productoDB = rows.find(r => r.id_producto === p.id_producto);
+        if (!productoDB) return;
+
+        const precio_unitario = productoDB.precio_unitario;
+        const subtotal = precio_unitario * p.cantidad;
+        total += subtotal;
+
+        detalleInsert.push({
+          ...p,
+          precio_unitario,
+          subtotal
+        });
       });
-    });
 
-    const pedidoQuery = `
-      INSERT INTO pedidos (id_cliente, id_usuario, fecha_pedido, total, seguimiento_dist, estado)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-
-    db.query(pedidoQuery, [id_cliente, id_usuario || 1, fecha_pedido, total, seguimiento_dist || '', estado], (err2, result) => {
-      if (err2) return res.status(500).send(err2);
-
-      const id_pedido = result.insertId;
-      const values = detalleInsert.map(p => [id_pedido, p.id_producto, p.cantidad, p.precio_unitario, p.subtotal]);
-
-      const detalleQuery = `
-        INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
-        VALUES ?
+      const pedidoQuery = `
+        INSERT INTO pedidos (id_cliente, id_usuario, fecha_pedido, total, seguimiento_dist, estado)
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
 
-      db.query(detalleQuery, [values], (err3) => {
-        if (err3) return res.status(500).send(err3);
+      db.query(pedidoQuery, [id_cliente, id_usuario || 1, fecha_pedido, total, seguimiento_dist || '', estado], (err2, result) => {
+        if (err2) return res.status(500).send(err2);
 
-        // ✅ Si el pedido vino desde un token, marcar como usado
-        if (token) {
-          db.query('UPDATE pedido_tokens SET usado = TRUE WHERE token = ?', [token]);
-        }
+        const id_pedido = result.insertId;
+        const values = detalleInsert.map(p => [id_pedido, p.id_producto, p.cantidad, p.precio_unitario, p.subtotal]);
 
-        res.status(201).json({ id_pedido, total });
+        const detalleQuery = `
+          INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
+          VALUES ?
+        `;
+
+        db.query(detalleQuery, [values], (err3) => {
+          if (err3) return res.status(500).send(err3);
+
+          if (token) {
+            db.query('UPDATE pedido_tokens SET usado = TRUE WHERE token = ?', [token]);
+          }
+
+          // ✅ Respuesta personalizada si cliente está inhabilitado
+          if (!clienteHabilitado) {
+            return res.status(200).json({
+              id_pedido,
+              total,
+              advertencia: 'Este cliente está inhabilitado. El pedido fue registrado pero requiere revisión.'
+            });
+          }
+
+          res.status(201).json({ id_pedido, total });
+        });
       });
     });
   });
@@ -157,13 +173,21 @@ exports.validarTokenPedido = (req, res) => {
       cuit: rows[0].cuit
     };
 
-    db.query('SELECT id_producto, nombre, precio_unitario, descripcion FROM productos', (err2, productos) => {
-      if (err2) return res.status(500).send(err2);
+    // NUEVA CONSULTA: traer solo productos habilitados
+    const productosQuery = `
+      SELECT p.id_producto, p.nombre, p.precio_unitario, p.descripcion
+      FROM productos_habilitados ph
+      JOIN productos p ON p.id_producto = ph.id_producto
+      WHERE ph.id_cliente = ?
+    `;
 
+    db.query(productosQuery, [cliente.id_cliente], (err2, productos) => {
+      if (err2) return res.status(500).send(err2);
       res.json({ cliente, productos });
     });
   });
 };
+
 
 exports.actualizarPedido = (req, res) => {
   const { id } = req.params;

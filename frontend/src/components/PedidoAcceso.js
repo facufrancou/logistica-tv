@@ -12,6 +12,8 @@ function PedidoAcceso() {
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalAviso, setModalAviso] = useState(false);
+  const [mensajeAviso, setMensajeAviso] = useState('');
   const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
@@ -59,13 +61,25 @@ function PedidoAcceso() {
         productos: pedido,
         token
       })
-    }).then(res => {
+    }).then(async res => {
+      const data = await res.json();
+
       if (res.ok) {
-        alert('Pedido enviado correctamente');
+        if (data.advertencia) {
+          setMensajeAviso(data.advertencia);
+          setModalAviso(true);
+        } else {
+          setMensajeAviso('Pedido enviado correctamente');
+          setModalAviso(true);
+        }
         setPedido([]);
       } else {
-        alert('Error al enviar pedido');
+        setMensajeAviso('Error al enviar pedido: ' + (data.error || ''));
+        setModalAviso(true);
       }
+    }).catch(() => {
+      setMensajeAviso('Error al conectar con el servidor');
+      setModalAviso(true);
     });
   };
 
@@ -119,7 +133,27 @@ function PedidoAcceso() {
         Enviar Pedido
       </button>
 
-      {/* Modal en React */}
+      {/* Modal de aviso */}
+      {modalAviso && (
+        <div className="modal d-block" style={{ backgroundColor: '#00000099' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Aviso</h5>
+                <button type="button" className="btn-close" onClick={() => setModalAviso(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>{mensajeAviso}</p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-primary" onClick={() => setModalAviso(false)}>Aceptar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar producto */}
       {modalOpen && (
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: '#00000099' }}>
           <div className="modal-dialog">

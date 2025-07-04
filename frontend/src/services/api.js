@@ -129,3 +129,25 @@ export const actualizarProducto = async (id, producto) => {
   }
 };
 
+// Obtener productos habilitados de un cliente
+export const getProductosHabilitados = async (id_cliente) => {
+  const res = await fetch(`http://localhost:3000/clientes/${id_cliente}/productos-habilitados`);
+  if (!res.ok) throw new Error('Error al obtener productos habilitados');
+  return await res.json();
+};
+
+// Asignar productos habilitados (reemplaza los existentes)
+export const setProductosHabilitados = async (id_cliente, productos) => {
+  const res = await fetch(`http://localhost:3000/clientes/${id_cliente}/productos-habilitados`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productos }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Error al asignar productos habilitados');
+  }
+
+  return await res.json();
+};
