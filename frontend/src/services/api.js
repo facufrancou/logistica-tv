@@ -155,3 +155,7 @@ export const setProductosHabilitados = async (id_cliente, productos) => {
 export const getPedidosProximos = (desde, hasta) =>
   fetch(`http://localhost:3000/pedidos/proximos?desde=${desde}&hasta=${hasta}`)
     .then(r => r.ok ? r.json() : []);
+
+export const getPedidosPorFecha = (desde, hasta) =>
+  fetch(`http://localhost:3000/pedidos?desde=${desde}&hasta=${hasta}`)
+    .then(res => res.ok ? res.json() : []);

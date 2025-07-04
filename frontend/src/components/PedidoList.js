@@ -31,11 +31,13 @@ function PedidoList({ pedidos, onActualizar }) {
     getProductos().then(setProductos);
   }, []);
 
-  const pedidosFiltrados = pedidos.filter(
-    (p) =>
-      p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
-      (p.seguimiento_dist || "").toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const pedidosFiltrados = Array.isArray(pedidos)
+  ? pedidos.filter(
+      (p) =>
+        p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
+        (p.seguimiento_dist || "").toLowerCase().includes(busqueda.toLowerCase())
+    )
+  : [];
 
   const pedidosMostrados = pedidosFiltrados.slice(
     pagina * pedidosPorPagina,

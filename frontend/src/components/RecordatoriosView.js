@@ -31,7 +31,7 @@ function RecordatoriosView() {
 
   return (
     <div>
-      <h2>Recordatorios de pedidos próximos</h2>
+      <h2>Próximos pedidos</h2>
 
       <div className="row g-2 mb-3">
         <div className="col-auto">

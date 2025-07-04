@@ -2,46 +2,75 @@ const db = require('../db/connection');
 const crypto = require('crypto');
 
 exports.getPedidos = (req, res) => {
-  const query = `
+  const { desde, hasta } = req.query;
+
+  let query = `
     SELECT 
-      p.id_pedido, 
-      c.nombre AS cliente, 
-      u.nombre AS vendedor, 
-      p.fecha_pedido, 
-      p.total, 
-      p.estado,
-      p.seguimiento_dist,
-      p.fecha_proximo_pedido
+      p.id_pedido, c.nombre AS cliente, u.nombre AS vendedor,
+      p.fecha_pedido, p.total, p.estado, p.seguimiento_dist, p.fecha_proximo_pedido
     FROM pedidos p
     JOIN clientes c ON p.id_cliente = c.id_cliente
     JOIN usuarios u ON p.id_usuario = u.id_usuario
-    ORDER BY p.fecha_pedido DESC
   `;
 
-  db.query(query, (err, results) => {
-    if (err) return res.status(500).send(err);
+  const params = [];
+  if (desde && hasta) {
+    query += ' WHERE DATE(p.fecha_pedido) BETWEEN ? AND ?';
+    params.push(desde, hasta);
+  }
 
-    const pedidosFormateados = results.map(p => {
-      return {
-        ...p,
-        fecha_pedido: new Date(p.fecha_pedido).toLocaleString('es-AR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        total: new Intl.NumberFormat('es-AR', {
-          style: 'currency',
-          currency: 'ARS',
-          minimumFractionDigits: 2
-        }).format(p.total || 0)
-      };
+  query += ' ORDER BY p.fecha_pedido DESC';
+
+  db.query(query, params, (err, pedidos) => {
+    if (err) return res.status(500).json({ error: 'Error al obtener pedidos' });
+
+    // Cargar productos por cada pedido
+    const procesados = [];
+    let completados = 0;
+
+    if (pedidos.length === 0) return res.json([]);
+
+    pedidos.forEach((p) => {
+      db.query(
+        `
+        SELECT pr.nombre, pr.descripcion, dp.cantidad
+        FROM detalle_pedido dp
+        JOIN productos pr ON dp.id_producto = pr.id_producto
+        WHERE dp.id_pedido = ?
+        `,
+        [p.id_pedido],
+        (err2, productos) => {
+          if (err2) productos = [];
+
+          p.productos = productos || [];
+
+          p.fecha_pedido_iso = p.fecha_pedido;
+          p.fecha_pedido = new Date(p.fecha_pedido).toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+
+          p.total = new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            minimumFractionDigits: 2,
+          }).format(p.total || 0);
+
+          procesados.push(p);
+          completados++;
+
+          if (completados === pedidos.length) {
+            res.json(procesados);
+          }
+        }
+      );
     });
-
-    res.json(pedidosFormateados);
   });
 };
+
 
 exports.createPedido = (req, res) => {
   const { id_cliente, id_usuario, seguimiento_dist, productos, token, fecha_proximo_pedido } = req.body;
