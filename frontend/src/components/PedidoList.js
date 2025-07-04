@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   getClientes,
   getProductos,
@@ -18,6 +19,12 @@ function PedidoList({ pedidos, onActualizar }) {
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [pedidoVista, setPedidoVista] = useState(null);
   const [busqueda, setBusqueda] = useState("");
+
+  const location = useLocation();
+
+  useEffect(() => {
+    onActualizar(); // se ejecuta cada vez que volvés a /PEDIDOS
+  }, [location.pathname]);
 
   useEffect(() => {
     getClientes().then(setClientes);
