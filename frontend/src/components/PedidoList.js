@@ -55,6 +55,9 @@ function PedidoList({ pedidos, onActualizar }) {
         ...pedidoCompleto,
         productoSeleccionado: "",
         cantidadSeleccionada: 1,
+        fecha_proximo_pedido: pedidoCompleto.fecha_proximo_pedido
+          ? pedidoCompleto.fecha_proximo_pedido.split("T")[0]
+          : "",
       });
       setModalOpen(true);
     } catch (error) {
@@ -270,6 +273,20 @@ function PedidoList({ pedidos, onActualizar }) {
                     }
                   />
                 </div>
+                <div className="mb-3">
+                  <label className="form-label">Próximo pedido</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={pedidoEditando.fecha_proximo_pedido || ""}
+                    onChange={(e) =>
+                      setPedidoEditando({
+                        ...pedidoEditando,
+                        fecha_proximo_pedido: e.target.value,
+                      })
+                    }
+                  />
+                </div>
 
                 <h6>Productos</h6>
                 <ul className="list-group mb-3">
@@ -405,6 +422,14 @@ function PedidoList({ pedidos, onActualizar }) {
 
                 <p>
                   <strong>Estado:</strong> {pedidoVista.estado}
+                </p>
+                <p>
+                  <strong>Próximo pedido:</strong>{" "}
+                  {pedidoVista.fecha_proximo_pedido
+                    ? new Date(
+                        pedidoVista.fecha_proximo_pedido
+                      ).toLocaleDateString("es-AR")
+                    : "—"}
                 </p>
 
                 <h6>Productos:</h6>

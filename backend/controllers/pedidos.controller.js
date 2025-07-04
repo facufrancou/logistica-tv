@@ -10,7 +10,8 @@ exports.getPedidos = (req, res) => {
       p.fecha_pedido, 
       p.total, 
       p.estado,
-      p.seguimiento_dist  -- ✅ agregado
+      p.seguimiento_dist,
+      p.fecha_proximo_pedido
     FROM pedidos p
     JOIN clientes c ON p.id_cliente = c.id_cliente
     JOIN usuarios u ON p.id_usuario = u.id_usuario
@@ -43,18 +44,16 @@ exports.getPedidos = (req, res) => {
 };
 
 exports.createPedido = (req, res) => {
-  const { id_cliente, id_usuario, seguimiento_dist, productos, token } = req.body;
+  const { id_cliente, id_usuario, seguimiento_dist, productos, token, fecha_proximo_pedido } = req.body;
   if (!id_cliente || !productos || productos.length === 0) {
     return res.status(400).json({ error: 'Faltan datos del pedido' });
   }
 
-  // Verificar si el cliente está habilitado
   db.query('SELECT habilitado FROM clientes WHERE id_cliente = ?', [id_cliente], (err, rows) => {
     if (err) return res.status(500).send(err);
     if (rows.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
 
     const clienteHabilitado = rows[0].habilitado === 1;
-
     const fecha_pedido = new Date();
     const estado = 'pendiente';
 
@@ -83,11 +82,11 @@ exports.createPedido = (req, res) => {
       });
 
       const pedidoQuery = `
-        INSERT INTO pedidos (id_cliente, id_usuario, fecha_pedido, total, seguimiento_dist, estado)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO pedidos (id_cliente, id_usuario, fecha_pedido, total, seguimiento_dist, estado, fecha_proximo_pedido)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
-      db.query(pedidoQuery, [id_cliente, id_usuario || 1, fecha_pedido, total, seguimiento_dist || '', estado], (err2, result) => {
+      db.query(pedidoQuery, [id_cliente, id_usuario || 1, fecha_pedido, total, seguimiento_dist || '', estado, fecha_proximo_pedido || null], (err2, result) => {
         if (err2) return res.status(500).send(err2);
 
         const id_pedido = result.insertId;
@@ -105,7 +104,6 @@ exports.createPedido = (req, res) => {
             db.query('UPDATE pedido_tokens SET usado = TRUE WHERE token = ?', [token]);
           }
 
-          // ✅ Respuesta personalizada si cliente está inhabilitado
           if (!clienteHabilitado) {
             return res.status(200).json({
               id_pedido,
@@ -117,6 +115,75 @@ exports.createPedido = (req, res) => {
           res.status(201).json({ id_pedido, total });
         });
       });
+    });
+  });
+};
+
+exports.actualizarPedido = (req, res) => {
+  const { id } = req.params;
+  const { id_cliente, seguimiento_dist, productos, fecha_proximo_pedido } = req.body;
+
+  if (!id_cliente || !productos || productos.length === 0) {
+    return res.status(400).json({ error: 'Faltan datos' });
+  }
+
+  const ids = productos.map(p => p.id_producto);
+  const precioQuery = `SELECT id_producto, precio_unitario FROM productos WHERE id_producto IN (${ids.join(',')})`;
+
+  db.query(precioQuery, (err, rows) => {
+    if (err) return res.status(500).send(err);
+
+    let total = 0;
+    const detalleInsert = [];
+
+    productos.forEach(p => {
+      const prod = rows.find(r => r.id_producto === p.id_producto);
+      if (!prod) return;
+      const subtotal = prod.precio_unitario * p.cantidad;
+      total += subtotal;
+      detalleInsert.push([id, p.id_producto, p.cantidad, prod.precio_unitario, subtotal]);
+    });
+
+    const updatePedido = `
+      UPDATE pedidos 
+      SET id_cliente = ?, seguimiento_dist = ?, total = ?, fecha_proximo_pedido = ?
+      WHERE id_pedido = ?
+    `;
+
+    db.query(updatePedido, [id_cliente, seguimiento_dist || '', total, fecha_proximo_pedido || null, id], (err2) => {
+      if (err2) return res.status(500).send(err2);
+
+      db.query('DELETE FROM detalle_pedido WHERE id_pedido = ?', [id], (err3) => {
+        if (err3) return res.status(500).send(err3);
+
+        db.query(`
+          INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
+          VALUES ?
+        `, [detalleInsert], (err4) => {
+          if (err4) return res.status(500).send(err4);
+          res.sendStatus(200);
+        });
+      });
+    });
+  });
+};
+
+exports.getPedidoPorId = (req, res) => {
+  const { id } = req.params;
+
+  const queryPedido = 'SELECT * FROM pedidos WHERE id_pedido = ?';
+  const queryDetalle = 'SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?';
+
+  db.query(queryPedido, [id], (err, pedidos) => {
+    if (err) return res.status(500).send(err);
+    if (pedidos.length === 0) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    const pedido = pedidos[0];
+
+    db.query(queryDetalle, [id], (err2, detalle) => {
+      if (err2) return res.status(500).send(err2);
+      pedido.productos = detalle;
+      res.json(pedido);
     });
   });
 };
@@ -190,75 +257,6 @@ exports.validarTokenPedido = (req, res) => {
     db.query(productosQuery, [cliente.id_cliente], (err2, productos) => {
       if (err2) return res.status(500).send(err2);
       res.json({ cliente, productos });
-    });
-  });
-};
-
-exports.actualizarPedido = (req, res) => {
-  const { id } = req.params;
-  const { id_cliente, seguimiento_dist, productos } = req.body;
-
-  if (!id_cliente || !productos || productos.length === 0) {
-    return res.status(400).json({ error: 'Faltan datos' });
-  }
-
-  const ids = productos.map(p => p.id_producto);
-  const precioQuery = `SELECT id_producto, precio_unitario FROM productos WHERE id_producto IN (${ids.join(',')})`;
-
-  db.query(precioQuery, (err, rows) => {
-    if (err) return res.status(500).send(err);
-
-    let total = 0;
-    const detalleInsert = [];
-
-    productos.forEach(p => {
-      const prod = rows.find(r => r.id_producto === p.id_producto);
-      if (!prod) return;
-      const subtotal = prod.precio_unitario * p.cantidad;
-      total += subtotal;
-      detalleInsert.push([id, p.id_producto, p.cantidad, prod.precio_unitario, subtotal]);
-    });
-
-    const updatePedido = `
-      UPDATE pedidos SET id_cliente = ?, seguimiento_dist = ?, total = ? WHERE id_pedido = ?
-    `;
-
-    db.query(updatePedido, [id_cliente, seguimiento_dist || '', total, id], (err2) => {
-      if (err2) return res.status(500).send(err2);
-
-      const deleteDetalle = `DELETE FROM detalle_pedido WHERE id_pedido = ?`;
-      db.query(deleteDetalle, [id], (err3) => {
-        if (err3) return res.status(500).send(err3);
-
-        const insertDetalle = `
-          INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
-          VALUES ?
-        `;
-        db.query(insertDetalle, [detalleInsert], (err4) => {
-          if (err4) return res.status(500).send(err4);
-          res.sendStatus(200);
-        });
-      });
-    });
-  });
-};
-
-exports.getPedidoPorId = (req, res) => {
-  const { id } = req.params;
-
-  const queryPedido = 'SELECT * FROM pedidos WHERE id_pedido = ?';
-  const queryDetalle = 'SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?';
-
-  db.query(queryPedido, [id], (err, pedidos) => {
-    if (err) return res.status(500).send(err);
-    if (pedidos.length === 0) return res.status(404).json({ error: 'Pedido no encontrado' });
-
-    const pedido = pedidos[0];
-
-    db.query(queryDetalle, [id], (err2, detalle) => {
-      if (err2) return res.status(500).send(err2);
-      pedido.productos = detalle;
-      res.json(pedido);
     });
   });
 };

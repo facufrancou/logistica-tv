@@ -80,7 +80,7 @@ ALTER TABLE clientes ADD COLUMN habilitado BOOLEAN DEFAULT true;
 ALTER TABLE clientes ADD COLUMN fecha_proximo_pedido DATE;
 
 -- Agregar campo de próxima fecha de pedido
-ALTER TABLE pedidos ADD COLUMN proximo_pedido DATE NULL;
+ALTER TABLE pedidos ADD COLUMN fecha_proximo_pedido DATE NULL;
 
 -- Crear tabla productos habilitados por cliente
 CREATE TABLE productos_habilitados (

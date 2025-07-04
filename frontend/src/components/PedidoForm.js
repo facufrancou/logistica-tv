@@ -7,6 +7,7 @@ function PedidoForm({ onPedidoCreado }) {
   const [form, setForm] = useState({
     id_cliente: '',
     seguimiento_dist: '',
+    fecha_proximo_pedido: '',
     productos: []
   });
 
@@ -60,7 +61,7 @@ function PedidoForm({ onPedidoCreado }) {
     crearPedido({ ...form, id_usuario: 1 }).then(res => {
       if (res) {
         alert('Pedido creado correctamente');
-        setForm({ id_cliente: '', seguimiento_dist: '', productos: [] });
+        setForm({ id_cliente: '', seguimiento_dist: '', fecha_proximo_pedido: '', productos: [] });
         onPedidoCreado();
       }
     });
@@ -80,6 +81,15 @@ function PedidoForm({ onPedidoCreado }) {
         <div className="col">
           <label className="form-label">Seguimiento</label>
           <input className="form-control" type="text" value={form.seguimiento_dist} onChange={e => setForm({ ...form, seguimiento_dist: e.target.value })}/>
+        </div>
+        <div className="col">
+          <label className="form-label">Próximo pedido</label>
+          <input
+            type="date"
+            className="form-control"
+            value={form.fecha_proximo_pedido}
+            onChange={e => setForm({ ...form, fecha_proximo_pedido: e.target.value })}
+          />
         </div>
       </div>
 
@@ -102,8 +112,8 @@ function PedidoForm({ onPedidoCreado }) {
 
       <br />
       <button className="btn btn-primary" onClick={handleSubmit}>Crear Pedido</button>
-<br />
-<br />
+      <br /><br />
+
       {/* Modal */}
       {modalOpen && (
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: '#00000099' }}>

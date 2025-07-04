@@ -8,6 +8,7 @@ function PedidoAcceso() {
   const [cliente, setCliente] = useState(null);
   const [productos, setProductos] = useState([]);
   const [pedido, setPedido] = useState([]);
+  const [fechaProximoPedido, setFechaProximoPedido] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
   const [error, setError] = useState(null);
@@ -83,7 +84,8 @@ function PedidoAcceso() {
         id_usuario: null,
         seguimiento_dist: '',
         productos: pedido,
-        token
+        token,
+        fecha_proximo_pedido: fechaProximoPedido
       })
     }).then(async res => {
       const data = await res.json();
@@ -97,6 +99,7 @@ function PedidoAcceso() {
           setModalAviso(true);
         }
         setPedido([]);
+        setFechaProximoPedido('');
       } else {
         setMensajeAviso('Error al enviar pedido: ' + (data.error || ''));
         setModalAviso(true);
@@ -132,6 +135,16 @@ function PedidoAcceso() {
       <div className="mb-3">
         <label className="form-label">Nombre</label>
         <input type="text" className="form-control" value={cliente.nombre} disabled />
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label">Próximo pedido</label>
+        <input
+          type="date"
+          className="form-control"
+          value={fechaProximoPedido}
+          onChange={(e) => setFechaProximoPedido(e.target.value)}
+        />
       </div>
 
       <div className="d-flex justify-content-end mb-3">
