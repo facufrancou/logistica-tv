@@ -8,6 +8,8 @@ import ProductoList from './components/ProductoList';
 import PedidoList from './components/PedidoList';
 import PedidoForm from './components/PedidoForm';
 import PedidoAcceso from './components/PedidoAcceso';
+import RecordatoriosView from './components/RecordatoriosView';
+
 import { getPedidos } from './services/api';
 import { useEffect, useState, useContext } from 'react';
 
@@ -47,6 +49,9 @@ function Navbar() {
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/productos">PRODUCTOS</Link>
+            </li>
+            <li className="nav-item">
+              <Link to="/recordatorios" className="nav-link">PROXIMOS</Link>
             </li>
           </ul>
           <span className="navbar-text me-3 text-white">
@@ -98,6 +103,8 @@ function MainRoutes() {
             <ProductoList />
           </RutaPrivada>
         } />
+        <Route path="/recordatorios" element={<RecordatoriosView />} />
+
       </Routes>
     </div>
   );

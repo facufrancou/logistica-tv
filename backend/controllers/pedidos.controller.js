@@ -308,3 +308,52 @@ exports.getUltimoPedidoPorCliente = (req, res) => {
     );
   });
 };
+
+exports.getPedidosProximos = (req, res) => {
+  const { desde, hasta } = req.query;
+
+  if (!desde || !hasta) {
+    return res.status(400).json({ error: 'Parámetros desde y hasta requeridos' });
+  }
+
+  const query = `
+    SELECT 
+      p.id_pedido, 
+      c.nombre AS cliente, 
+      u.nombre AS vendedor, 
+      p.fecha_pedido, 
+      p.total, 
+      p.estado,
+      p.seguimiento_dist,
+      p.fecha_proximo_pedido
+    FROM pedidos p
+    JOIN clientes c ON p.id_cliente = c.id_cliente
+    JOIN usuarios u ON p.id_usuario = u.id_usuario
+    WHERE DATE(p.fecha_proximo_pedido) BETWEEN ? AND ?
+    ORDER BY p.fecha_proximo_pedido ASC
+  `;
+
+  db.query(query, [desde, hasta], (err, results) => {
+    if (err) {
+      console.error("Error en getPedidosProximos:", err);
+      return res.status(500).send(err);
+    }
+
+    // ✅ Elimina el if que cortaba la respuesta
+    const pedidos = (results || []).map(p => ({
+      ...p,
+      fecha_pedido: new Date(p.fecha_pedido).toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      }),
+      fecha_proximo_pedido: p.fecha_proximo_pedido
+        ? new Date(p.fecha_proximo_pedido).toISOString().split('T')[0]
+        : null,
+      total: new Intl.NumberFormat('es-AR', {
+        style: 'currency', currency: 'ARS', minimumFractionDigits: 2
+      }).format(p.total || 0)
+    }));
+
+    res.json(pedidos); // 🔁 SIEMPRE devuelve un array, vacío o no
+  });
+};
