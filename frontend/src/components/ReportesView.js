@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { getPedidos, getClientes, getPedidosPorFecha } from '../services/api';
+import { getPedidos, getClientes, getPedidosPorFecha } from "../services/api";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function ReportesView() {
   const [tipoReporte, setTipoReporte] = useState("");
@@ -14,6 +16,21 @@ function ReportesView() {
   useEffect(() => {
     getClientes().then(setClientes);
   }, []);
+
+  const getTituloReporte = () => {
+  switch (tipoReporte) {
+    case "pendientes":
+      return "Reporte de Pedidos Pendientes";
+    case "cliente":
+      return `Reporte por Cliente: ${clienteSeleccionado}`;
+    case "fecha":
+      return `Reporte por Fecha (${fechaDesde} a ${fechaHasta})`;
+    case "estado":
+      return `Reporte por Estado: ${estadoSeleccionado}`;
+    default:
+      return "Reporte de Pedidos";
+  }
+};
 
   const handleBuscar = async () => {
     const todos = await getPedidos();
@@ -41,7 +58,9 @@ function ReportesView() {
           fechaHasta
         ) {
           filtrados = await getPedidosPorFecha(fechaDesde, fechaHasta);
-          filtrados = filtrados.filter((p) => p.estado.toLowerCase() === "completado");
+          filtrados = filtrados.filter(
+            (p) => p.estado.toLowerCase() === "completado"
+          );
         } else {
           filtrados = todos.filter(
             (p) => p.estado.toLowerCase() === estadoSeleccionado.toLowerCase()
@@ -55,9 +74,70 @@ function ReportesView() {
     setResultados(filtrados);
   };
 
+  const exportarPDF = () => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const titulo = getTituloReporte();
+    doc.setFontSize(14);
+    doc.text(titulo, 14, 20);
+
+    const rows = [];
+
+    resultados.forEach((p) => {
+      const productos =
+        p.productos
+          ?.map(
+            (prod) =>
+              `${prod.nombre} - ${prod.descripcion} (Cant: ${prod.cantidad})`
+          )
+          .join("\n") || "—";
+
+      rows.push([
+        p.id_pedido,
+        p.cliente,
+        p.vendedor,
+        p.fecha_pedido,
+        p.estado,
+        p.total,
+        productos,
+        p.fecha_proximo_pedido
+          ? new Date(p.fecha_proximo_pedido).toLocaleDateString("es-AR")
+          : "—",
+      ]);
+    });
+
+    autoTable(doc, {
+      startY: 30,
+      head: [
+        [
+          "ID",
+          "Cliente",
+          "Vendedor",
+          "Fecha",
+          "Estado",
+          "Total",
+          "Productos",
+          "Próximo Pedido",
+        ],
+      ],
+      body: rows,
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [50, 50, 50] },
+    });
+
+    doc.save("reporte.pdf");
+  };
+
   return (
     <div className="container mt-4">
       <h2>Reportes de Pedidos</h2>
+      <button className="btn btn-success mt-2 me-2" onClick={exportarPDF}>
+        Exportar PDF
+      </button>
 
       {/* Selector de tipo */}
       <div className="mb-3">
@@ -161,7 +241,9 @@ function ReportesView() {
                   type="checkbox"
                   id="mostrarTodos"
                   checked={mostrarTodosCompletados}
-                  onChange={() => setMostrarTodosCompletados(!mostrarTodosCompletados)}
+                  onChange={() =>
+                    setMostrarTodosCompletados(!mostrarTodosCompletados)
+                  }
                 />
                 <label className="form-check-label" htmlFor="mostrarTodos">
                   Mostrar todos los pedidos completados (ignorar fechas)
@@ -209,7 +291,8 @@ function ReportesView() {
                         {p.productos?.length > 0 ? (
                           p.productos.map((prod, i) => (
                             <li key={i}>
-                              {prod.nombre} - {prod.descripcion} — <strong>Cantidad:</strong> {prod.cantidad}
+                              {prod.nombre} - {prod.descripcion} —{" "}
+                              <strong>Cantidad:</strong> {prod.cantidad}
                             </li>
                           ))
                         ) : (
@@ -218,7 +301,9 @@ function ReportesView() {
                       </ul>
                       <strong>Próximo pedido:</strong>{" "}
                       {p.fecha_proximo_pedido
-                        ? new Date(p.fecha_proximo_pedido).toLocaleDateString("es-AR")
+                        ? new Date(p.fecha_proximo_pedido).toLocaleDateString(
+                            "es-AR"
+                          )
                         : "—"}
                     </td>
                   </tr>
