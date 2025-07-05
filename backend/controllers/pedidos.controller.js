@@ -71,7 +71,6 @@ exports.getPedidos = (req, res) => {
   });
 };
 
-
 exports.createPedido = (req, res) => {
   const { id_cliente, id_usuario, seguimiento_dist, productos, token, fecha_proximo_pedido } = req.body;
   if (!id_cliente || !productos || productos.length === 0) {
@@ -314,8 +313,9 @@ exports.getUltimoPedidoPorCliente = (req, res) => {
   const { id_cliente } = req.params;
 
   const query = `
-    SELECT p.id_pedido
+    SELECT p.id_pedido, p.fecha_pedido, c.nombre AS cliente
     FROM pedidos p
+    JOIN clientes c ON p.id_cliente = c.id_cliente
     WHERE p.id_cliente = ?
     ORDER BY p.fecha_pedido DESC
     LIMIT 1
@@ -325,18 +325,25 @@ exports.getUltimoPedidoPorCliente = (req, res) => {
     if (err) return res.status(500).send(err);
     if (result.length === 0) return res.status(404).json({ error: 'No hay pedidos anteriores' });
 
-    const id_pedido = result[0].id_pedido;
+    const pedido = result[0];
 
     db.query(
-      'SELECT id_producto, cantidad FROM detalle_pedido WHERE id_pedido = ?',
-      [id_pedido],
+      `
+      SELECT pr.nombre, pr.descripcion, dp.cantidad
+      FROM detalle_pedido dp
+      JOIN productos pr ON dp.id_producto = pr.id_producto
+      WHERE dp.id_pedido = ?
+      `,
+      [pedido.id_pedido],
       (err2, productos) => {
         if (err2) return res.status(500).send(err2);
-        res.json({ id_pedido, productos });
+        pedido.productos = productos;
+        res.json(pedido);
       }
     );
   });
 };
+
 
 exports.getPedidosProximos = (req, res) => {
   const { desde, hasta } = req.query;
@@ -386,3 +393,40 @@ exports.getPedidosProximos = (req, res) => {
     res.json(pedidos); // 🔁 SIEMPRE devuelve un array, vacío o no
   });
 };
+
+// Obtener pedidos agrupados por semana
+exports.getPedidosPorSemana = (req, res) => {
+  const query = `
+    SELECT 
+      p.id_pedido,
+      p.fecha_proximo_pedido,
+      c.nombre AS cliente,
+      p.id_cliente
+    FROM pedidos p
+    JOIN clientes c ON p.id_cliente = c.id_cliente
+    WHERE p.fecha_proximo_pedido IS NOT NULL
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).json({ error: err });
+
+    const agrupado = {};
+
+    results.forEach(p => {
+      const fecha = new Date(p.fecha_proximo_pedido);
+      const semana = getNumeroSemana(fecha); // Usamos función auxiliar
+
+      if (!agrupado[semana]) agrupado[semana] = [];
+      agrupado[semana].push(p);
+    });
+
+    res.json(agrupado);
+  });
+};
+
+// Función auxiliar para obtener número de semana
+function getNumeroSemana(fecha) {
+  const primerDiaAño = new Date(fecha.getFullYear(), 0, 1);
+  const dias = Math.floor((fecha - primerDiaAño) / (24 * 60 * 60 * 1000));
+  return Math.ceil((dias + primerDiaAño.getDay() + 1) / 7);
+}

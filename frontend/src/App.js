@@ -9,7 +9,8 @@ import PedidoList from './components/PedidoList';
 import PedidoForm from './components/PedidoForm';
 import PedidoAcceso from './components/PedidoAcceso';
 import RecordatoriosView from './components/RecordatoriosView';
-import ReportesView from './components/ReportesView'; // ✅ NUEVO
+import ReportesView from './components/ReportesView';
+import VistaSemanal from './components/VistaSemanal'; // ✅ NUEVO
 
 import { getPedidos } from './services/api';
 import { useEffect, useState, useContext } from 'react';
@@ -52,10 +53,13 @@ function Navbar() {
               <Link className="nav-link" to="/productos">PRODUCTOS</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/recordatorios">PROXIMOS</Link>
+              <Link className="nav-link" to="/recordatorios">PRÓXIMOS</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/reportes">REPORTES</Link> {/* ✅ NUEVO */}
+              <Link className="nav-link" to="/reportes">REPORTES</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/semanal">SEMANAL</Link> {/* ✅ NUEVO */}
             </li>
           </ul>
           <span className="navbar-text me-3 text-white">
@@ -116,8 +120,12 @@ function MainRoutes() {
           <RutaPrivada>
             <ReportesView />
           </RutaPrivada>
-        } /> {/* ✅ NUEVO */}
-
+        } />
+        <Route path="/semanal" element={ // ✅ NUEVO
+          <RutaPrivada>
+            <VistaSemanal />
+          </RutaPrivada>
+        } />
       </Routes>
     </div>
   );

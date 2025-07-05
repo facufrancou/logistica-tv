@@ -1,0 +1,47 @@
+.carrusel-semanal {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 10px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+
+.tarjeta-semana {
+  flex: 0 0 auto;
+  width: 220px;
+  min-height: 580px; /* ⬅️ AGREGÁ o MODIFICÁ esta línea */
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.titulo-semana {
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.btn-nombre {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #007bff;
+  text-align: left;
+  padding: 4px 0;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.btn-nombre:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}

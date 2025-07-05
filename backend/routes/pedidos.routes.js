@@ -7,6 +7,7 @@ router.post('/', controller.createPedido);
 router.patch('/:id/completar', controller.completarPedido);
 router.delete('/:id', controller.eliminarPedido);
 router.get('/proximos', controller.getPedidosProximos);
+router.get('/semanal', controller.getPedidosPorSemana);
 router.get('/link/:id_cliente', controller.generarLinkPedido);
 router.get('/token/:token', controller.validarTokenPedido);
 router.put('/:id', controller.actualizarPedido);
