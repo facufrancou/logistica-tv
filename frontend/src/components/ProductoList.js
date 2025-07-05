@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { getProductos, crearProducto, actualizarProducto } from '../services/api';
+import {
+  getProductos,
+  crearProducto,
+  actualizarProducto,
+  getProveedores
+} from '../services/api';
 
 function ProductoList() {
   const [productos, setProductos] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
+
   const [pagina, setPagina] = useState(0);
   const porPagina = 15;
   const [busqueda, setBusqueda] = useState('');
@@ -13,6 +20,7 @@ function ProductoList() {
 
   useEffect(() => {
     cargarProductos();
+    getProveedores().then(setProveedores);
   }, []);
 
   const cargarProductos = () => {
@@ -33,6 +41,7 @@ function ProductoList() {
         nombre: '',
         precio_unitario: '',
         descripcion: '',
+        id_proveedor: ''
       }
     );
     setModo(modoAccion);
@@ -59,6 +68,11 @@ function ProductoList() {
     setProductoActivo({ ...productoActivo, [campo]: valor });
   };
 
+  const obtenerNombreProveedor = (id) => {
+    const p = proveedores.find(prov => prov.id_proveedor === id);
+    return p?.nombre || '—';
+  };
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -79,7 +93,7 @@ function ProductoList() {
       <table className="table">
         <thead>
           <tr>
-            <th>ID</th><th>Nombre</th><th>Precio</th><th>Descripción</th><th>Acciones</th>
+            <th>ID</th><th>Nombre</th><th>Precio</th><th>Descripción</th><th>Marca</th><th>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -89,6 +103,7 @@ function ProductoList() {
               <td>{p.nombre}</td>
               <td>${Number(p.precio_unitario).toFixed(2)}</td>
               <td>{p.descripcion}</td>
+              <td>{obtenerNombreProveedor(p.id_proveedor)}</td>
               <td>
                 <button className="btn btn-sm btn-secondary me-2" onClick={() => abrirModal(p, 'ver')}>Ver</button>
                 <button className="btn btn-sm btn-warning" onClick={() => abrirModal(p, 'editar')}>Editar</button>
@@ -137,12 +152,29 @@ function ProductoList() {
 
                 <label className="form-label">Descripción</label>
                 <textarea
-                  className="form-control"
+                  className="form-control mb-2"
                   rows={3}
                   value={productoActivo.descripcion}
                   onChange={e => handleInput('descripcion', e.target.value)}
                   disabled={modo === 'ver'}
                 />
+
+                <label className="form-label">Marca / Proveedor</label>
+                <select
+                  className="form-select"
+                  value={productoActivo.id_proveedor || ''}
+                  onChange={e => handleInput('id_proveedor', parseInt(e.target.value))}
+                  disabled={modo === 'ver'}
+                >
+                  <option value="">Seleccione</option>
+                  {proveedores
+                    .filter(p => p.activo)
+                    .map(p => (
+                      <option key={p.id_proveedor} value={p.id_proveedor}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={cerrarModal}>Cerrar</button>

@@ -19,6 +19,8 @@ app.use(express.json());
 app.use('/clientes', require('./routes/clientes.routes'));
 app.use('/productos', require('./routes/productos.routes'));
 app.use('/pedidos', require('./routes/pedidos.routes'));
+app.use('/proveedores', require('./routes/proveedores.routes'));
+
 
 const authRoutes = require('./routes/auth.routes');
 app.use('/auth', authRoutes);

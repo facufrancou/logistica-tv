@@ -181,3 +181,70 @@ export const getUltimoPedidoPorCliente = async (id_cliente) => {
   if (!res.ok) throw new Error("Error al obtener último pedido del cliente");
   return await res.json();
 };
+
+
+// PROVEEDORES
+
+export const getProveedores = async () => {
+  const res = await fetch("http://localhost:3000/proveedores");
+  if (!res.ok) throw new Error("Error al obtener proveedores");
+  return await res.json();
+};
+
+export const crearProveedor = async (proveedor) => {
+  try {
+    const res = await fetch("http://localhost:3000/proveedores", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(proveedor),
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear el proveedor");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear proveedor: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarProveedor = async (id, proveedor) => {
+  try {
+    const res = await fetch(`http://localhost:3000/proveedores/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(proveedor),
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar el proveedor");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar proveedor: " + err.message);
+    return null;
+  }
+};
+
+export const eliminarProveedor = async (id) => {
+  try {
+    const res = await fetch(`http://localhost:3000/proveedores/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo eliminar el proveedor");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al eliminar proveedor: " + err.message);
+    return null;
+  }
+};

@@ -73,6 +73,13 @@ CREATE TABLE pedido_tokens (
   FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
 );
 
+CREATE TABLE proveedores (
+  id_proveedor INT NOT NULL AUTO_INCREMENT,
+  nombre VARCHAR(255) NOT NULL,
+  activo BOOLEAN DEFAULT TRUE,
+  PRIMARY KEY (id_proveedor)
+);
+
 -- Agregar campo para inhabilitar clientes
 ALTER TABLE clientes ADD COLUMN habilitado BOOLEAN DEFAULT true;
 
@@ -81,6 +88,10 @@ ALTER TABLE clientes ADD COLUMN fecha_proximo_pedido DATE;
 
 -- Agregar campo de próxima fecha de pedido
 ALTER TABLE pedidos ADD COLUMN fecha_proximo_pedido DATE NULL;
+
+ALTER TABLE productos ADD COLUMN id_proveedor INT;
+ALTER TABLE productos ADD FOREIGN KEY (id_proveedor) REFERENCES proveedores(id_proveedor);
+
 
 -- Crear tabla productos habilitados por cliente
 CREATE TABLE productos_habilitados (

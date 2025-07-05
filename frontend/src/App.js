@@ -1,19 +1,26 @@
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
-import { AuthProvider, AuthContext } from './context/AuthContext';
-import RutaPrivada from './components/RutaPrivada';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from "react-router-dom";
+import { AuthProvider, AuthContext } from "./context/AuthContext";
+import RutaPrivada from "./components/RutaPrivada";
 
-import Login from './components/Login';
-import ClienteList from './components/ClienteList';
-import ProductoList from './components/ProductoList';
-import PedidoList from './components/PedidoList';
-import PedidoForm from './components/PedidoForm';
-import PedidoAcceso from './components/PedidoAcceso';
-import RecordatoriosView from './components/RecordatoriosView';
-import ReportesView from './components/ReportesView';
-import VistaSemanal from './components/VistaSemanal'; // ✅ NUEVO
+import Login from "./components/Login";
+import ClienteList from "./components/ClienteList";
+import ProductoList from "./components/ProductoList";
+import PedidoList from "./components/PedidoList";
+import PedidoForm from "./components/PedidoForm";
+import PedidoAcceso from "./components/PedidoAcceso";
+import RecordatoriosView from "./components/RecordatoriosView";
+import ReportesView from "./components/ReportesView";
+import VistaSemanal from "./components/VistaSemanal";
+import ProveedorList from "./components/ProveedorList";
 
-import { getPedidos } from './services/api';
-import { useEffect, useState, useContext } from 'react';
+import { getPedidos } from "./services/api";
+import { useEffect, useState, useContext } from "react";
 
 function App() {
   return (
@@ -33,39 +40,60 @@ function Navbar() {
 
   const cerrarSesion = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-      <Link className="navbar-brand" to="/">Tierra Volga</Link>
+      <Link className="navbar-brand" to="/">
+        Tierra Volga
+      </Link>
 
       {usuario && (
         <div className="collapse navbar-collapse">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link" to="/pedidos">PEDIDOS</Link>
+              <Link className="nav-link" to="/pedidos">
+                PEDIDOS
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/clientes">CLIENTES</Link>
+              <Link className="nav-link" to="/clientes">
+                CLIENTES
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/productos">PRODUCTOS</Link>
+              <Link className="nav-link" to="/productos">
+                PRODUCTOS
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/recordatorios">PRÓXIMOS</Link>
+              <Link className="nav-link" to="/recordatorios">
+                PRÓXIMOS
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/reportes">REPORTES</Link>
+              <Link className="nav-link" to="/reportes">
+                REPORTES
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/semanal">SEMANAL</Link> {/* ✅ NUEVO */}
+              <Link className="nav-link" to="/semanal">
+                SEMANAL
+              </Link>{" "}
+              {/* ✅ NUEVO */}
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/proveedores">
+                PROVEEDORES
+              </Link>
             </li>
           </ul>
-          <span className="navbar-text me-3 text-white">
-            {usuario.nombre}
-          </span>
-          <button className="btn btn-outline-light btn-sm" onClick={cerrarSesion}>
+          <span className="navbar-text me-3 text-white">{usuario.nombre}</span>
+          <button
+            className="btn btn-outline-light btn-sm"
+            onClick={cerrarSesion}
+          >
             Cerrar sesión
           </button>
         </div>
@@ -90,42 +118,72 @@ function MainRoutes() {
         <Route path="/pedido/acceso" element={<PedidoAcceso />} />
 
         {/* 🔐 Rutas protegidas */}
-        <Route path="/" element={
-          <RutaPrivada>
-            <PedidoForm onPedidoCreado={loadPedidos} />
-            <PedidoList pedidos={pedidos} onActualizar={loadPedidos} />
-          </RutaPrivada>
-        } />
-        <Route path="/pedidos" element={
-          <RutaPrivada>
-            <PedidoList pedidos={pedidos} onActualizar={loadPedidos} />
-          </RutaPrivada>
-        } />
-        <Route path="/clientes" element={
-          <RutaPrivada>
-            <ClienteList />
-          </RutaPrivada>
-        } />
-        <Route path="/productos" element={
-          <RutaPrivada>
-            <ProductoList />
-          </RutaPrivada>
-        } />
-        <Route path="/recordatorios" element={
-          <RutaPrivada>
-            <RecordatoriosView />
-          </RutaPrivada>
-        } />
-        <Route path="/reportes" element={
-          <RutaPrivada>
-            <ReportesView />
-          </RutaPrivada>
-        } />
-        <Route path="/semanal" element={ // ✅ NUEVO
-          <RutaPrivada>
-            <VistaSemanal />
-          </RutaPrivada>
-        } />
+        <Route
+          path="/"
+          element={
+            <RutaPrivada>
+              <PedidoForm onPedidoCreado={loadPedidos} />
+              <PedidoList pedidos={pedidos} onActualizar={loadPedidos} />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/pedidos"
+          element={
+            <RutaPrivada>
+              <PedidoList pedidos={pedidos} onActualizar={loadPedidos} />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/clientes"
+          element={
+            <RutaPrivada>
+              <ClienteList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/productos"
+          element={
+            <RutaPrivada>
+              <ProductoList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/recordatorios"
+          element={
+            <RutaPrivada>
+              <RecordatoriosView />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/reportes"
+          element={
+            <RutaPrivada>
+              <ReportesView />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/semanal"
+          element={
+            // ✅ NUEVO
+            <RutaPrivada>
+              <VistaSemanal />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/proveedores"
+          element={
+            <RutaPrivada>
+              <ProveedorList />
+            </RutaPrivada>
+          }
+        />
       </Routes>
     </div>
   );
