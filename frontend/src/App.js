@@ -54,41 +54,57 @@ function Navbar() {
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
               <Link className="nav-link" to="/pedidos">
-                PEDIDOS
+                Pedidos
               </Link>
             </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/clientes">
-                CLIENTES
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/productos">
-                PRODUCTOS
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/recordatorios">
-                PRÓXIMOS
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/reportes">
-                REPORTES
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/semanal">
-                SEMANAL
-              </Link>{" "}
-              {/* ✅ NUEVO */}
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/proveedores">
-                PROVEEDORES
-              </Link>
+
+            {/* Dropdown de gestión */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="#"
+                id="gestionDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Gestión
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="gestionDropdown">
+                <li>
+                  <Link className="dropdown-item" to="/clientes">
+                    Clientes
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/productos">
+                    Productos
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/proveedores">
+                    Proveedores
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/reportes">
+                    Reportes
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/recordatorios">
+                    Próximos pedidos
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/semanal">
+                    Vista Semanal
+                  </Link>
+                </li>
+              </ul>
             </li>
           </ul>
+
           <span className="navbar-text me-3 text-white">{usuario.nombre}</span>
           <button
             className="btn btn-outline-light btn-sm"
@@ -101,6 +117,7 @@ function Navbar() {
     </nav>
   );
 }
+
 
 // ✅ Contenedor principal de rutas
 function MainRoutes() {
