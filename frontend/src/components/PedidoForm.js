@@ -28,14 +28,6 @@ function PedidoForm({ onPedidoCreado }) {
     getProveedores().then(setProveedores);
   }, []);
 
-/*   useEffect(() => {
-    getClientes().then(setClientes);
-    getProductos().then((data) => {
-      console.log("🧪 Productos desde backend:", data); // <-- AGREGADO
-      setProductos(data);
-    });
-    getProveedores().then(setProveedores);
-  }, []); */
 
   const agruparPorProveedor = (lista) => {
     const agrupados = {};

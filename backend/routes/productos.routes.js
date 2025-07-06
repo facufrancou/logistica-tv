@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/productos.controller');
+const { validarSesion } = require('../middlewares/auth');
 
-router.get('/', controller.getProductos);
-router.post('/', controller.createProducto);  
-router.put('/:id', controller.updateProducto); 
+router.get('/', validarSesion, controller.getProductos);
+router.post('/', validarSesion, controller.createProducto);
+router.put('/:id', validarSesion, controller.updateProducto);
+
 module.exports = router;

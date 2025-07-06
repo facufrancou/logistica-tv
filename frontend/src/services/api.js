@@ -1,62 +1,21 @@
 const API = "http://localhost:3000";
 
-export const getClientes = () => fetch(API + "/clientes").then((r) => r.json());
-export const getProductos = () =>
-  fetch(API + "/productos").then((r) => r.json());
-export const getPedidos = () => fetch(API + "/pedidos").then((r) => r.json());
-
-export const crearPedido = async (pedido) => {
-  try {
-    const response = await fetch("http://localhost:3000/pedidos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pedido),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("Error al crear pedido:", error);
-      alert(`Error: ${error.error || "No se pudo crear el pedido"}`);
-      return null;
-    }
-
-    return await response.json();
-  } catch (err) {
-    console.error("Error en la red o backend no disponible:", err);
-    alert(
-      "No se pudo conectar al servidor. Verificá que el backend esté corriendo."
-    );
-    return null;
-  }
-};
-export const completarPedido = (id_pedido) => {
-  return fetch(`${API}/pedidos/${id_pedido}/completar`, { method: "PATCH" });
-};
-
-export const eliminarPedido = (id_pedido) => {
-  return fetch(`${API}/pedidos/${id_pedido}`, { method: "DELETE" });
-};
-
-export const actualizarPedido = (id, data) =>
-  fetch(`http://localhost:3000/pedidos/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  }).then((res) => res.ok);
-
-export const getPedidoPorId = async (id) => {
-  const res = await fetch(`http://localhost:3000/pedidos/${id}`);
-  if (!res.ok) throw new Error("Error al obtener el pedido");
+// Función reutilizable para fetch con sesión
+const fetchConSesion = async (url, options = {}) => {
+  const res = await fetch(url, { ...options, credentials: "include" });
+  if (!res.ok) throw new Error("No autorizado");
   return await res.json();
 };
 
 // CLIENTES
+export const getClientes = () => fetchConSesion(API + "/clientes");
 export const crearCliente = async (cliente) => {
   try {
-    const res = await fetch("http://localhost:3000/clientes", {
+    const res = await fetch(API + "/clientes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(cliente),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -73,10 +32,11 @@ export const crearCliente = async (cliente) => {
 
 export const actualizarCliente = async (id, cliente) => {
   try {
-    const res = await fetch(`http://localhost:3000/clientes/${id}`, {
+    const res = await fetch(`${API}/clientes/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(cliente),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -91,66 +51,68 @@ export const actualizarCliente = async (id, cliente) => {
   }
 };
 
-// PRODUCTOS
-export const crearProducto = async (producto) => {
+export const getProductos = () => fetchConSesion(API + "/productos");
+export const getPedidos = () => fetchConSesion(API + "/pedidos");
+
+export const crearPedido = async (pedido) => {
   try {
-    const res = await fetch("http://localhost:3000/productos", {
+    const response = await fetch(API + "/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(producto),
+      body: JSON.stringify(pedido),
+      credentials: "include",
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Error al crear producto");
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("Error al crear pedido:", error);
+      alert(`Error: ${error.error || "No se pudo crear el pedido"}`);
+      return null;
     }
 
-    return await res.json();
+    return await response.json();
   } catch (err) {
-    alert("Error al crear producto: " + err.message);
+    console.error("Error en la red o backend no disponible:", err);
+    alert("No se pudo conectar al servidor. Verificá que el backend esté corriendo.");
     return null;
   }
 };
 
-export const actualizarProducto = async (id, producto) => {
-  try {
-    const res = await fetch(`http://localhost:3000/productos/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(producto),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Error al actualizar producto");
-    }
-
-    return await res.json();
-  } catch (err) {
-    alert("Error al actualizar producto: " + err.message);
-    return null;
-  }
+export const completarPedido = (id_pedido) => {
+  return fetch(`${API}/pedidos/${id_pedido}/completar`, {
+    method: "PATCH",
+    credentials: "include",
+  });
 };
 
-// Obtener productos habilitados de un cliente
-export const getProductosHabilitados = async (id_cliente) => {
-  const res = await fetch(
-    `http://localhost:3000/clientes/${id_cliente}/productos-habilitados`
-  );
-  if (!res.ok) throw new Error("Error al obtener productos habilitados");
-  return await res.json();
+export const eliminarPedido = (id_pedido) => {
+  return fetch(`${API}/pedidos/${id_pedido}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
 };
 
-// Asignar productos habilitados (reemplaza los existentes)
+export const actualizarPedido = (id, data) =>
+  fetch(`${API}/pedidos/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  }).then((res) => res.ok);
+
+export const getPedidoPorId = (id) =>
+  fetchConSesion(`${API}/pedidos/${id}`);
+
+export const getProductosHabilitados = (id_cliente) =>
+  fetchConSesion(`${API}/clientes/${id_cliente}/productos-habilitados`);
+
 export const setProductosHabilitados = async (id_cliente, productos) => {
-  const res = await fetch(
-    `http://localhost:3000/clientes/${id_cliente}/productos-habilitados`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productos }),
-    }
-  );
+  const res = await fetch(`${API}/clientes/${id_cliente}/productos-habilitados`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productos }),
+    credentials: "include",
+  });
 
   if (!res.ok) {
     const error = await res.json();
@@ -161,42 +123,28 @@ export const setProductosHabilitados = async (id_cliente, productos) => {
 };
 
 export const getPedidosProximos = (desde, hasta) =>
-  fetch(
-    `http://localhost:3000/pedidos/proximos?desde=${desde}&hasta=${hasta}`
-  ).then((r) => (r.ok ? r.json() : []));
+  fetch(`${API}/pedidos/proximos?desde=${desde}&hasta=${hasta}`, {
+    credentials: "include",
+  }).then((r) => (r.ok ? r.json() : []));
 
 export const getPedidosPorFecha = (desde, hasta) =>
-  fetch(`http://localhost:3000/pedidos?desde=${desde}&hasta=${hasta}`).then(
-    (res) => (res.ok ? res.json() : [])
-  );
+  fetch(`${API}/pedidos?desde=${desde}&hasta=${hasta}`, {
+    credentials: "include",
+  }).then((res) => (res.ok ? res.json() : []));
 
-export const getPedidosPorSemana = async () => {
-  const res = await fetch("http://localhost:3000/pedidos/semanal");
-  if (!res.ok) throw new Error("Error al obtener pedidos por semana");
-  return await res.json();
-};
-
-export const getUltimoPedidoPorCliente = async (id_cliente) => {
-  const res = await fetch(`http://localhost:3000/pedidos/ultimo/${id_cliente}`);
-  if (!res.ok) throw new Error("Error al obtener último pedido del cliente");
-  return await res.json();
-};
-
+export const getPedidosPorSemana = () => fetchConSesion(`${API}/pedidos/semanal`);
+export const getUltimoPedidoPorCliente = (id_cliente) => fetchConSesion(`${API}/pedidos/ultimo/${id_cliente}`);
 
 // PROVEEDORES
-
-export const getProveedores = async () => {
-  const res = await fetch("http://localhost:3000/proveedores");
-  if (!res.ok) throw new Error("Error al obtener proveedores");
-  return await res.json();
-};
+export const getProveedores = () => fetchConSesion(`${API}/proveedores`);
 
 export const crearProveedor = async (proveedor) => {
   try {
-    const res = await fetch("http://localhost:3000/proveedores", {
+    const res = await fetch(`${API}/proveedores`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(proveedor),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -213,10 +161,11 @@ export const crearProveedor = async (proveedor) => {
 
 export const actualizarProveedor = async (id, proveedor) => {
   try {
-    const res = await fetch(`http://localhost:3000/proveedores/${id}`, {
+    const res = await fetch(`${API}/proveedores/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(proveedor),
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -233,8 +182,9 @@ export const actualizarProveedor = async (id, proveedor) => {
 
 export const eliminarProveedor = async (id) => {
   try {
-    const res = await fetch(`http://localhost:3000/proveedores/${id}`, {
+    const res = await fetch(`${API}/proveedores/${id}`, {
       method: "DELETE",
+      credentials: "include",
     });
 
     if (!res.ok) {
@@ -248,3 +198,46 @@ export const eliminarProveedor = async (id) => {
     return null;
   }
 };
+
+export const crearProducto = async (producto) => {
+  try {
+    const res = await fetch(`${API}/productos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(producto),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear el producto");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear producto: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarProducto = async (id, producto) => {
+  try {
+    const res = await fetch(`${API}/productos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(producto),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar el producto");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar producto: " + err.message);
+    return null;
+  }
+};
+

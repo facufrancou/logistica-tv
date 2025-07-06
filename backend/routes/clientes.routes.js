@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/clientes.controller');
+const { validarSesion } = require('../middlewares/auth');
 
-router.get('/', controller.getClientes);
-router.post('/', controller.createCliente);  
-router.put('/:id', controller.updateCliente);
+router.get('/', validarSesion, controller.getClientes);
+router.post('/', validarSesion, controller.createCliente);
+router.put('/:id', validarSesion, controller.updateCliente);
+router.get('/:id/productos-habilitados', validarSesion, controller.getProductosHabilitados);
+router.put('/:id/productos-habilitados', validarSesion, controller.setProductosHabilitados);
 
-// NUEVOS ENDPOINTS: productos habilitados por cliente
-router.get('/:id/productos-habilitados', controller.getProductosHabilitados);
-router.put('/:id/productos-habilitados', controller.setProductosHabilitados);
+router.get('/proximos', validarSesion, controller.getClientesConPedidosProximos);
+
+
 
 module.exports = router;

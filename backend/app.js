@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();const session = require('express-session');
+const { validarSesion } = require('./middlewares/auth');
 
 app.use(session({
   secret: 'clave_secreta_segura',

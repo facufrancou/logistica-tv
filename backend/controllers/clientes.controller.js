@@ -94,3 +94,62 @@ exports.setProductosHabilitados = (req, res) => {
     });
   });
 };
+
+exports.getClientesConPedidosProximos = (req, res) => {
+  const dias = parseInt(req.query.dias) || 0;
+
+  let query = `
+    SELECT 
+      c.id_cliente,
+      c.nombre,
+      c.cuit,
+      c.email,
+      c.telefono,
+      p.fecha_proximo_pedido
+    FROM clientes c
+    JOIN pedidos p ON c.id_cliente = p.id_cliente
+    WHERE p.fecha_proximo_pedido IS NOT NULL
+      AND p.fecha_proximo_pedido >= CURDATE()
+      AND p.estado != 'completado'
+  `;
+
+  if (dias > 0) {
+    query += ` AND p.fecha_proximo_pedido <= DATE_ADD(CURDATE(), INTERVAL ${dias} DAY)`;
+  }
+
+  query += ` ORDER BY p.fecha_proximo_pedido ASC`;
+
+  const formatearFecha = (fechaISO) => {
+    const fecha = new Date(fechaISO);
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const anio = fecha.getFullYear();
+    return `${dia}/${mes}/${anio}`;
+  };
+
+  const normalizarTelefono = (telefono) => {
+    if (!telefono) return null;
+
+    const limpio = telefono.replace(/\D/g, '');
+    if (limpio.startsWith('549')) return `+${limpio}`;
+    if (limpio.startsWith('54')) return `+${limpio}`;
+    if (limpio.startsWith('0')) return `+549${limpio.slice(1)}`;
+    if (limpio.length === 10) return `+549${limpio}`;
+    return `+549${limpio}`;
+  };
+
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).send(err);
+
+    const formateados = results.map(cliente => ({
+      ...cliente,
+      fecha_proximo_pedido: formatearFecha(cliente.fecha_proximo_pedido),
+      telefono: normalizarTelefono(cliente.telefono)
+    }));
+
+    res.json(formateados);
+  });
+};
+
+
+
