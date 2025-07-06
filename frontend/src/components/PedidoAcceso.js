@@ -19,14 +19,17 @@ function PedidoAcceso() {
   const [mensajeAviso, setMensajeAviso] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [ultimoPedidoTemp, setUltimoPedidoTemp] = useState(null);
-  const [modalConfirmacionRepetir, setModalConfirmacionRepetir] = useState(false);
+  const [modalConfirmacionRepetir, setModalConfirmacionRepetir] =
+    useState(false);
   const [cuentaRegresiva, setCuentaRegresiva] = useState(3);
   const [forzarReload, setForzarReload] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     fetch(`http://localhost:3000/pedidos/token/${token}`)
-      .then((res) => res.ok ? res.json() : Promise.reject("Token inválido o expirado"))
+      .then((res) =>
+        res.ok ? res.json() : Promise.reject("Token inválido o expirado")
+      )
       .then((data) => {
         setCliente(data.cliente);
         setProductos(data.productos);
@@ -34,11 +37,11 @@ function PedidoAcceso() {
         // Extraer proveedores únicos
         const marcasUnicas = [];
         const idsUsados = new Set();
-        data.productos.forEach(p => {
+        data.productos.forEach((p) => {
           if (p.id_proveedor && !idsUsados.has(p.id_proveedor)) {
             marcasUnicas.push({
               id_proveedor: p.id_proveedor,
-              nombre: p.proveedor_nombre || `Marca ${p.id_proveedor}`
+              nombre: p.proveedor_nombre || `Marca ${p.id_proveedor}`,
             });
             idsUsados.add(p.id_proveedor);
           }
@@ -50,7 +53,7 @@ function PedidoAcceso() {
 
   const agruparPorProveedor = (productos) => {
     const agrupados = {};
-    productos.forEach(p => {
+    productos.forEach((p) => {
       const key = p.id_proveedor || 0;
       if (!agrupados[key]) agrupados[key] = [];
       agrupados[key].push(p);
@@ -60,18 +63,41 @@ function PedidoAcceso() {
 
   const cargarUltimoPedido = () => {
     if (!cliente?.id_cliente) return;
+
     fetch(`http://localhost:3000/pedidos/ultimo/${cliente.id_cliente}`)
-      .then((res) => res.ok ? res.json() : Promise.reject("No se pudo cargar el último pedido"))
+      .then((res) => {
+        if (!res.ok) throw new Error("No hay pedidos anteriores");
+        return res.json();
+      })
       .then((data) => {
-        if (Array.isArray(data.productos)) {
-          const filtrados = data.productos.filter((p) =>
+        if (Array.isArray(data.productos) && data.productos.length > 0) {
+          const productosDisponibles = data.productos.filter((p) =>
             productos.find((prod) => prod.id_producto === p.id_producto)
           );
-          setUltimoPedidoTemp(filtrados);
+
+          if (productosDisponibles.length === 0) {
+            setMensajeAviso(
+              "Ninguno de los productos del pedido anterior está actualmente disponible."
+            );
+            setModalAviso(true);
+            return;
+          }
+
+          setUltimoPedidoTemp(productosDisponibles);
           setModalConfirmacionRepetir(true);
+        } else {
+          setMensajeAviso(
+            "Este cliente no tiene pedidos anteriores para repetir."
+          );
+          setModalAviso(true);
         }
       })
-      .catch((err) => alert(err));
+      .catch(() => {
+        setMensajeAviso(
+          "Este cliente no tiene pedidos anteriores para repetir."
+        );
+        setModalAviso(true);
+      });
   };
 
   const confirmarRepetirPedido = () => {
@@ -133,13 +159,17 @@ function PedidoAcceso() {
           } else {
             let segundos = 3;
             setCuentaRegresiva(segundos);
-            setMensajeAviso(`Pedido enviado correctamente. Redirigiendo en ${segundos} segundos...`);
+            setMensajeAviso(
+              `Pedido enviado correctamente. Redirigiendo en ${segundos} segundos...`
+            );
             setModalAviso(true);
 
             const intervalo = setInterval(() => {
               segundos--;
               setCuentaRegresiva(segundos);
-              setMensajeAviso(`Pedido enviado correctamente. Redirigiendo en ${segundos} segundos...`);
+              setMensajeAviso(
+                `Pedido enviado correctamente. Redirigiendo en ${segundos} segundos...`
+              );
               if (segundos === 0) {
                 clearInterval(intervalo);
                 window.location.reload();
@@ -168,9 +198,17 @@ function PedidoAcceso() {
   };
 
   if (error)
-    return <div className="container mt-5"><h4>{error}</h4></div>;
+    return (
+      <div className="container mt-5">
+        <h4>{error}</h4>
+      </div>
+    );
   if (!cliente)
-    return <div className="container mt-5"><h4>Cargando...</h4></div>;
+    return (
+      <div className="container mt-5">
+        <h4>Cargando...</h4>
+      </div>
+    );
 
   return (
     <div className="container mt-4">
@@ -178,12 +216,22 @@ function PedidoAcceso() {
 
       <div className="mb-3">
         <label className="form-label">CUIT</label>
-        <input type="text" className="form-control" value={cliente.cuit} disabled />
+        <input
+          type="text"
+          className="form-control"
+          value={cliente.cuit}
+          disabled
+        />
       </div>
 
       <div className="mb-3">
         <label className="form-label">Nombre</label>
-        <input type="text" className="form-control" value={cliente.nombre} disabled />
+        <input
+          type="text"
+          className="form-control"
+          value={cliente.nombre}
+          disabled
+        />
       </div>
 
       <div className="mb-3">
@@ -203,7 +251,10 @@ function PedidoAcceso() {
       </div>
 
       <h5>Productos</h5>
-      <button className="btn btn-secondary mb-3" onClick={() => setModalOpen(true)}>
+      <button
+        className="btn btn-secondary mb-3"
+        onClick={() => setModalOpen(true)}
+      >
         + Agregar Producto
       </button>
 
@@ -212,12 +263,19 @@ function PedidoAcceso() {
       {pedido.length > 0 && (
         <ul className="list-group mb-4">
           {pedido.map((p, i) => (
-            <li key={i} className="list-group-item d-flex justify-content-between align-items-center">
+            <li
+              key={i}
+              className="list-group-item d-flex justify-content-between align-items-center"
+            >
               {obtenerNombreProducto(p.id_producto)} (x{p.cantidad})
               <span>
-                ${ (obtenerPrecioProducto(p.id_producto) * p.cantidad).toFixed(2) }
+                $
+                {(obtenerPrecioProducto(p.id_producto) * p.cantidad).toFixed(2)}
               </span>
-              <button className="btn btn-sm btn-danger ms-2" onClick={() => eliminarProducto(p.id_producto)}>
+              <button
+                className="btn btn-sm btn-danger ms-2"
+                onClick={() => eliminarProducto(p.id_producto)}
+              >
                 Eliminar
               </button>
             </li>
@@ -225,12 +283,17 @@ function PedidoAcceso() {
         </ul>
       )}
 
-      <button className="btn btn-success w-100" onClick={enviarPedido}>Enviar Pedido</button>
+      <button className="btn btn-success w-100" onClick={enviarPedido}>
+        Enviar Pedido
+      </button>
 
       {/* Modal de aviso */}
       {modalAviso && (
         <div className="modal d-block" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
+          <div
+            className="modal-dialog"
+            style={{ maxWidth: "800px", width: "90%" }}
+          >
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Aviso</h5>
@@ -262,7 +325,10 @@ function PedidoAcceso() {
       {/* Modal para confirmar repetir pedido */}
       {modalConfirmacionRepetir && (
         <div className="modal d-block" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
+          <div
+            className="modal-dialog"
+            style={{ maxWidth: "800px", width: "90%" }}
+          >
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Repetir pedido anterior</h5>
@@ -310,14 +376,25 @@ function PedidoAcceso() {
         </div>
       )}
 
-{/* Modal para agregar producto agrupado por proveedor */}
+      {/* Modal para agregar producto agrupado por proveedor */}
       {modalOpen && (
-        <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
+        <div
+          className="modal d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "#00000099" }}
+        >
+          <div
+            className="modal-dialog"
+            style={{ maxWidth: "800px", width: "90%" }}
+          >
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Agregar Producto</h5>
-                <button type="button" className="btn-close" onClick={() => setModalOpen(false)}></button>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setModalOpen(false)}
+                ></button>
               </div>
               <div className="modal-body">
                 <label className="form-label">Buscar producto</label>
@@ -328,24 +405,37 @@ function PedidoAcceso() {
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                 />
-                <div className="list-group mb-3" style={{ maxHeight: 200, overflowY: "auto" }}>
-                  {Object.entries(agruparPorProveedor(
-                    productos.filter(
-                      (p) =>
-                        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                        p.descripcion.toLowerCase().includes(busqueda.toLowerCase())
+                <div
+                  className="list-group mb-3"
+                  style={{ maxHeight: 200, overflowY: "auto" }}
+                >
+                  {Object.entries(
+                    agruparPorProveedor(
+                      productos.filter(
+                        (p) =>
+                          p.nombre
+                            .toLowerCase()
+                            .includes(busqueda.toLowerCase()) ||
+                          p.descripcion
+                            .toLowerCase()
+                            .includes(busqueda.toLowerCase())
+                      )
                     )
-                  )).map(([id_proveedor, lista]) => (
+                  ).map(([id_proveedor, lista]) => (
                     <div key={id_proveedor} className="mb-2">
                       <div className="fw-bold mb-1">
-                        {proveedores.find(p => p.id_proveedor === parseInt(id_proveedor))?.nombre || 'Sin Marca'}
+                        {proveedores.find(
+                          (p) => p.id_proveedor === parseInt(id_proveedor)
+                        )?.nombre || "Sin Marca"}
                       </div>
                       {lista.map((p) => (
                         <button
                           type="button"
                           key={p.id_producto}
                           className={`list-group-item list-group-item-action ${
-                            productoSeleccionado?.id_producto === p.id_producto ? "active" : ""
+                            productoSeleccionado?.id_producto === p.id_producto
+                              ? "active"
+                              : ""
                           }`}
                           onClick={() => setProductoSeleccionado(p)}
                         >
@@ -362,12 +452,21 @@ function PedidoAcceso() {
                   className="form-control"
                   min="1"
                   value={cantidadSeleccionada}
-                  onChange={(e) => setCantidadSeleccionada(parseInt(e.target.value) || 1)}
+                  onChange={(e) =>
+                    setCantidadSeleccionada(parseInt(e.target.value) || 1)
+                  }
                 />
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={agregarProducto}>Agregar</button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={agregarProducto}>
+                  Agregar
+                </button>
               </div>
             </div>
           </div>

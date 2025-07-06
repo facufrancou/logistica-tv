@@ -6,7 +6,7 @@ import {
   getProductos,
   getProductosHabilitados,
   setProductosHabilitados,
-  getProveedores
+  getProveedores,
 } from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 
@@ -27,6 +27,10 @@ function ClienteList() {
   const [proveedores, setProveedores] = useState([]);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState("");
 
+  const [linkGenerado, setLinkGenerado] = useState("");
+  const [mostrarModalLink, setMostrarModalLink] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
   useEffect(() => {
     getProveedores().then(setProveedores);
   }, []);
@@ -43,6 +47,19 @@ function ClienteList() {
 
   const cargarClientes = () => {
     getClientes().then(setClientes);
+  };
+
+  const generarLinkParaCliente = async (idCliente) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/pedidos/link/${idCliente}`
+      );
+      const data = await res.json();
+      setLinkGenerado(data.link);
+      setMostrarModalLink(true);
+    } catch (err) {
+      console.error("Error al generar link:", err);
+    }
   };
 
   const clientesFiltrados = clientes.filter(
@@ -103,6 +120,11 @@ function ClienteList() {
   };
 
   const handleGuardar = async () => {
+    // Si el campo cuit está vacío, asignar 0
+    if (!clienteActivo.cuit || clienteActivo.cuit.trim() === "") {
+      clienteActivo.cuit = "0";
+    }
+
     if (modo === "nuevo") {
       const nuevo = await crearCliente(clienteActivo);
       if (usuario?.rol_id === 2 && productosSeleccionados.length > 0) {
@@ -171,10 +193,16 @@ function ClienteList() {
                   Ver
                 </button>
                 <button
-                  className="btn btn-sm btn-warning"
+                  className="btn btn-sm btn-warning me-2"
                   onClick={() => abrirModal(c, "editar")}
                 >
                   Editar
+                </button>
+                <button
+                  className="btn btn-sm btn-info"
+                  onClick={() => generarLinkParaCliente(c.id_cliente)}
+                >
+                  Generar Link
                 </button>
               </td>
             </tr>
@@ -313,6 +341,64 @@ function ClienteList() {
                     Guardar
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {mostrarModalLink && (
+        <div
+          className="modal d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "#00000099" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Link generado para el cliente</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setMostrarModalLink(false);
+                    setCopiado(false);
+                  }}
+                />
+              </div>
+              <div className="modal-body">
+                <input
+                  type="text"
+                  className="form-control"
+                  value={linkGenerado}
+                  readOnly
+                  onClick={(e) => e.target.select()}
+                />
+                {copiado && (
+                  <div className="text-success mt-2">
+                    ✅ Link copiado al portapapeles
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(linkGenerado);
+                    setCopiado(true);
+                    setTimeout(() => setCopiado(false), 2500);
+                  }}
+                >
+                  Copiar
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setMostrarModalLink(false);
+                    setCopiado(false);
+                  }}
+                >
+                  Cerrar
+                </button>
               </div>
             </div>
           </div>
