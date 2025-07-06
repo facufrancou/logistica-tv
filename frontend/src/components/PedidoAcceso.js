@@ -113,7 +113,7 @@ function PedidoAcceso() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id_cliente: cliente.id_cliente,
-        id_usuario: null,
+        id_usuario: 1,
         seguimiento_dist: "",
         productos: pedido,
         token,
@@ -230,7 +230,7 @@ function PedidoAcceso() {
       {/* Modal de aviso */}
       {modalAviso && (
         <div className="modal d-block" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Aviso</h5>
@@ -262,7 +262,7 @@ function PedidoAcceso() {
       {/* Modal para confirmar repetir pedido */}
       {modalConfirmacionRepetir && (
         <div className="modal d-block" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Repetir pedido anterior</h5>
@@ -313,7 +313,7 @@ function PedidoAcceso() {
 {/* Modal para agregar producto agrupado por proveedor */}
       {modalOpen && (
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Agregar Producto</h5>

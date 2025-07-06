@@ -53,8 +53,8 @@ function Navbar() {
         <div className="collapse navbar-collapse">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link" to="/pedidos">
-                Pedidos
+              <Link className="nav-link" to="/">
+                Home
               </Link>
             </li>
 
@@ -72,6 +72,11 @@ function Navbar() {
               </a>
               <ul className="dropdown-menu" aria-labelledby="gestionDropdown">
                 <li>
+                  <Link className="dropdown-item" to="/pedidos">
+                    Pedidos
+                  </Link>
+                </li>
+                <li>
                   <Link className="dropdown-item" to="/clientes">
                     Clientes
                   </Link>
@@ -86,6 +91,20 @@ function Navbar() {
                     Proveedores
                   </Link>
                 </li>
+              </ul>
+            </li>
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="#"
+                id="gestionDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Admin
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="gestionDropdown">
                 <li>
                   <Link className="dropdown-item" to="/reportes">
                     Reportes
@@ -117,7 +136,6 @@ function Navbar() {
     </nav>
   );
 }
-
 
 // ✅ Contenedor principal de rutas
 function MainRoutes() {

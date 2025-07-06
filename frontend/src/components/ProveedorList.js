@@ -90,7 +90,7 @@ function ProveedorList() {
 
       {modalOpen && proveedorActivo && (
         <div className="modal d-block" style={{ backgroundColor: '#00000099' }} tabIndex="-1">
-          <div className="modal-dialog">
+          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">

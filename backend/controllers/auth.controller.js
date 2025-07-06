@@ -14,7 +14,7 @@ exports.login = (req, res) => {
 
     const usuario = results[0];
     const match = await bcrypt.compare(password, usuario.password);
-    console.log({ passwordIngresada: password, hashEnDB: usuario.password, match });
+    /* console.log({ passwordIngresada: password, hashEnDB: usuario.password, match }); */
 
     if (!match) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
