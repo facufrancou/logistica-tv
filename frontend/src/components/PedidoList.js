@@ -19,6 +19,12 @@ function PedidoList({ pedidos, onActualizar }) {
   const [pedidoEditando, setPedidoEditando] = useState(null);
   const [pedidoVista, setPedidoVista] = useState(null);
   const [busqueda, setBusqueda] = useState("");
+  const [pedidosFiltrados, setPedidosFiltrados] = useState([]);
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   const location = useLocation();
 
@@ -31,13 +37,64 @@ function PedidoList({ pedidos, onActualizar }) {
     getProductos().then(setProductos);
   }, []);
 
-  const pedidosFiltrados = Array.isArray(pedidos)
-  ? pedidos.filter(
-      (p) =>
-        p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (p.seguimiento_dist || "").toLowerCase().includes(busqueda.toLowerCase())
-    )
-  : [];
+  const buscarPedidosPorFecha = () => {
+    if (!fechaDesde || !fechaHasta) {
+      alert("Seleccioná un rango de fechas válido");
+      return;
+    }
+
+    const desde = fechaDesde;
+    const hasta = fechaHasta;
+
+    const filtrados = pedidos.filter((p) => {
+      if (!p.fecha_pedido_iso) return false;
+
+      const fechaISO = p.fecha_pedido_iso.slice(0, 10); // YYYY-MM-DD
+
+      return fechaISO >= desde && fechaISO <= hasta;
+    });
+
+    console.log("Fechas filtradas:", desde, hasta);
+    console.log(
+      "Incluidos:",
+      filtrados.map((f) => f.id_pedido)
+    );
+
+    setPedidosFiltrados(filtrados);
+    setPagina(0);
+  };
+
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setFechaDesde("");
+    setFechaHasta("");
+    setPedidosFiltrados([]);
+    setPagina(0);
+  };
+
+  const mostrarTodosPedidos = () => {
+    setPedidosFiltrados(pedidos);
+    setPagina(0);
+  };
+
+  /* const pedidosFiltrados = Array.isArray(pedidos)
+    ? pedidos.filter((p) => {
+        const coincideBusqueda =
+          p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
+          (p.seguimiento_dist || "")
+            .toLowerCase()
+            .includes(busqueda.toLowerCase());
+
+        const fechaPedido = new Date(p.fecha_pedido);
+        const desde = fechaDesde ? new Date(fechaDesde) : null;
+        const hasta = fechaHasta ? new Date(fechaHasta) : null;
+
+        const dentroDeRango =
+          (!desde || fechaPedido >= desde) && (!hasta || fechaPedido <= hasta);
+
+        return mostrarTodos || (coincideBusqueda && dentroDeRango);
+      })
+    : []; */
 
   const pedidosMostrados = pedidosFiltrados.slice(
     pagina * pedidosPorPagina,
@@ -147,17 +204,72 @@ function PedidoList({ pedidos, onActualizar }) {
 
   return (
     <div>
-      <h2>Pedidos</h2>
+      <h2 className="mb-4">
+        <i className="bi bi-box-seam me-2"></i> Pedidos
+      </h2>
 
-      <input
-        type="text"
-        className="form-control mb-3"
-        placeholder="Buscar por cliente o seguimiento"
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
+      <div className="card mb-4 p-3 shadow-sm">
+        <h5 className="mb-3">Filtros</h5>
+        <div className="row g-2 mb-3">
+          <div className="col-auto">
+            <label className="form-label">Desde</label>
+            <input
+              type="date"
+              className="form-control"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+            />
+          </div>
+          <div className="col-auto">
+            <label className="form-label">Hasta</label>
+            <input
+              type="date"
+              className="form-control"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+            />
+          </div>
+          <div className="col-auto d-flex align-items-end gap-2">
+            <button className="btn btn-success" onClick={buscarPedidosPorFecha}>
+              Buscar por rango
+            </button>
+            <button className="btn btn-primary" onClick={mostrarTodosPedidos}>
+              Ver todos
+            </button>
+            <button className="btn btn-danger" onClick={limpiarFiltros}>
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+        <div className="mb-3">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar por cliente o seguimiento"
+            value={busqueda}
+            onChange={(e) => {
+              const texto = e.target.value;
+              setBusqueda(texto);
 
-      <table className="table">
+              const filtrados = pedidos.filter(
+                (p) =>
+                  p.cliente.toLowerCase().includes(texto.toLowerCase()) ||
+                  (p.seguimiento_dist || "")
+                    .toLowerCase()
+                    .includes(texto.toLowerCase())
+              );
+              setPedidosFiltrados(filtrados);
+              setPagina(0);
+            }}
+          />
+        </div>
+      </div>
+
+      {!loading && pedidosFiltrados.length === 0 && (
+        <p>No hay pedidos para mostrar. Usá los filtros para comenzar.</p>
+      )}
+
+      <table className="table table-striped">
         <thead>
           <tr>
             <th>ID</th>
@@ -177,32 +289,37 @@ function PedidoList({ pedidos, onActualizar }) {
               <td>{p.fecha_pedido}</td>
               <td>{p.estado}</td>
               <td>
-                <button
-                  className="btn btn-sm btn-secondary me-2"
-                  onClick={() => handleVer(p)}
-                >
-                  Ver
-                </button>
-                {p.estado !== "completado" && (
+                <div className="btn-group btn-group-sm" role="group">
                   <button
-                    className="btn btn-sm btn-warning me-2"
-                    onClick={() => handleEditar(p)}
+                    className="btn btn-secondary"
+                    onClick={() => handleVer(p)}
                   >
-                    Editar
+                    Ver
                   </button>
-                )}
-                <button
-                  className="btn btn-sm btn-success me-2"
-                  onClick={() => handleCompletar(p.id_pedido)}
-                >
-                  Completar
-                </button>
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={() => handleEliminar(p.id_pedido)}
-                >
-                  Eliminar
-                </button>
+
+                  {p.estado !== "completado" && (
+                    <button
+                      className="btn btn-warning"
+                      onClick={() => handleEditar(p)}
+                    >
+                      Editar
+                    </button>
+                  )}
+
+                  <button
+                    className="btn btn-success"
+                    onClick={() => handleCompletar(p.id_pedido)}
+                  >
+                    Completar
+                  </button>
+
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => handleEliminar(p.id_pedido)}
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

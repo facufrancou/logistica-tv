@@ -122,15 +122,32 @@ export const setProductosHabilitados = async (id_cliente, productos) => {
   return await res.json();
 };
 
-export const getPedidosProximos = (desde, hasta) =>
-  fetch(`${API}/pedidos/proximos?desde=${desde}&hasta=${hasta}`, {
+export const getPedidosProximos = async (desde, hasta) => {
+  const res = await fetch(`${API}/pedidos/proximos?desde=${desde}&hasta=${hasta}`, {
     credentials: "include",
-  }).then((r) => (r.ok ? r.json() : []));
+  });
 
-export const getPedidosPorFecha = (desde, hasta) =>
-  fetch(`${API}/pedidos?desde=${desde}&hasta=${hasta}`, {
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    console.error("❌ Error getPedidosProximos:", res.status, error);
+    throw new Error(error.error || "No se pudieron obtener los pedidos próximos");
+  }
+
+  return await res.json();
+};
+
+
+
+export const getPedidosPorFecha = (desde, hasta) => {
+  let url = `${API}/pedidos`;
+  if (desde && hasta) {
+    url += `?desde=${desde}&hasta=${hasta}`;
+  }
+
+  return fetch(url, {
     credentials: "include",
   }).then((res) => (res.ok ? res.json() : []));
+};
 
 export const getPedidosPorSemana = () => fetchConSesion(`${API}/pedidos/semanal`);
 export const getUltimoPedidoPorCliente = (id_cliente) => fetchConSesion(`${API}/pedidos/ultimo/${id_cliente}`);

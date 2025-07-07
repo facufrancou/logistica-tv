@@ -30,6 +30,7 @@ function ClienteList() {
   const [linkGenerado, setLinkGenerado] = useState("");
   const [mostrarModalLink, setMostrarModalLink] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const [clienteLinkGenerado, setClienteLinkGenerado] = useState(null);
 
   useEffect(() => {
     getProveedores().then(setProveedores);
@@ -49,12 +50,29 @@ function ClienteList() {
     getClientes().then(setClientes);
   };
 
+  /*   const generarLinkParaCliente = async (idCliente) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/pedidos/link/${idCliente}`
+      );
+      const data = await res.json();
+      setLinkGenerado(data.link);
+      setMostrarModalLink(true);
+    } catch (err) {
+      console.error("Error al generar link:", err);
+    }
+  }; */
+
   const generarLinkParaCliente = async (idCliente) => {
     try {
       const res = await fetch(
         `http://localhost:3000/pedidos/link/${idCliente}`
       );
       const data = await res.json();
+
+      const cliente = clientes.find((c) => c.id_cliente === idCliente);
+      setClienteLinkGenerado(cliente);
+
       setLinkGenerado(data.link);
       setMostrarModalLink(true);
     } catch (err) {
@@ -355,13 +373,18 @@ function ClienteList() {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Link generado para el cliente</h5>
+                <h5 className="modal-title">
+                  Link generado para{" "}
+                  {clienteLinkGenerado?.nombre || "el cliente"}
+                </h5>
+
                 <button
                   type="button"
                   className="btn-close"
                   onClick={() => {
                     setMostrarModalLink(false);
                     setCopiado(false);
+                    setClienteLinkGenerado(null);
                   }}
                 />
               </div>

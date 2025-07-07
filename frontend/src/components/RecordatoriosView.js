@@ -8,17 +8,31 @@ function RecordatoriosView() {
   const [pedidoVista, setPedidoVista] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const buscarPedidos = () => {
-    if (!desde || !hasta) {
-      alert('Seleccioná un rango de fechas válido');
-      return;
-    }
+const buscarPedidos = () => {
+  if (!desde || !hasta) {
+    alert("Seleccioná un rango de fechas válido");
+    return;
+  }
 
-    setLoading(true);
-    getPedidosProximos(desde, hasta)
-      .then(data => setPedidos(data))
-      .finally(() => setLoading(false));
-  };
+  // Normalización: nos aseguramos que sea YYYY-MM-DD
+  const desdeISO = new Date(desde).toISOString().split("T")[0];
+  const hastaISO = new Date(hasta).toISOString().split("T")[0];
+
+  console.log("📅 Buscando pedidos desde:", desdeISO, "hasta:", hastaISO);
+
+  setLoading(true);
+  getPedidosProximos(desdeISO, hastaISO)
+    .then((data) => {
+      console.log("✅ Pedidos recibidos:", data);
+      setPedidos(data);
+    })
+    .catch((err) => {
+      console.error("❌ Error al obtener pedidos:", err.message);
+      alert("Error al obtener pedidos: " + err.message);
+    })
+    .finally(() => setLoading(false));
+};
+
 
   const handleVer = async (id_pedido) => {
     try {

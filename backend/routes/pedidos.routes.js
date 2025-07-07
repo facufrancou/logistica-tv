@@ -8,11 +8,12 @@ router.get('/', validarSesion, controller.getPedidos);
 router.patch('/:id/completar', validarSesion, controller.completarPedido);
 router.delete('/:id', validarSesion, controller.eliminarPedido);
 router.put('/:id', validarSesion, controller.actualizarPedido);
-router.get('/:id', validarSesion, controller.getPedidoPorId);
-router.get('/:id/repetir', validarSesion, controller.getPedidoParaRepetir);
+
 router.get('/semanal', validarSesion, controller.getPedidosPorSemana);
 router.get('/proximos', validarSesion, controller.getPedidosProximos);
-router.get('/ultimo/:id_cliente', validarSesion, controller.getUltimoPedidoPorCliente);
+router.get('/ultimo/:id_cliente', controller.getUltimoPedidoPorCliente);
+router.get('/:id/repetir', validarSesion, controller.getPedidoParaRepetir);
+router.get('/:id', validarSesion, controller.getPedidoPorId); // ⬅️ ESTA VA AL FINAL
 
 // 🔓 Rutas públicas (para token por link o acceso externo)
 router.post('/', controller.createPedido); // acepta token por query
