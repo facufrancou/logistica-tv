@@ -13,10 +13,44 @@ Consulta n8n
 Tipo de request: HTTP Request
 Método: GET
 
-URL: http://localhost:3000/clientes/proximos?dias=7
+URL: https://api.tierravolga.com.ar/clientes/proximos?dias=7
 
 Headers:
 
 Key: Authorization
 
 Value: Bearer c3715755fd409ae5c0f929ce024e1577
+
+APP.JS de backup
+
+const express = require('express');
+const cors = require('cors');
+const app = express();const session = require('express-session');
+const { validarSesion } = require('./middlewares/auth');
+require('dotenv').config();
+
+app.use(session({
+  secret: 'clave_secreta_segura',
+  resave: false,
+  saveUninitialized: false,
+}));
+
+
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true
+}));
+app.use(express.json());
+
+// Rutas
+app.use('/clientes', require('./routes/clientes.routes'));
+app.use('/productos', require('./routes/productos.routes'));
+app.use('/pedidos', require('./routes/pedidos.routes'));
+app.use('/proveedores', require('./routes/proveedores.routes'));
+
+
+const authRoutes = require('./routes/auth.routes');
+app.use('/auth', authRoutes);
+
+
+module.exports = app;

@@ -1,31 +1,45 @@
 const express = require('express');
 const cors = require('cors');
-const app = express();const session = require('express-session');
-const { validarSesion } = require('./middlewares/auth');
+const session = require('express-session');
 require('dotenv').config();
 
+const app = express();
+
+// 🔐 Cloudflare HTTPS requiere esto para cookies seguras
+app.set('trust proxy', 1);
+
+// ✅ CORS abierto o limitado según entorno
+app.use(cors({
+  origin: true,           // o tu dominio exacto
+  credentials: true
+}));
+
+// Middleware JSON
+app.use(express.json());
+
+// 🔒 Config sesión
 app.use(session({
   secret: 'clave_secreta_segura',
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    sameSite: 'lax',       // ✅ suficiente si frontend y backend están juntos
+    secure: true           // 🔐 porque Cloudflared da HTTPS
+  }
 }));
 
-
-app.use(cors({
-  origin: 'http://localhost:3001',
-  credentials: true
-}));
-app.use(express.json());
-
-// Rutas
+// Rutas API
+app.use('/auth', require('./routes/auth.routes'));
 app.use('/clientes', require('./routes/clientes.routes'));
 app.use('/productos', require('./routes/productos.routes'));
 app.use('/pedidos', require('./routes/pedidos.routes'));
 app.use('/proveedores', require('./routes/proveedores.routes'));
 
-
-const authRoutes = require('./routes/auth.routes');
-app.use('/auth', authRoutes);
-
+// 🔚 Servir el frontend (ya agregado)
+const path = require("path");
+app.use(express.static(path.join(__dirname, "build")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
 module.exports = app;
