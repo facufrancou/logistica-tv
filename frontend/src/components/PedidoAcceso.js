@@ -12,7 +12,7 @@ function PedidoAcceso() {
   const [pedido, setPedido] = useState([]);
   const [fechaProximoPedido, setFechaProximoPedido] = useState("");
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
+  const [cantidadSeleccionada, setCantidadSeleccionada] = useState("");
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAviso, setModalAviso] = useState(false);
@@ -26,7 +26,7 @@ function PedidoAcceso() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`http://localhost:3000/pedidos/token/${token}`)
+    fetch(`https://api.tierravolga.com.ar/pedidos/token/${token}`)
       .then((res) =>
         res.ok ? res.json() : Promise.reject("Token inválido o expirado")
       )
@@ -64,7 +64,7 @@ function PedidoAcceso() {
   const cargarUltimoPedido = () => {
     if (!cliente?.id_cliente) return;
 
-    fetch(`http://localhost:3000/pedidos/ultimo/${cliente.id_cliente}`)
+    fetch(`https://api.tierravolga.com.ar/pedidos/ultimo/${cliente.id_cliente}`)
       .then((res) => {
         if (!res.ok) throw new Error("No hay pedidos anteriores");
         return res.json();
@@ -107,7 +107,8 @@ function PedidoAcceso() {
   };
 
   const agregarProducto = () => {
-    if (!productoSeleccionado || cantidadSeleccionada < 1) return;
+    if (!productoSeleccionado || !cantidadSeleccionada || cantidadSeleccionada < 1)
+      return;
 
     const id_producto = productoSeleccionado.id_producto;
     const yaExiste = pedido.find((p) => p.id_producto === id_producto);
@@ -120,12 +121,12 @@ function PedidoAcceso() {
         )
       );
     } else {
-      setPedido([...pedido, { id_producto, cantidad: cantidadSeleccionada }]);
+      setPedido([...pedido, { id_producto, cantidad: Number(cantidadSeleccionada) }]);
     }
 
     setProductoSeleccionado(null);
     setBusqueda("");
-    setCantidadSeleccionada(1);
+    setCantidadSeleccionada("");
     setModalOpen(false);
   };
 
@@ -134,7 +135,7 @@ function PedidoAcceso() {
   };
 
   const enviarPedido = () => {
-    fetch("http://localhost:3000/pedidos", {
+    fetch("https://api.tierravolga.com.ar/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -452,9 +453,7 @@ function PedidoAcceso() {
                   className="form-control"
                   min="1"
                   value={cantidadSeleccionada}
-                  onChange={(e) =>
-                    setCantidadSeleccionada(parseInt(e.target.value) || 1)
-                  }
+                  onChange={e => setCantidadSeleccionada(e.target.value.replace(/\D/g, ""))}
                 />
               </div>
               <div className="modal-footer">

@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
 
   // Al iniciar, verificar si ya hay sesión
   useEffect(() => {
-    fetch("http://localhost:3000/auth/me", { credentials: "include" })
+    fetch("https://api.tierravolga.com.ar/auth/me", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setUsuario(data);
@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const res = await fetch("http://localhost:3000/auth/login", {
+    const res = await fetch("https://api.tierravolga.com.ar/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await fetch("http://localhost:3000/auth/logout", {
+    await fetch("https://api.tierravolga.com.ar/auth/logout", {
       method: "POST",
       credentials: "include",
     });

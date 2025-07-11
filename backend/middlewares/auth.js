@@ -1,4 +1,5 @@
 function validarSesion  (req, res, next) {
+  if (process.env.NODE_ENV === 'development') return next(); // Desactiva auth en desarrollo
   if (!req.session || !req.session.usuario) {
     return res.status(401).json({ error: 'No autorizado' });
   }
@@ -6,6 +7,7 @@ function validarSesion  (req, res, next) {
 };
 
 function validarApiKey(req, res, next) {
+  if (process.env.NODE_ENV === 'development') return next(); // Desactiva auth en desarrollo
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {

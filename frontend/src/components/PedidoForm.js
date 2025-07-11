@@ -19,7 +19,7 @@ function PedidoForm({ onPedidoCreado }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
+  const [cantidadSeleccionada, setCantidadSeleccionada] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
@@ -40,7 +40,7 @@ function PedidoForm({ onPedidoCreado }) {
   };
 
   const handleAgregarProducto = () => {
-    if (!productoSeleccionado || cantidadSeleccionada < 1) return;
+    if (!productoSeleccionado || !cantidadSeleccionada || cantidadSeleccionada < 1) return;
 
     const yaExiste = form.productos.find(
       (p) => p.id_producto === productoSeleccionado.id_producto
@@ -50,7 +50,7 @@ function PedidoForm({ onPedidoCreado }) {
         ...prev,
         productos: prev.productos.map((p) =>
           p.id_producto === productoSeleccionado.id_producto
-            ? { ...p, cantidad: cantidadSeleccionada }
+            ? { ...p, cantidad: Number(cantidadSeleccionada) }
             : p
         ),
       }));
@@ -61,7 +61,7 @@ function PedidoForm({ onPedidoCreado }) {
           ...prev.productos,
           {
             id_producto: productoSeleccionado.id_producto,
-            cantidad: cantidadSeleccionada,
+            cantidad: Number(cantidadSeleccionada),
           },
         ],
       }));
@@ -69,7 +69,7 @@ function PedidoForm({ onPedidoCreado }) {
 
     setProductoSeleccionado(null);
     setBusqueda("");
-    setCantidadSeleccionada(1);
+    setCantidadSeleccionada("");
     setModalOpen(false);
   };
 
@@ -246,9 +246,7 @@ function PedidoForm({ onPedidoCreado }) {
                   className="form-control"
                   min="1"
                   value={cantidadSeleccionada}
-                  onChange={(e) =>
-                    setCantidadSeleccionada(parseInt(e.target.value) || 1)
-                  }
+                  onChange={e => setCantidadSeleccionada(e.target.value.replace(/\D/g, ""))}
                 />
               </div>
               <div className="modal-footer">

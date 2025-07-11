@@ -53,7 +53,7 @@ function ClienteList() {
   /*   const generarLinkParaCliente = async (idCliente) => {
     try {
       const res = await fetch(
-        `http://localhost:3000/pedidos/link/${idCliente}`
+        `https://api.tierravolga.com.ar/pedidos/link/${idCliente}`
       );
       const data = await res.json();
       setLinkGenerado(data.link);
@@ -66,7 +66,7 @@ function ClienteList() {
   const generarLinkParaCliente = async (idCliente) => {
     try {
       const res = await fetch(
-        `http://localhost:3000/pedidos/link/${idCliente}`
+        `https://api.tierravolga.com.ar/pedidos/link/${idCliente}`
       );
       const data = await res.json();
 

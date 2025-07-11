@@ -127,7 +127,7 @@ exports.getClientesConPedidosProximos = (req, res) => {
     return `${dia}/${mes}/${anio}`;
   };
 
-  const normalizarTelefono = (telefono) => {
+  /* const normalizarTelefono = (telefono) => {
     if (!telefono) return null;
 
     const limpio = telefono.replace(/\D/g, '');
@@ -137,14 +137,20 @@ exports.getClientesConPedidosProximos = (req, res) => {
     if (limpio.length === 10) return `+549${limpio}`;
     return `+549${limpio}`;
   };
-
+ */
   db.query(query, (err, results) => {
     if (err) return res.status(500).send(err);
 
-    const formateados = results.map(cliente => ({
+   /*  const formateados = results.map(cliente => ({
       ...cliente,
       fecha_proximo_pedido: formatearFecha(cliente.fecha_proximo_pedido),
       telefono: normalizarTelefono(cliente.telefono)
+    }));
+ */
+    const formateados = results.map(cliente => ({
+      ...cliente,
+      fecha_proximo_pedido: formatearFecha(cliente.fecha_proximo_pedido),
+      telefono: cliente.telefono
     }));
 
     res.json(formateados);
