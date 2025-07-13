@@ -411,7 +411,7 @@ exports.getUltimoPedidoPorCliente = (req, res) => {
 
     db.query(
       `
-      SELECT pr.nombre, pr.descripcion, dp.cantidad
+      SELECT pr.id_producto, pr.nombre, pr.descripcion, dp.cantidad
       FROM detalle_pedido dp
       JOIN productos pr ON dp.id_producto = pr.id_producto
       WHERE dp.id_pedido = ?

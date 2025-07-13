@@ -71,19 +71,7 @@ function PedidoAcceso() {
       })
       .then((data) => {
         if (Array.isArray(data.productos) && data.productos.length > 0) {
-          const productosDisponibles = data.productos.filter((p) =>
-            productos.find((prod) => prod.id_producto === p.id_producto)
-          );
-
-          if (productosDisponibles.length === 0) {
-            setMensajeAviso(
-              "Ninguno de los productos del pedido anterior está actualmente disponible."
-            );
-            setModalAviso(true);
-            return;
-          }
-
-          setUltimoPedidoTemp(productosDisponibles);
+          setUltimoPedidoTemp(data.productos);
           setModalConfirmacionRepetir(true);
         } else {
           setMensajeAviso(
@@ -268,10 +256,16 @@ function PedidoAcceso() {
               key={i}
               className="list-group-item d-flex justify-content-between align-items-center"
             >
-              {obtenerNombreProducto(p.id_producto)} (x{p.cantidad})
+              <div>
+                <strong>{p.nombre || obtenerNombreProducto(p.id_producto)}</strong> (x{p.cantidad})<br />
+                <span className="text-muted">{p.descripcion}</span>
+                {p.proveedor_nombre && (
+                  <span className="ms-2">Proveedor: {p.proveedor_nombre}</span>
+                )}
+              </div>
               <span>
                 $
-                {(obtenerPrecioProducto(p.id_producto) * p.cantidad).toFixed(2)}
+                {p.precio_unitario ? (p.precio_unitario * p.cantidad).toFixed(2) : (obtenerPrecioProducto(p.id_producto) * p.cantidad).toFixed(2)}
               </span>
               <button
                 className="btn btn-sm btn-danger ms-2"
@@ -347,12 +341,16 @@ function PedidoAcceso() {
                       key={i}
                       className="list-group-item d-flex justify-content-between"
                     >
-                      {obtenerNombreProducto(p.id_producto)} (x{p.cantidad})
+                      <div>
+                        <strong>{p.nombre}</strong> (x{p.cantidad})<br />
+                        <span className="text-muted">{p.descripcion}</span>
+                        {p.proveedor_nombre && (
+                          <span className="ms-2">Proveedor: {p.proveedor_nombre}</span>
+                        )}
+                      </div>
                       <span>
                         $
-                        {(
-                          obtenerPrecioProducto(p.id_producto) * p.cantidad
-                        ).toFixed(2)}
+                        {p.precio_unitario ? (p.precio_unitario * p.cantidad).toFixed(2) : "0.00"}
                       </span>
                     </li>
                   ))}
