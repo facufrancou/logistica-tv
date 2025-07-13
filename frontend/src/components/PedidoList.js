@@ -103,8 +103,18 @@ function PedidoList({ pedidos, onActualizar }) {
   const totalPaginas = Math.ceil(pedidosFiltrados.length / pedidosPorPagina);
 
   const handleCompletar = async (id) => {
-    await completarPedido(id);
-    onActualizar();
+    try {
+      await completarPedido(id);
+
+      // Actualiza el estado local respetando los filtros actuales
+      setPedidosFiltrados((prevPedidos) =>
+        prevPedidos.map((p) =>
+          p.id_pedido === id ? { ...p, estado: "completado" } : p
+        )
+      );
+    } catch (error) {
+      console.error("Error al completar el pedido:", error);
+    }
   };
 
   const handleEliminar = async (id) => {
