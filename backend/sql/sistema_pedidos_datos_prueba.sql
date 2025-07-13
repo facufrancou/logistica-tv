@@ -4,6 +4,9 @@ INSERT INTO rol (rol_type) VALUES (1), (2);
 
 -- Insertar usuarios
 INSERT INTO usuarios (nombre, email, password, rol_id) VALUES
+('Juan Manuel Torossi', 'jtorossi', '$2b$10$1NeCjSssp8oRHqh/lvU9/eLKNCteV3fiTkJoonv2Z96cM2piIJ0Vq', 1),
+('Leonardo Costa', 'lcosta', '$2b$10$MAeMwKSRnwqkGbZGWFnrxOmoDBkmX1tJYIk2PIMGnr5MrHwm49fhC', 1),
+('Ignacio Elua', 'ielua', '$2b$10$7Cv.6Mz/nwJEB1MDEz4X2eULKyrZUzc10qbBzK5pVdH9DgHUECCr.', 1),
 ('Usuario', 'user', '$2b$10$nkMUdKNS.W4HRvJnTCT21uIMRWo5QQItsCGeG5nmCPSuJutfSyZd2', 1),
 ('Administrador', 'admin', '$2b$10$7HpZa4w3hETdxv6xBGDOg.kKY8VT97hvQlcr5W75p9YzHdtEE7nwm', 2);
 

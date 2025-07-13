@@ -1,0 +1,72 @@
+NUEVAS FUNCIONALIDADES PARA SISTEMA DE GESTIÓN INTEGRAL
+
+1. Gestión de Stock y Lotes
+- Control de inventario por producto, lote y ubicación.
+- Alertas de stock mínimo y vencimientos.
+- Movimientos de entrada/salida (compras, ventas, ajustes, devoluciones).
+- Tabla: lotes
+
+2. Gestión de Compras
+- Registro y seguimiento de órdenes de compra a proveedores.
+- Recepción de mercadería y actualización automática de stock.
+- Historial de compras por proveedor y producto.
+- Tablas: ordenes_compra, detalle_orden_compra
+
+3. Gestión de Ventas
+- Presupuestos y pedidos de clientes.
+- Facturación electrónica y remitos.
+- Gestión de precios, descuentos y promociones.
+
+4. Gestión de Clientes y Cuentas Corrientes
+- Ficha completa de clientes (datos, historial, productos habilitados).
+- Seguimiento de cuentas corrientes, pagos y saldos.
+- Gestión de cobranzas y vencimientos.
+- Tablas: cuentas_corrientes, movimientos_ctacte
+
+5. Gestión de Proveedores
+- Ficha de proveedores, historial de compras y condiciones comerciales.
+- Evaluación de desempeño y ranking de proveedores.
+
+6. Reportes y Tableros
+- Reportes de ventas, compras, stock, cuentas corrientes, rentabilidad.
+- Tablero de indicadores clave (KPI): ventas por especie, productos más vendidos, clientes top, etc.
+
+7. Trazabilidad y Lotes
+- Registro de lotes y vencimientos para cada producto.
+- Trazabilidad de productos desde la compra hasta la venta.
+
+8. Gestión de usuarios y permisos
+- Perfiles avanzados: vendedor, administrativo, gerente, etc.
+- Auditoría de acciones y registro de actividad.
+- Tabla: auditoria
+
+9. Agenda y Recordatorios
+- Recordatorios automáticos para próximos pedidos, vencimientos, visitas comerciales.
+- Integración con calendario.
+
+10. Integración con e-commerce y apps móviles
+- Portal web para clientes (pedidos online, consulta de cuenta corriente).
+- App móvil para vendedores y clientes.
+
+11. Gestión de logística y reparto
+- Planificación de rutas de entrega.
+- Seguimiento de envíos y entregas.
+
+12. Gestión de productos veterinarios
+- Catálogo por especie (cerdos, rumiantes, avícola).
+- Fichas técnicas, documentos y recomendaciones de uso.
+
+13. Gestión de campañas y marketing
+- Envío de promociones y novedades a clientes.
+- Segmentación por especie, zona, historial de compra.
+
+14. Escalabilidad
+- Estructura de base de datos preparada para agregar nuevas tablas y funcionalidades sin romper lo existente.
+- Uso de claves foráneas, campos opcionales y relaciones bien definidas.
+
+15. Auditoría y registro de actividad
+- Registro de acciones de usuarios para trazabilidad y seguridad.
+
+---
+
+Estas funcionalidades pueden implementarse de forma modular y escalable, agregando nuevas tablas y endpoints según las necesidades del negocio.

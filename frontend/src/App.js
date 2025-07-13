@@ -18,6 +18,9 @@ import RecordatoriosView from "./components/RecordatoriosView";
 import ReportesView from "./components/ReportesView";
 import VistaSemanal from "./components/VistaSemanal";
 import ProveedorList from "./components/ProveedorList";
+import SistemaView from "./components/SistemaView";
+import UsuarioForm from "./components/UsuarioForm";
+import CtaCteForm from "./components/CtaCteForm";
 
 import { getPedidos } from "./services/api";
 import { useEffect, useState, useContext } from "react";
@@ -90,6 +93,25 @@ function Navbar() {
                 <li><Link className="dropdown-item" to="/reportes">Reportes</Link></li>
                 <li><Link className="dropdown-item" to="/recordatorios">Próximos pedidos</Link></li>
                 <li><Link className="dropdown-item" to="/semanal">Vista Semanal</Link></li>
+              </ul>
+            </li>
+
+            {/* Sistema: usuarios y cuentas corrientes */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="#"
+                id="sistemaDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Sistema
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="sistemaDropdown">
+                <li><Link className="dropdown-item" to="/sistema">Panel Sistema</Link></li>
+                <li><Link className="dropdown-item" to="/sistema/usuarios">Crear usuario de sistema</Link></li>
+                <li><Link className="dropdown-item" to="/sistema/ctacte">Crear Cta. Cte.</Link></li>
               </ul>
             </li>
           </ul>
@@ -189,6 +211,9 @@ function MainRoutes() {
             </RutaPrivada>
           }
         />
+        <Route path="/sistema" element={<RutaPrivada><SistemaView /></RutaPrivada>} />
+        <Route path="/sistema/usuarios" element={<RutaPrivada><UsuarioForm /></RutaPrivada>} />
+        <Route path="/sistema/ctacte" element={<RutaPrivada><CtaCteForm /></RutaPrivada>} />
       </Routes>
     </div>
   );

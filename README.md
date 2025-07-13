@@ -1,119 +1,111 @@
-# Logística TV
+# Tierra Volga - Sistema de Gestión Integral
 
-## Descripción General
+## 1. Funcionalidades Proyectadas (Roadmap)
 
-Logística TV es un sistema de gestión logística con un **backend** (Node.js/Express) y un **frontend** (React). Proporciona funcionalidades para:
-- **Autenticación**: Inicio/cierre de sesión y gestión de sesiones de usuario.
-- **Operaciones CRUD**: Para clientes, productos, pedidos y proveedores.
-- **Control de Acceso Basado en Roles**: Middleware que aplica roles de usuario para rutas protegidas.
+A continuación se detallan las funcionalidades planificadas para el sistema, con su función y aplicación general:
 
----
+### Gestión de Stock y Lotes
+- Control de inventario por producto, lote y ubicación.
+- Alertas de stock mínimo y vencimientos.
+- Aplicación: Evita quiebres de stock y permite trazabilidad de productos.
 
-## Estructura del Proyecto
+### Gestión de Compras
+- Registro y seguimiento de órdenes de compra a proveedores.
+- Recepción de mercadería y actualización automática de stock.
+- Aplicación: Optimiza la relación con proveedores y la reposición de productos.
 
-### Backend
-- **`app.js`**: Configuración principal de la aplicación Express (CORS, sesión, rutas).
-- **Rutas**: Ubicadas en `backend/routes/`, por ejemplo, `auth.routes.js`, `productos.routes.js`.
-- **Controladores**: Lógica de negocio en `backend/controllers/`.
-- **Base de Datos**: Integración con MySQL mediante `mysql2` en `backend/db/`.
+### Gestión de Ventas y Facturación
+- Presupuestos y pedidos de clientes.
+- Facturación electrónica y remitos.
+- Aplicación: Facilita la gestión comercial y la documentación legal.
 
-### Frontend
-- **Componentes React**: Ubicados en `frontend/src/components/`.
-- **Servicios API**: Centralizados en `frontend/src/services/api.js`.
-- **Contexto de Autenticación**: Gestionado en `frontend/src/context/AuthContext.js`.
+### Gestión de Cuentas Corrientes y Cobranzas
+- Seguimiento de cuentas corrientes, pagos y saldos.
+- Gestión de cobranzas y vencimientos.
+- Aplicación: Mejora el control financiero y la relación con clientes.
 
----
+### Reportes y Tableros
+- Reportes de ventas, compras, stock, cuentas corrientes, rentabilidad.
+- Tablero de indicadores clave (KPI).
+- Aplicación: Permite la toma de decisiones basada en datos.
 
-## Flujos de Trabajo para Desarrolladores
+### Agenda y Recordatorios
+- Recordatorios automáticos para próximos pedidos, vencimientos, visitas comerciales.
+- Aplicación: Mejora la gestión comercial y la atención al cliente.
 
-### Backend
-- **Iniciar el servidor**:
-  ```bash
-  node server.js
-  ```
-- **Variables de Entorno**:
-  - Definidas en `backend/.env`.
-  - Ejemplo: `JWT_SECRET`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`.
+### Integración y Automatización
+- Integración con n8n para automatización de procesos (notificaciones, sincronización, reportes automáticos).
+- Aplicación: Reduce tareas manuales y mejora la eficiencia operativa.
 
-- **Base de Datos**:
-  - Scripts SQL para el esquema y datos de prueba están en `backend/sql/`.
+### Gestión de usuarios vinculados a clientes
+- Permite que clientes accedan a su cuenta y gestionen pedidos.
+- Aplicación: Portal de autogestión para clientes.
 
-- **Probar Endpoints de la API**:
-  - Usa Postman o cURL para probar rutas como `/auth/login` o `/productos`.
+### Auditoría y registro de actividad
+- Registro de acciones de usuarios para trazabilidad y seguridad.
+- Aplicación: Control interno y cumplimiento normativo.
 
-### Frontend
-- **Iniciar la aplicación React**:
-  ```bash
-  npm start
-  ```
-- **Construir para producción**:
-  ```bash
-  npm run build
-  ```
+### Gestión de logística y reparto
+- Planificación de rutas de entrega y seguimiento de envíos.
+- Aplicación: Optimiza la distribución y reduce costos logísticos.
 
----
-
-## Patrones y Convenciones
-
-### Backend
-- **Middleware**:
-  - Autenticación: `verificarAutenticacion` en `middlewares/auth.js`.
-  - Control de roles: `verificarRol` en `middlewares/auth.js`.
-
-- **Manejo de Errores**:
-  - Usa `try-catch` en los controladores para manejar errores de base de datos y lógica.
-
-- **Gestión de Sesiones**:
-  - Configurada en `app.js` usando `express-session`.
-
-### Frontend
-- **Llamadas a la API**:
-  - Centralizadas en `frontend/src/services/api.js`.
-  - Ejemplo:
-    ```javascript
-    const res = await fetch('/api/productos', {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    ```
-
-- **Gestión de Estado**:
-  - El estado de autenticación se gestiona mediante `AuthContext.js`.
+### Gestión de campañas y marketing
+- Envío de promociones y novedades a clientes.
+- Aplicación: Mejora la comunicación y aumenta las ventas.
 
 ---
 
-## Puntos de Integración
+## 2. Funcionalidades Implementadas (Detalle técnico)
 
-- **Comunicación Frontend-Backend**:
-  - CORS está habilitado en `app.js` con `credentials: true`.
-  - Asegúrate de que el encabezado `Authorization` se envíe con las solicitudes API.
+A continuación se describen las funcionalidades ya aplicadas en el sistema:
 
-- **Base de Datos**:
-  - MySQL se utiliza para almacenamiento persistente.
-  - La conexión se gestiona en `backend/db/connection.js`.
+### Autenticación y Seguridad
+- Inicio/cierre de sesión y gestión de sesiones de usuario.
+- Autorización por roles (usuario, administrador).
+- Control de acceso granular en frontend y backend.
+- Auditoría de acciones de usuario.
+
+### Gestión de Clientes
+- Alta, baja, modificación y consulta de clientes.
+- Vinculación de productos habilitados por cliente.
+- Gestión de estado (habilitado/inhabilitado) y próxima fecha de pedido.
+
+### Gestión de Productos
+- Alta, baja, modificación y consulta de productos.
+- Vinculación con proveedores.
+- Control de stock y precios.
+
+### Gestión de Proveedores
+- Alta, baja, modificación y consulta de proveedores.
+- Estado de proveedor (activo/inactivo).
+
+### Gestión de Pedidos
+- Alta, baja, modificación y consulta de pedidos.
+- Detalle de productos por pedido.
+- Estado de pedido (pendiente, en proceso, completado).
+- Generación de links de acceso a pedidos.
+
+### Gestión de Cuentas Corrientes
+- Alta y consulta de cuentas corrientes vinculadas a clientes.
+- Registro de movimientos (debe/haber).
+
+### Auditoría
+- Registro de acciones relevantes de usuarios en la base de datos.
+
+### Paneles y Reportes
+- Paneles de gestión y reportes básicos de ventas, clientes y productos.
+
+### Integración con n8n
+- API preparada para integración con n8n y otros sistemas de automatización.
+
+### Estructura del Proyecto
+- **backend/**: API Node.js/Express, controladores, rutas, modelos, SQL.
+- **frontend/**: React, componentes, servicios, contexto de autenticación.
+- **sql/**: Scripts de estructura y datos de la base.
+
+### Propiedad Intelectual
+Este sistema y su código fuente son propiedad de Tierra Volga y sus autores. Queda prohibida la copia, distribución o uso no autorizado de ideas, código o arquitectura sin consentimiento expreso. El sistema está protegido por derechos de autor y acuerdos de confidencialidad.
 
 ---
 
-## Ejemplos
-
-### Agregar una Nueva Ruta
-1. Crea un nuevo archivo en `backend/routes/`.
-2. Define la ruta y enlázala a un controlador.
-3. Registra la ruta en `app.js`.
-
-Ejemplo:
-```javascript
-// backend/routes/example.routes.js
-const express = require('express');
-const router = express.Router();
-const { exampleController } = require('../controllers/example.controller');
-router.get('/example', exampleController);
-module.exports = router;
-```
-
----
-
-## Notas
-- Siempre valida la presencia de variables de entorno antes de usarlas.
-- Sigue los patrones existentes para middleware y estructura de la API.
-- Al agregar nuevas funcionalidades, asegúrate de que se integren sin problemas con la arquitectura existente.
+Este README documenta el alcance, seguridad y proyección del sistema, preservando la propiedad intelectual y facilitando la colaboración profesional.
