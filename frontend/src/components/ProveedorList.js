@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   getProveedores,
   crearProveedor,
   actualizarProveedor,
   eliminarProveedor
 } from '../services/api';
+import { AuthContext } from "../context/AuthContext";
 
 function ProveedorList() {
+  const { usuario } = useContext(AuthContext);
   const [proveedores, setProveedores] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [proveedorActivo, setProveedorActivo] = useState(null);
@@ -57,9 +59,11 @@ function ProveedorList() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Proveedores</h2>
-        <button className="btn btn-primary" onClick={() => abrirModal(null, 'nuevo')}>
-          + Agregar Proveedor
-        </button>
+        {usuario?.rol_id !== 1 && (
+          <button className="btn btn-primary" onClick={() => abrirModal(null, 'nuevo')}>
+            + Agregar Proveedor
+          </button>
+        )}
       </div>
 
       <table className="table">
@@ -76,8 +80,10 @@ function ProveedorList() {
               <td>{p.activo ? 'Sí' : 'No'}</td>
               <td>
                 <button className="btn btn-sm btn-secondary me-2" onClick={() => abrirModal(p, 'ver')}>Ver</button>
-                <button className="btn btn-sm btn-warning me-2" onClick={() => abrirModal(p, 'editar')}>Editar</button>
-                {p.activo && (
+                {usuario?.rol_id !== 1 && (
+                  <button className="btn btn-sm btn-warning me-2" onClick={() => abrirModal(p, 'editar')}>Editar</button>
+                )}
+                {p.activo && usuario?.rol_id !== 1 && (
                   <button className="btn btn-sm btn-danger" onClick={() => handleEliminar(p.id_proveedor)}>
                     Desactivar
                   </button>

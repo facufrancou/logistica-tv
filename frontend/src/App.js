@@ -69,11 +69,12 @@ function Navbar() {
               <ul className="dropdown-menu" aria-labelledby="gestionDropdown">
                 <li><Link className="dropdown-item" to="/pedidos">Pedidos</Link></li>
                 <li><Link className="dropdown-item" to="/clientes">Clientes</Link></li>
-                <li><Link className="dropdown-item" to="/productos">Productos</Link></li>
                 <li><Link className="dropdown-item" to="/proveedores">Proveedores</Link></li>
+                <li><Link className="dropdown-item" to="/productos">Productos</Link></li>
               </ul>
             </li>
 
+            {/* Admin: reportes, recordatorios, semanal */}
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle"

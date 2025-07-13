@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   getProductos,
   crearProducto,
   actualizarProducto,
   getProveedores,
 } from "../services/api";
+import { AuthContext } from "../context/AuthContext";
 
 function ProductoList() {
+  const { usuario } = useContext(AuthContext);
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
 
@@ -58,28 +60,27 @@ function ProductoList() {
   };
 
   const handleGuardar = async () => {
-  const producto = {
-    ...productoActivo,
-    precio_unitario:
-      productoActivo.precio_unitario === undefined ||
-      productoActivo.precio_unitario === ""
-        ? 0
-        : productoActivo.precio_unitario,
-    descripcion: productoActivo.descripcion || "",
-    id_proveedor:
-      productoActivo.id_proveedor === "" ? null : productoActivo.id_proveedor,
+    const producto = {
+      ...productoActivo,
+      precio_unitario:
+        productoActivo.precio_unitario === undefined ||
+        productoActivo.precio_unitario === ""
+          ? 0
+          : productoActivo.precio_unitario,
+      descripcion: productoActivo.descripcion || "",
+      id_proveedor:
+        productoActivo.id_proveedor === "" ? null : productoActivo.id_proveedor,
+    };
+
+    if (modo === "nuevo") {
+      await crearProducto(producto);
+    } else if (modo === "editar") {
+      await actualizarProducto(producto.id_producto, producto);
+    }
+
+    cerrarModal();
+    cargarProductos();
   };
-
-  if (modo === "nuevo") {
-    await crearProducto(producto);
-  } else if (modo === "editar") {
-    await actualizarProducto(producto.id_producto, producto);
-  }
-
-  cerrarModal();
-  cargarProductos();
-};
-
 
   const handleInput = (campo, valor) => {
     setProductoActivo({ ...productoActivo, [campo]: valor });
@@ -94,12 +95,14 @@ function ProductoList() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Productos</h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => abrirModal(null, "nuevo")}
-        >
-          + Agregar Producto
-        </button>
+        {usuario?.rol_id !== 1 && (
+          <button
+            className="btn btn-primary"
+            onClick={() => abrirModal(null, "nuevo")}
+          >
+            + Agregar Producto
+          </button>
+        )}
       </div>
 
       <input
@@ -136,12 +139,14 @@ function ProductoList() {
                 >
                   Ver
                 </button>
-                <button
-                  className="btn btn-sm btn-warning"
-                  onClick={() => abrirModal(p, "editar")}
-                >
-                  Editar
-                </button>
+                {usuario?.rol_id !== 1 && (
+                  <button
+                    className="btn btn-sm btn-warning"
+                    onClick={() => abrirModal(p, "editar")}
+                  >
+                    Editar
+                  </button>
+                )}
               </td>
             </tr>
           ))}

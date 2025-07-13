@@ -166,12 +166,14 @@ function ClienteList() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Clientes</h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => abrirModal(null, "nuevo")}
-        >
-          + Agregar Cliente
-        </button>
+        {usuario?.rol_id !== 1 && (
+          <button
+            className="btn btn-primary"
+            onClick={() => abrirModal(null, "nuevo")}
+          >
+            + Agregar Cliente
+          </button>
+        )}
       </div>
 
       <input
@@ -210,12 +212,14 @@ function ClienteList() {
                 >
                   Ver
                 </button>
-                <button
-                  className="btn btn-sm btn-warning me-2"
-                  onClick={() => abrirModal(c, "editar")}
-                >
-                  Editar
-                </button>
+                {usuario?.rol_id !== 1 && (
+                  <button
+                    className="btn btn-sm btn-warning me-2"
+                    onClick={() => abrirModal(c, "editar")}
+                  >
+                    Editar
+                  </button>
+                )}
                 <button
                   className="btn btn-sm btn-info"
                   onClick={() => generarLinkParaCliente(c.id_cliente)}
