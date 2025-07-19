@@ -1,0 +1,97 @@
+:root {
+  /* Colores principales de la paleta */
+  --color-principal: #3D2113; /* Marrón oscuro */
+  --color-secundario: #7D0C0A; /* Rojo oscuro */
+  --color-acento: #CCB137; /* Amarillo dorado */
+  
+  /* Variantes para hover */
+  --color-principal-hover: #4a2a19;
+  --color-secundario-hover: #9a0f0c;
+  --color-acento-hover: #dfc34e;
+  
+  /* Gradientes basados en la paleta */
+  --gradiente-principal: linear-gradient(135deg, var(--color-principal), #5a3018);
+  --gradiente-secundario: linear-gradient(135deg, var(--color-secundario), #a1100c);
+  --gradiente-acento: linear-gradient(135deg, var(--color-acento), #e0c646);
+  --gradiente-oscuro: linear-gradient(135deg, #2d1910, #3a1d12);
+  --gradiente-claro: linear-gradient(135deg, #f9f9f9, #f0f0f0);
+  
+  /* Colores de texto */
+  --color-texto-claro: #ffffff;
+  --color-texto-oscuro: #333333;
+  --color-texto-muted: #777777;
+  
+  /* Colores de fondo */
+  --color-fondo-claro: #f9f9f9;
+  --color-fondo-medio: #f0f0f0;
+  --color-fondo-oscuro: #e0e0e0;
+  
+  /* Colores de estado */
+  --color-exito: #28a745;
+  --color-error: #dc3545;
+  --color-advertencia: #ffc107;
+  --color-info: #17a2b8;
+  
+  /* Bordes y sombras */
+  --borde-radio: 6px;
+  --borde-color: #ddd;
+  --sombra-suave: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --sombra-media: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --sombra-fuerte: 0 6px 12px rgba(0, 0, 0, 0.2);
+  
+  /* Tipografía */
+  --fuente-principal: 'Adelle Sans', system-ui, -apple-system, sans-serif;
+  --tamano-texto-xs: 0.75rem;
+  --tamano-texto-sm: 0.875rem;
+  --tamano-texto-base: 1rem;
+  --tamano-texto-lg: 1.125rem;
+  --tamano-texto-xl: 1.25rem;
+  --tamano-texto-2xl: 1.5rem;
+  
+  /* Espaciado */
+  --espaciado-xs: 0.25rem;
+  --espaciado-sm: 0.5rem;
+  --espaciado-md: 1rem;
+  --espaciado-lg: 1.5rem;
+  --espaciado-xl: 2rem;
+  
+  /* Transiciones */
+  --transicion-rapida: all 0.2s ease;
+  --transicion-media: all 0.3s ease;
+  --transicion-lenta: all 0.5s ease;
+}
+
+/* Estilos base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--fuente-principal);
+  color: var(--color-texto-oscuro);
+  background-color: var(--color-fondo-claro);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Media queries para responsive design */
+@media (max-width: 1200px) {
+  :root {
+    --tamano-texto-base: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --tamano-texto-base: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  :root {
+    --tamano-texto-base: 0.85rem;
+  }
+}

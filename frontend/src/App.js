@@ -7,6 +7,19 @@ import {
 } from "react-router-dom";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
 import RutaPrivada from "./components/RutaPrivada";
+import { NotificationProvider } from "./context/NotificationContext";
+import { 
+  FaHome, 
+  FaBoxOpen, 
+  FaUsers, 
+  FaTruck, 
+  FaChartBar,
+  FaBell, 
+  FaCalendarAlt, 
+  FaCog, 
+  FaSignOutAlt,
+  FaBars
+} from "react-icons/fa";
 
 import Login from "./components/Login";
 import ClienteList from "./components/ClienteList";
@@ -24,14 +37,18 @@ import CtaCteForm from "./components/CtaCteForm";
 
 import { getPedidos } from "./services/api";
 import { useEffect, useState, useContext } from "react";
+// Importar el manejador de menús desplegables
+import "./utils/dropdownHandler";
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Navbar />
-        <MainRoutes />
-      </Router>
+      <NotificationProvider>
+        <Router>
+          <Navbar />
+          <MainRoutes />
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
   );
 }
@@ -46,93 +63,110 @@ function Navbar() {
     navigate("/login");
   };
 
-  return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-      <Link className="navbar-brand" to="/">Tierra Volga</Link>
-      <button
-        className="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
-        <span className="navbar-toggler-icon"></span>
-      </button>
+  // No mostrar la barra de navegación en la página de login
+  if (!usuario) {
+    return null;
+  }
 
-      {usuario && (
+  return (
+    <nav className="navbar navbar-expand-lg navbar-dark px-3" style={{ backgroundColor: 'var(--color-principal)' }}>
+      <div className="container-fluid">
+        <Link className="navbar-brand d-flex align-items-center" to="/">
+          <img src="/img/logo-b.svg" alt="Tierra Volga" className="navbar-logo me-2" />
+          
+        </Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <FaBars />
+        </button>
+
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link" to="/">Home</Link>
+              <Link className="nav-link d-flex align-items-center" to="/">
+                <FaHome className="me-1" />
+                <span>Home</span>
+              </Link>
             </li>
 
             {/* Dropdown de gestión */}
             <li className="nav-item dropdown">
               <a
-                className="nav-link dropdown-toggle"
+                className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
                 id="gestionDropdown"
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                Gestión
+                <FaBoxOpen className="me-1" />
+                <span>Gestión</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="gestionDropdown">
-                <li><Link className="dropdown-item" to="/pedidos">Pedidos</Link></li>
-                <li><Link className="dropdown-item" to="/clientes">Clientes</Link></li>
-                <li><Link className="dropdown-item" to="/proveedores">Proveedores</Link></li>
-                <li><Link className="dropdown-item" to="/productos">Productos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/pedidos"><FaBoxOpen className="me-2" /> Pedidos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/clientes"><FaUsers className="me-2" /> Clientes</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/proveedores"><FaTruck className="me-2" /> Proveedores</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/productos"><FaBoxOpen className="me-2" /> Productos</Link></li>
               </ul>
             </li>
 
             {/* Admin: reportes, recordatorios, semanal */}
             <li className="nav-item dropdown">
               <a
-                className="nav-link dropdown-toggle"
+                className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
                 id="adminDropdown"
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                Admin
+                <FaChartBar className="me-1" />
+                <span>Admin</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="adminDropdown">
-                <li><Link className="dropdown-item" to="/reportes">Reportes</Link></li>
-                <li><Link className="dropdown-item" to="/recordatorios">Próximos pedidos</Link></li>
-                <li><Link className="dropdown-item" to="/semanal">Vista Semanal</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes"><FaChartBar className="me-2" /> Reportes</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/recordatorios"><FaBell className="me-2" /> Próximos pedidos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/semanal"><FaCalendarAlt className="me-2" /> Vista Semanal</Link></li>
               </ul>
             </li>
 
             {/* Sistema: usuarios y cuentas corrientes */}
             <li className="nav-item dropdown">
               <a
-                className="nav-link dropdown-toggle"
+                className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
                 id="sistemaDropdown"
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                Sistema
+                <FaCog className="me-1" />
+                <span>Sistema</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="sistemaDropdown">
-                <li><Link className="dropdown-item" to="/sistema">Panel Sistema</Link></li>
-                <li><Link className="dropdown-item" to="/sistema/usuarios">Crear usuario de sistema</Link></li>
-                <li><Link className="dropdown-item" to="/sistema/ctacte">Crear Cta. Cte.</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema"><FaCog className="me-2" /> Panel Sistema</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/usuarios"><FaUsers className="me-2" /> Crear usuario</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/ctacte"><FaChartBar className="me-2" /> Crear Cta. Cte.</Link></li>
               </ul>
             </li>
           </ul>
 
-          <span className="navbar-text me-3 text-white">{usuario.nombre}</span>
-          <button className="btn btn-outline-light btn-sm" onClick={cerrarSesion}>
-            Cerrar sesión
-          </button>
+          <div className="d-flex align-items-center">
+            <span className="navbar-text me-3 text-white">{usuario.nombre}</span>
+            <button className="btn btn-outline-light btn-sm d-flex align-items-center" onClick={cerrarSesion}>
+              <FaSignOutAlt className="me-1" />
+              <span>Salir</span>
+            </button>
+          </div>
         </div>
-      )}
+      </div>
     </nav>
   );
 }
@@ -148,10 +182,15 @@ function MainRoutes() {
     if (usuario) loadPedidos();
   }, [usuario]);
 
-  if (cargando) return <div className="text-center mt-5">Cargando...</div>;
+  if (cargando) return (
+    <div className="loading-spinner">
+      <div className="spinner"></div>
+      <p>Cargando datos...</p>
+    </div>
+  );
 
   return (
-    <div className="container mt-4">
+    <div className="container-fluid px-3 px-md-4 py-4">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/pedido/acceso" element={<PedidoAcceso />} />

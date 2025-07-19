@@ -1,4 +1,6 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useContext } from "react";
+import { useNotification } from "../context/NotificationContext";
+import "../styles/loading.css";
 
 export const AuthContext = createContext();
 
@@ -45,7 +47,10 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{ usuario, login, logout, cargando }}>
       {cargando ? (
-        <div className="text-center mt-5">Cargando...</div>
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Cargando...</p>
+        </div>
       ) : (
         children
       )}

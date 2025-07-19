@@ -1,0 +1,504 @@
+/* Página completa de login */
+.login-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  min-height: 100vh;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Fondo con gradiente y animaciones */
+.login-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, 
+    var(--color-principal), 
+    var(--color-secundario),
+    var(--color-acento)
+  );
+  opacity: 0.9;
+  animation: gradientFlow 15s ease infinite;
+  background-size: 400% 400%;
+  z-index: -1;
+  will-change: background-position;
+}
+
+/* .particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.particles:before, 
+.particles:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.particles:before {
+  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.3) 100%);
+  mix-blend-mode: multiply;
+}
+
+.particles:after {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  animation: particleMove 60s linear infinite;
+} */
+
+/* Marca y título */
+.login-brand {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  transform: translateY(-50%);
+  color: white;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeSlideIn 1s forwards 0.5s;
+}
+
+.login-brand-logo {
+  width: 20px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.login-brand-name {
+  font-size: 3rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.5px;
+}
+
+.login-brand-tagline {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+/* Contenedor del formulario */
+.login-container {
+  position: absolute;
+  right: 10%;
+  top: 50%;
+  transform: translateY(-50%) translateX(50px);
+  opacity: 0;
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 2;
+}
+
+.login-container.active {
+  transform: translateY(-50%) translateX(0);
+  opacity: 1;
+}
+
+.login-card {
+  width: 100%;
+  min-width: 420px;
+  max-width: 550px;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  padding: 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card:before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(135deg, var(--color-acento), var(--color-principal));
+  border-radius: 50%;
+  opacity: 0.1;
+  z-index: -1;
+}
+
+/* Logo y título */
+.login-logo {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.login-logo img {
+  height: 80px;
+  display: inline-block;
+}
+
+.login-title {
+  font-size: 32px;
+  color: var(--color-principal);
+  margin-bottom: 8px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.login-subtitle {
+  color: var(--color-texto-muted);
+  margin-bottom: 35px;
+  font-size: 15px;
+}
+
+/* Formulario */
+.login-form {
+  text-align: left;
+}
+
+.form-group {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-texto-oscuro);
+}
+
+.input-group {
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.input-group:focus-within {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.input-group-text {
+  width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, var(--color-principal), var(--color-secundario));
+  color: rgb(255, 255, 255) !important;
+  border: none;
+  font-size: 18px;
+}
+
+.form-control {
+  flex: 1;
+  padding: 16px;
+  font-size: 16px;
+  border: none;
+  background-color: #f5f5f5;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  background-color: #ffffff;
+  outline: none;
+  box-shadow: none;
+}
+
+.form-footer {
+  margin-top: 35px;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 16px 25px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--color-principal), var(--color-secundario));
+  color: white;
+  font-weight: 600;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 20px -10px var(--color-principal);
+  letter-spacing: 0.5px;
+}
+
+.btn-login:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: all 0.6s ease;
+}
+
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 25px -12px var(--color-principal);
+}
+
+.btn-login:hover:not(:disabled):before {
+  left: 100%;
+}
+
+.btn-login:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-icon-right {
+  margin-left: 8px;
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.btn-login:hover .btn-icon-right {
+  transform: translateX(3px);
+}
+
+.login-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s infinite linear;
+  margin-right: 10px;
+}
+
+/* Animaciones */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-6px) rotate(2deg); }
+  50% { transform: translateY(-10px) rotate(0deg); }
+  75% { transform: translateY(-6px) rotate(-2deg); }
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes particleMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 500px 500px; }
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .login-brand {
+    left: 5%;
+  }
+  .login-container {
+    right: 5%;
+  }
+}
+
+@media (max-width: 992px) {
+  .login-page {
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+    position: absolute;
+    overflow-y: auto;
+  }
+  
+  .login-background {
+    position: fixed;
+    width: 100%;
+    height: 100vh;
+  }
+  
+  .particles {
+    display: none;
+  }
+  
+  .login-brand {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    padding: 80px 20px 0;
+    text-align: center;
+    animation: fadeIn 1s forwards;
+    width: 100%;
+  }
+  
+  .login-container {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    margin: 40px auto 80px;
+    max-width: 550px;
+    padding: 0 25px;
+    width: 100%;
+    animation: fadeIn 1s forwards 0.5s;
+    opacity: 0;
+  }
+  
+  .login-container.active {
+    transform: none;
+    opacity: 1;
+  }
+  
+  .login-card {
+    min-width: unset;
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-page {
+    padding: 0;
+  }
+  
+  .gradient-overlay {
+    background: linear-gradient(135deg, 
+      var(--color-principal), 
+      var(--color-secundario)
+    );
+    opacity: 0.95;
+    animation: gradientFlow 15s ease infinite;
+    background-size: 300% 300%;
+  }
+  
+  .login-brand {
+    padding: 60px 20px 0;
+  }
+  
+  .login-card {
+    padding: 35px 25px;
+    border-radius: 15px;
+  }
+  
+  .login-brand-name {
+    font-size: 2.5rem;
+  }
+  
+  .login-brand-logo {
+    width: 80px;
+  }
+  
+  .form-control {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .input-group-text {
+    width: 40px;
+  }
+  
+  .btn-login {
+    padding: 12px 20px;
+  }
+  
+  .login-title {
+    font-size: 24px;
+  }
+  
+  .login-subtitle {
+    font-size: 13px;
+    margin-bottom: 25px;
+  }
+  
+  .form-label {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  .gradient-overlay {
+    background: linear-gradient(135deg, 
+      var(--color-principal),
+      var(--color-secundario)
+    );
+    opacity: 1;
+    animation: gradientFlowMobile 10s ease infinite;
+    background-size: 200% 200%;
+  }
+  
+  .login-brand-name {
+    font-size: 2rem;
+  }
+  
+  .login-brand-logo {
+    width: 60px;
+  }
+  
+  .login-card {
+    padding: 25px 15px;
+    min-width: unset;
+  }
+  
+  .login-logo img {
+    height: 50px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  .form-control {
+    padding: 10px;
+  }
+  
+  .login-container {
+    margin: 30px auto 50px;
+  }
+}
+
+@keyframes gradientFlowMobile {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
