@@ -51,6 +51,50 @@ export const actualizarCliente = async (id, cliente) => {
   }
 };
 
+// Función específica para actualizar solo el estado (habilitado/deshabilitado) de un cliente
+export const actualizarEstadoCliente = async (id, habilitado) => {
+  try {
+    const res = await fetch(`${API}/clientes/${id}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ habilitado }),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar el estado del cliente");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar el estado del cliente: " + err.message);
+    return null;
+  }
+};
+
+// Función específica para actualizar solo el estado de bloqueo de un cliente
+export const actualizarBloqueoCliente = async (id, bloqueado) => {
+  try {
+    const res = await fetch(`${API}/clientes/${id}/bloqueo`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bloqueado }),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar el estado de bloqueo del cliente");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar el estado de bloqueo del cliente: " + err.message);
+    return null;
+  }
+};
+
 export const getProductos = () => fetchConSesion(API + "/productos");
 export const getPedidos = () => fetchConSesion(API + "/pedidos");
 

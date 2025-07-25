@@ -3,6 +3,8 @@ import {
   getClientes,
   crearCliente,
   actualizarCliente,
+  actualizarEstadoCliente,
+  actualizarBloqueoCliente,
   getProductos,
   getProductosHabilitados,
   setProductosHabilitados,
@@ -31,6 +33,7 @@ function ClienteList() {
   const [mostrarModalLink, setMostrarModalLink] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [clienteLinkGenerado, setClienteLinkGenerado] = useState(null);
+  const [mostrarBloqueados, setMostrarBloqueados] = useState(false);
 
   useEffect(() => {
     getProveedores().then(setProveedores);
@@ -81,9 +84,17 @@ function ClienteList() {
   };
 
   const clientesFiltrados = clientes.filter(
-    (c) =>
-      c.cuit?.toString().includes(busqueda) ||
-      c.nombre?.toLowerCase().includes(busqueda.toLowerCase())
+    (c) => {
+      // Primero filtramos por el estado de bloqueo
+      const pasaFiltroBloqueados = mostrarBloqueados ? c.bloqueado : !c.bloqueado;
+
+      // Luego aplicamos el filtro de búsqueda
+      const pasaFiltroBusqueda = 
+        c.cuit?.toString().includes(busqueda) ||
+        c.nombre?.toLowerCase().includes(busqueda.toLowerCase());
+      
+      return pasaFiltroBloqueados && pasaFiltroBusqueda;
+    }
   );
 
   const clientesMostrados = clientesFiltrados.slice(
@@ -101,6 +112,7 @@ function ClienteList() {
         telefono: "",
         email: "",
         habilitado: true,
+        bloqueado: false,
       }
     );
     setModo(modoAccion);
@@ -166,23 +178,44 @@ function ClienteList() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Clientes</h2>
-        {usuario?.rol_id !== 1 && (
+        <div>
           <button
-            className="btn btn-primary"
-            onClick={() => abrirModal(null, "nuevo")}
+            className={`btn me-2 ${mostrarBloqueados ? 'btn-secondary' : 'btn-dark'}`}
+            onClick={() => setMostrarBloqueados(!mostrarBloqueados)}
           >
-            + Agregar Cliente
+            {mostrarBloqueados ? 'Mostrar Activos' : 'Mostrar Bloqueados'}
           </button>
-        )}
+          {usuario?.rol_id !== 1 && (
+            <button
+              className="btn btn-primary"
+              onClick={() => abrirModal(null, "nuevo")}
+            >
+              + Agregar Cliente
+            </button>
+          )}
+        </div>
       </div>
 
-      <input
-        type="text"
-        className="form-control mb-3"
-        placeholder="Buscar por nombre o código"
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
+      <div className="row mb-3">
+        <div className="col">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar por nombre o código"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+        <div className="col-auto">
+          {mostrarBloqueados ? (
+            <div className="alert alert-dark py-1 px-2 mb-0">
+              <small>
+                <strong>Mostrando clientes bloqueados</strong> ({clientesFiltrados.length})
+              </small>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       <table className="table">
         <thead>
@@ -198,9 +231,13 @@ function ClienteList() {
         </thead>
         <tbody>
           {clientesMostrados.map((c) => (
-            <tr key={c.id_cliente}>
+            <tr key={c.id_cliente} className={c.bloqueado ? 'table-dark' : (c.habilitado ? '' : 'table-danger')}>
               <td>{c.id_cliente}</td>
-              <td>{c.nombre}</td>
+              <td>
+                <span>{c.nombre}</span>
+                {c.bloqueado ? <span className="ms-2 badge bg-dark">Bloqueado</span> : null}
+                {!c.habilitado && !c.bloqueado ? <span className="ms-2 badge bg-danger">Deshabilitado</span> : null}
+              </td>
               <td>{c.cuit}</td>
               <td>{c.direccion}</td>
               <td>{c.telefono}</td>
@@ -298,10 +335,20 @@ function ClienteList() {
                         type="checkbox"
                         id="habilitadoSwitch"
                         checked={clienteActivo.habilitado ?? true}
-                        onChange={(e) =>
-                          handleInput("habilitado", e.target.checked)
-                        }
-                        disabled={modo === "ver"}
+                        onChange={async (e) => {
+                          const nuevoEstado = e.target.checked;
+                          handleInput("habilitado", nuevoEstado);
+                          if (modo === "editar") {
+                            try {
+                              await actualizarEstadoCliente(clienteActivo.id_cliente, nuevoEstado);
+                            } catch (error) {
+                              console.error("Error al cambiar el estado del cliente:", error);
+                              // Revertir el cambio local si falla la API
+                              handleInput("habilitado", !nuevoEstado);
+                            }
+                          }
+                        }}
+                        disabled={modo === "ver" || clienteActivo.bloqueado}
                       />
                       <label
                         className="form-check-label"
@@ -309,6 +356,47 @@ function ClienteList() {
                       >
                         Cuenta habilitada para realizar pedidos
                       </label>
+                    </div>
+                    
+                    <div className="form-check form-switch mb-4">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="bloqueadoSwitch"
+                        checked={clienteActivo.bloqueado ?? false}
+                        onChange={async (e) => {
+                          const nuevoEstado = e.target.checked;
+                          handleInput("bloqueado", nuevoEstado);
+                          
+                          if (modo === "editar") {
+                            try {
+                              await actualizarBloqueoCliente(clienteActivo.id_cliente, nuevoEstado);
+                              
+                              // Si estamos bloqueando, también deshabilitar automáticamente
+                              if (nuevoEstado && clienteActivo.habilitado) {
+                                await actualizarEstadoCliente(clienteActivo.id_cliente, false);
+                                handleInput("habilitado", false);
+                              }
+                            } catch (error) {
+                              console.error("Error al cambiar el estado de bloqueo del cliente:", error);
+                              // Revertir el cambio local si falla la API
+                              handleInput("bloqueado", !nuevoEstado);
+                            }
+                          }
+                        }}
+                        disabled={modo === "ver"}
+                      />
+                      <label
+                        className="form-check-label"
+                        htmlFor="bloqueadoSwitch"
+                      >
+                        <span className="text-danger fw-bold">Bloquear cuenta completamente</span>
+                      </label>
+                      {clienteActivo.bloqueado ? (
+                        <div className="text-danger small mt-1">
+                           ⚠️ El bloqueo impide todo acceso al sistema, incluido el inicio de sesión.
+                        </div>
+                      ) : null}
                     </div>
 
                     <label className="form-label">Filtrar por marca</label>
@@ -378,7 +466,7 @@ function ClienteList() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  Link generado para{" "}
+                  Link generado para{""}
                   {clienteLinkGenerado?.nombre || "el cliente"}
                 </h5>
 
