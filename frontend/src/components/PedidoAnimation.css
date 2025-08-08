@@ -1,0 +1,22 @@
+.success-message {
+  font-size: 14px;
+  color: #666;
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.login-animation-logo {
+  height: 70px !important;
+  margin-bottom: 20px;
+}
+
+.step-3 h2.success-title {
+  color: #7a3316;
+  font-weight: bold;
+}
+
+.step-3 p.success-subtitle {
+  font-size: 16px;
+  margin-bottom: 5px;
+  color: #333;
+}

@@ -314,7 +314,7 @@ function ClienteList() {
                   (campo) => (
                     <div className="mb-2" key={campo}>
                       <label className="form-label">
-                        {campo.charAt(0).toUpperCase() + campo.slice(1)}
+                        {campo === "cuit" ? "Cod. Cliente" : campo.charAt(0).toUpperCase() + campo.slice(1)}
                       </label>
                       <input
                         type="text"

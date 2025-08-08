@@ -275,7 +275,6 @@ const exportarPDF = () => {
                 <th>Vendedor</th>
                 <th>Fecha</th>
                 <th>Estado</th>
-                <th>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -287,10 +286,9 @@ const exportarPDF = () => {
                     <td>{p.vendedor}</td>
                     <td>{p.fecha_pedido}</td>
                     <td>{p.estado}</td>
-                    <td>{p.total}</td>
                   </tr>
                   <tr>
-                    <td colSpan="6" className="bg-light">
+                    <td colSpan="5" className="bg-light">
                       <strong>Productos:</strong>
                       <ul className="mb-1">
                         {p.productos?.length > 0 ? (

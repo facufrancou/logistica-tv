@@ -37,10 +37,15 @@ import CtaCteForm from "./components/CtaCteForm";
 
 import { getPedidos } from "./services/api";
 import { useEffect, useState, useContext } from "react";
+import { observeTableMutations } from './utils/responsiveTables';
 // Importar el manejador de menús desplegables
 import "./utils/dropdownHandler";
 
 function App() {
+  useEffect(() => {
+    const obs = observeTableMutations('.table-mobile');
+    return () => obs && obs.disconnect();
+  }, []);
   return (
     <AuthProvider>
       <NotificationProvider>

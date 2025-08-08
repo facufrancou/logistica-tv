@@ -30,9 +30,10 @@ body {
 /* Contenedor con ancho máximo del 75% para pantallas grandes */
 .container-fluid {
   width: 100%;
-  max-width: 75%;
+  max-width: 85%; /* antes 75% */
   margin: 0 auto;
   padding: 0 var(--espaciado-md);
+  transition: max-width .25s ease;
 }
 
 /* Estilo para el logo en la navbar */
@@ -749,4 +750,79 @@ body {
     box-shadow: none;
     padding-left: var(--espaciado-md);
   }
+
+  /* Tablas -> convertir en lista tipo cards */
+  .table-responsive-stack table,
+  .table-responsive-stack thead,
+  .table-responsive-stack tbody,
+  .table-responsive-stack th,
+  .table-responsive-stack td,
+  .table-responsive-stack tr {
+    display: block;
+    width: 100%;
+  }
+
+  .table-responsive-stack thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .table-responsive-stack tr { 
+    margin-bottom: 1rem;
+    background: #fff;
+    border: 1px solid var(--color-fondo-medio);
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.06);
+    padding: .75rem .75rem .25rem;
+    animation: fadeInUp .4s ease;
+  }
+
+  .table-responsive-stack td {
+    border: none !important;
+    position: relative;
+    padding: .35rem .25rem .35rem 40%;
+    font-size: .85rem;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+  }
+
+  .table-responsive-stack td:before {
+    position: absolute;
+    left: .75rem;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--color-principal);
+    content: attr(data-label);
+    white-space: nowrap;
+  }
+
+  .table-responsive-stack .table-actions {
+    justify-content: flex-start;
+    gap: .5rem;
+    margin-top: .25rem;
+  }
+
+  /* Ajustes de modales en mobile */
+  .modal-dialog { margin: .5rem; }
+  .modal-content { border-radius: 16px; }
+
+  /* Botones full-width contextuales */
+  .btn-group.btn-group-sm, .acciones-grid-mobile { 
+    display: grid !important; 
+    grid-template-columns: repeat(auto-fit,minmax(120px,1fr));
+    gap: .5rem; 
+    width: 100%;
+  }
+
+  /* Animaciones ligeras */
+  @keyframes fadeInUp { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+  @keyframes scaleIn { from {opacity:0; transform: scale(.95);} to {opacity:1; transform: scale(1);} }
+  .animate-scale-in { animation: scaleIn .35s ease; }
 }
+
+/* Helper clase para marcar tablas que deben colapsar */

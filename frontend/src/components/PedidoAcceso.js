@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import PedidoConfirmadoAnimation from "./PedidoConfirmadoAnimation";
 
 function PedidoAcceso() {
   const [searchParams] = useSearchParams();
@@ -23,6 +24,8 @@ function PedidoAcceso() {
     useState(false);
   const [cuentaRegresiva, setCuentaRegresiva] = useState(3);
   const [forzarReload, setForzarReload] = useState(false);
+  const [mostrarAnimacion, setMostrarAnimacion] = useState(false);
+  const [tokenInvalido, setTokenInvalido] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -48,7 +51,10 @@ function PedidoAcceso() {
         });
         setProveedores(marcasUnicas);
       })
-      .catch((err) => setError(err));
+      .catch((err) => {
+        setTokenInvalido(true);
+        setError(err);
+      });
   }, [token]);
 
   const agruparPorProveedor = (productos) => {
@@ -146,24 +152,9 @@ function PedidoAcceso() {
             setForzarReload(true);
             setModalAviso(true);
           } else {
-            let segundos = 3;
-            setCuentaRegresiva(segundos);
-            setMensajeAviso(
-              `Pedido enviado correctamente. Redirigiendo en ${segundos} segundos...`
-            );
-            setModalAviso(true);
-
-            const intervalo = setInterval(() => {
-              segundos--;
-              setCuentaRegresiva(segundos);
-              setMensajeAviso(
-                `Pedido enviado correctamente. Redirigiendo en ${segundos} segundos...`
-              );
-              if (segundos === 0) {
-                clearInterval(intervalo);
-                window.location.reload();
-              }
-            }, 1000);
+            // Mostrar animación en lugar del modal con cuenta regresiva
+            setMostrarAnimacion(true);
+            // La redirección se maneja dentro del componente de animación
           }
         } else {
           setMensajeAviso("Error al enviar pedido: " + (data.error || ""));
@@ -181,10 +172,36 @@ function PedidoAcceso() {
     return prod ? prod.nombre : "";
   };
 
-  const obtenerPrecioProducto = (id) => {
-    const prod = productos.find((p) => p.id_producto === id);
-    return prod ? prod.precio_unitario : 0;
-  };
+  // Manejo de animación de pedido confirmado
+  if (mostrarAnimacion) {
+    return <PedidoConfirmadoAnimation onComplete={() => window.location.reload()} />;
+  }
+
+  // Manejo de token inválido con estilo mejorado
+  if (tokenInvalido) {
+    return (
+      <div className="container mt-5 text-center">
+        <div className="card p-4 shadow">
+          <div className="mb-4">
+            <img src="/img/logo.svg" alt="Tierra Volga" style={{ height: '80px' }} />
+          </div>
+          <div className="mb-3">
+            <img src="/img/logo-b.svg" alt="Tierra Volga" style={{ height: '40px', opacity: 0.6 }} />
+          </div>
+          <h3 className="text-danger mb-3">Token inválido o expirado</h3>
+          <div className="alert alert-warning">
+            <p className="mb-1"><strong>¡Atención!</strong></p>
+            <p>Este enlace ya no es válido. Esto puede deberse a que:</p>
+            <ul className="text-start">
+              <li>El pedido ya ha sido confirmado exitosamente</li>
+              <li>El token ha expirado por seguridad</li>
+            </ul>
+          </div>
+          <p className="text-muted mt-3">Si necesita realizar un nuevo pedido, por favor contáctenos para generar un nuevo enlace.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (error)
     return (
@@ -204,7 +221,7 @@ function PedidoAcceso() {
       <h3 className="mb-4 text-center">Formulario de Pedido</h3>
 
       <div className="mb-3">
-        <label className="form-label">CUIT</label>
+        <label className="form-label">Cod. Cliente</label>
         <input
           type="text"
           className="form-control"
@@ -263,10 +280,6 @@ function PedidoAcceso() {
                   <span className="ms-2">Proveedor: {p.proveedor_nombre}</span>
                 )}
               </div>
-              <span>
-                $
-                {p.precio_unitario ? (p.precio_unitario * p.cantidad).toFixed(2) : (obtenerPrecioProducto(p.id_producto) * p.cantidad).toFixed(2)}
-              </span>
               <button
                 className="btn btn-sm btn-danger ms-2"
                 onClick={() => eliminarProducto(p.id_producto)}
@@ -339,7 +352,7 @@ function PedidoAcceso() {
                   {ultimoPedidoTemp?.map((p, i) => (
                     <li
                       key={i}
-                      className="list-group-item d-flex justify-content-between"
+                      className="list-group-item"
                     >
                       <div>
                         <strong>{p.nombre}</strong> (x{p.cantidad})<br />
@@ -348,10 +361,6 @@ function PedidoAcceso() {
                           <span className="ms-2">Proveedor: {p.proveedor_nombre}</span>
                         )}
                       </div>
-                      <span>
-                        $
-                        {p.precio_unitario ? (p.precio_unitario * p.cantidad).toFixed(2) : "0.00"}
-                      </span>
                     </li>
                   ))}
                 </ul>
@@ -438,7 +447,7 @@ function PedidoAcceso() {
                           }`}
                           onClick={() => setProductoSeleccionado(p)}
                         >
-                          {p.nombre} (${p.precio_unitario}) - {p.descripcion}
+                          {p.nombre} - {p.descripcion}
                         </button>
                       ))}
                     </div>
