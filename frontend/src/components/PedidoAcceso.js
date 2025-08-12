@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import PedidoConfirmadoAnimation from "./PedidoConfirmadoAnimation";
+import "./PedidoAcceso.css";
 
 function PedidoAcceso() {
   const [searchParams] = useSearchParams();
@@ -105,17 +106,34 @@ function PedidoAcceso() {
       return;
 
     const id_producto = productoSeleccionado.id_producto;
+    const prodFuente = productos.find(p => p.id_producto === id_producto) || productoSeleccionado;
     const yaExiste = pedido.find((p) => p.id_producto === id_producto);
     if (yaExiste) {
       setPedido(
         pedido.map((p) =>
           p.id_producto === id_producto
-            ? { ...p, cantidad: p.cantidad + cantidadSeleccionada }
+            ? { 
+                ...p, 
+                // aseguro que tenga los datos completos
+                nombre: p.nombre || prodFuente.nombre, 
+                descripcion: p.descripcion || prodFuente.descripcion, 
+                proveedor_nombre: p.proveedor_nombre || prodFuente.proveedor_nombre,
+                cantidad: p.cantidad + Number(cantidadSeleccionada) 
+              }
             : p
         )
       );
     } else {
-      setPedido([...pedido, { id_producto, cantidad: Number(cantidadSeleccionada) }]);
+      setPedido([
+        ...pedido, 
+        { 
+          id_producto, 
+          cantidad: Number(cantidadSeleccionada), 
+          nombre: prodFuente.nombre, 
+          descripcion: prodFuente.descripcion, 
+          proveedor_nombre: prodFuente.proveedor_nombre
+        }
+      ]);
     }
 
     setProductoSeleccionado(null);
@@ -171,6 +189,10 @@ function PedidoAcceso() {
     const prod = productos.find((p) => p.id_producto === id);
     return prod ? prod.nombre : "";
   };
+  const obtenerDescripcionProducto = (id) => {
+    const prod = productos.find((p) => p.id_producto === id);
+    return prod ? prod.descripcion : "";
+  };
 
   // Manejo de animación de pedido confirmado
   if (mostrarAnimacion) {
@@ -217,7 +239,7 @@ function PedidoAcceso() {
     );
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 pedido-acceso">
       <h3 className="mb-4 text-center">Formulario de Pedido</h3>
 
       <div className="mb-3">
@@ -256,7 +278,7 @@ function PedidoAcceso() {
         </button>
       </div>
 
-      <h5>Productos</h5>
+  <h5 className="seccion-titulo mt-4">Productos</h5>
       <button
         className="btn btn-secondary mb-3"
         onClick={() => setModalOpen(true)}
@@ -264,32 +286,90 @@ function PedidoAcceso() {
         + Agregar Producto
       </button>
 
-      {pedido.length === 0 && <p>No hay productos agregados.</p>}
+  {pedido.length === 0 && <p className="text-muted">No hay productos agregados todavía. Usá el botón "Agregar Producto" o repetí el último pedido.</p>}
 
-      {pedido.length > 0 && (
-        <ul className="list-group mb-4">
-          {pedido.map((p, i) => (
-            <li
-              key={i}
-              className="list-group-item d-flex justify-content-between align-items-center"
-            >
-              <div>
-                <strong>{p.nombre || obtenerNombreProducto(p.id_producto)}</strong> (x{p.cantidad})<br />
-                <span className="text-muted">{p.descripcion}</span>
-                {p.proveedor_nombre && (
-                  <span className="ms-2">Proveedor: {p.proveedor_nombre}</span>
-                )}
+      {pedido.length > 0 && (() => {
+        // Agrupar por proveedor para claridad visual en tarjetas
+        const agrupado = pedido.reduce((acc, item) => {
+          const prov = item.proveedor_nombre || "Sin Marca";
+          if (!acc[prov]) acc[prov] = [];
+          acc[prov].push(item);
+          return acc;
+        }, {});
+        return (
+          <div className="mb-4">
+            {Object.entries(agrupado).map(([prov, items]) => (
+              <div key={prov} className="pedido-prov card mb-3">
+                <div className="card-header py-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <span className="fw-semibold text-uppercase small text-muted d-flex align-items-center gap-2">
+                    <i className="bi bi-tags-fill text-primary"></i> {prov}
+                  </span>
+                  <span className="badge rounded-pill bg-light text-dark border">
+                    {items.length} {items.length === 1 ? "producto" : "productos"}
+                  </span>
+                </div>
+                <ul className="list-group list-group-flush">
+                  {items.map((p) => (
+                    <li key={p.id_producto} className="list-group-item pedido-product-item">
+                      <div className="flex-grow-1">
+                        <div className="d-flex flex-column">
+                          <strong className="pedido-product-name">{p.nombre || obtenerNombreProducto(p.id_producto)}</strong>
+                          <div className="text-muted small pedido-product-desc">
+                            {p.descripcion || obtenerDescripcionProducto(p.id_producto)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="pedido-qty ms-md-3 mt-2 mt-md-0">
+                        <div className="input-group input-group-sm qty-group">
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={() =>
+                              setPedido(prev => prev.map(x => x.id_producto === p.id_producto ? { ...x, cantidad: Math.max(1, x.cantidad - 1)}: x))
+                            }
+                            title="Restar 1"
+                            aria-label={`Restar 1 a ${p.nombre}`}
+                          >-
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            className="form-control text-center"
+                            value={p.cantidad}
+                            onChange={(e) => {
+                              const val = Math.max(1, parseInt(e.target.value)||1);
+                              setPedido(prev => prev.map(x => x.id_producto === p.id_producto ? { ...x, cantidad: val }: x));
+                            }}
+                            aria-label={`Cantidad para ${p.nombre}`}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={() =>
+                              setPedido(prev => prev.map(x => x.id_producto === p.id_producto ? { ...x, cantidad: x.cantidad + 1}: x))
+                            }
+                            title="Sumar 1"
+                            aria-label={`Sumar 1 a ${p.nombre}`}
+                          >+
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger"
+                            onClick={() => eliminarProducto(p.id_producto)}
+                            title="Eliminar producto"
+                            aria-label={`Eliminar ${p.nombre}`}
+                          >×
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <button
-                className="btn btn-sm btn-danger ms-2"
-                onClick={() => eliminarProducto(p.id_producto)}
-              >
-                Eliminar
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       <button className="btn btn-success w-100" onClick={enviarPedido}>
         Enviar Pedido
@@ -349,14 +429,14 @@ function PedidoAcceso() {
               <div className="modal-body">
                 <p>¿Querés repetir el siguiente pedido?</p>
                 <ul className="list-group">
-                  {ultimoPedidoTemp?.map((p, i) => (
+      {ultimoPedidoTemp?.map((p, i) => (
                     <li
                       key={i}
                       className="list-group-item"
                     >
                       <div>
-                        <strong>{p.nombre}</strong> (x{p.cantidad})<br />
-                        <span className="text-muted">{p.descripcion}</span>
+        <strong>{p.nombre}</strong> (x{p.cantidad})<br />
+        <span className="text-muted">{p.descripcion || obtenerDescripcionProducto(p.id_producto)}</span>
                         {p.proveedor_nombre && (
                           <span className="ms-2">Proveedor: {p.proveedor_nombre}</span>
                         )}

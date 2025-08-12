@@ -51,6 +51,7 @@ exports.getPedidos = (req, res) => {
 
           p.fecha_pedido_iso = p.fecha_pedido;
           p.fecha_pedido = new Date(p.fecha_pedido).toLocaleString("es-AR", {
+            timeZone: "America/Argentina/Buenos_Aires",
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
@@ -462,6 +463,7 @@ exports.getPedidosProximos = (req, res) => {
     const pedidos = (results || []).map((p) => ({
       ...p,
       fecha_pedido: new Date(p.fecha_pedido).toLocaleString("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
         day: "2-digit",
         month: "2-digit",
         year: "numeric",

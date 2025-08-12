@@ -45,7 +45,6 @@ function ProductoList() {
     setProductoActivo(
       producto || {
         nombre: "",
-        precio_unitario: "",
         descripcion: "",
         id_proveedor: "",
       }
@@ -62,11 +61,6 @@ function ProductoList() {
   const handleGuardar = async () => {
     const producto = {
       ...productoActivo,
-      precio_unitario:
-        productoActivo.precio_unitario === undefined ||
-        productoActivo.precio_unitario === ""
-          ? 0
-          : productoActivo.precio_unitario,
       descripcion: productoActivo.descripcion || "",
       id_proveedor:
         productoActivo.id_proveedor === "" ? null : productoActivo.id_proveedor,
@@ -113,12 +107,11 @@ function ProductoList() {
         onChange={(e) => setBusqueda(e.target.value)}
       />
 
-      <table className="table">
+  <table className="table table-mobile table-responsive-stack">
         <thead>
           <tr>
             <th>ID</th>
             <th>Nombre</th>
-            <th>Precio</th>
             <th>Descripción</th>
             <th>Marca</th>
             <th>Acciones</th>
@@ -127,11 +120,10 @@ function ProductoList() {
         <tbody>
           {productosMostrados.map((p) => (
             <tr key={p.id_producto}>
-              <td>{p.id_producto}</td>
-              <td>{p.nombre}</td>
-              <td>${Number(p.precio_unitario).toFixed(2)}</td>
-              <td>{p.descripcion}</td>
-              <td>{obtenerNombreProveedor(p.id_proveedor)}</td>
+      <td data-label="ID">{p.id_producto}</td>
+      <td data-label="Nombre">{p.nombre}</td>
+      <td data-label="Descripción">{p.descripcion}</td>
+      <td data-label="Marca">{obtenerNombreProveedor(p.id_proveedor)}</td>
               <td>
                 <button
                   className="btn btn-sm btn-secondary me-2"
@@ -203,16 +195,7 @@ function ProductoList() {
                   disabled={modo === "ver"}
                 />
 
-                <label className="form-label">Precio Unitario</label>
-                <input
-                  type="number"
-                  className="form-control mb-2"
-                  value={productoActivo.precio_unitario}
-                  onChange={(e) =>
-                    handleInput("precio_unitario", parseFloat(e.target.value))
-                  }
-                  disabled={modo === "ver"}
-                />
+                {/* Campo de precio eliminado */}
 
                 <label className="form-label">Descripción</label>
                 <textarea

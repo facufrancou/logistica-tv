@@ -233,7 +233,7 @@ function PedidoForm({ onPedidoCreado }) {
                           }`}
                           onClick={() => setProductoSeleccionado(p)}
                         >
-                          {p.nombre} (${p.precio_unitario}) - {p.descripcion}
+                          {p.nombre} - {p.descripcion}
                         </button>
                       ))}
                     </div>
