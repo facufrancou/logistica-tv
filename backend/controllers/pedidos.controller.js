@@ -325,7 +325,7 @@ exports.generarLinkPedido = (req, res) => {
   db.query(query, [token, id_cliente, expires_at], (err) => {
     if (err) return res.status(500).json({ error: "Error al generar token" });
 
-    const link = `https://api.tierravolga.com.ar/pedido/acceso?token=${token}`;
+    const link = `https://gestion.tierravolga.com.ar/pedido/acceso?token=${token}`;
     /* const link = `http://localhost:3001/pedido/acceso?token=${token}`; */
     res.json({ id_cliente, token, link });
   });

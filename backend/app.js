@@ -17,14 +17,14 @@ app.use(cors({
 // Middleware JSON
 app.use(express.json());
 
-// 🔒 Config sesión
+//  Config sesión
 app.use(session({
   secret: 'clave_secreta_segura',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    sameSite: 'lax',       // ✅ suficiente si frontend y backend están juntos
-    secure: true           // 🔐 porque Cloudflared da HTTPS
+    sameSite: 'lax',       
+    secure: true           
   }
 }));
 
@@ -35,7 +35,7 @@ app.use('/productos', require('./routes/productos.routes'));
 app.use('/pedidos', require('./routes/pedidos.routes'));
 app.use('/proveedores', require('./routes/proveedores.routes'));
 
-// 🔚 Servir el frontend (ya agregado)
+//  Servir el frontend (ya agregado)
 const path = require("path");
 app.use(express.static(path.join(__dirname, "build")));
 app.get("*", (req, res) => {
