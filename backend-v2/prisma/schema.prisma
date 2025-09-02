@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id       BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  rol_type BigInt
+  usuarios Usuario[]
+
+  @@map("rol")
+}
+
+model Usuario {
+  id_usuario         Int               @id @default(autoincrement())
+  nombre             String            @db.VarChar(100)
+  email              String?           @db.VarChar(100)
+  password           String            @db.VarChar(255)
+  rol_id             BigInt            @db.UnsignedBigInt
+  auditoria_acciones AuditoriaAccion[]
+  configuraciones    Configuracion[]
+  historial_precios  HistorialPrecio[]
+  notificaciones     Notificacion[]
+  pedidos            Pedido[]
+  rol                Rol               @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
+
+  @@index([email], map: "idx_usuarios_email")
+  @@index([rol_id], map: "rol_id")
+  @@map("usuarios")
+}
+
+model Cliente {
+  id_cliente            Int                  @id @default(autoincrement())
+  nombre                String               @db.VarChar(255)
+  cuit                  String               @db.VarChar(255)
+  email                 String?              @db.Text
+  telefono              String?              @db.VarChar(255)
+  direccion             String?              @db.Text
+  habilitado            Boolean?             @default(true)
+  bloqueado             Boolean?             @default(false)
+  fecha_proximo_pedido  DateTime?            @db.Date
+  created_at            DateTime?            @default(now()) @db.DateTime(0)
+  updated_at            DateTime?            @default(now()) @db.DateTime(0)
+  created_by            Int?
+  updated_by            Int?
+  descuentos            Descuento[]
+  notificaciones        Notificacion[]
+  pedido_tokens         PedidoToken[]
+  pedidos               Pedido[]
+  productos_habilitados ProductoHabilitado[]
+
+  @@index([cuit], map: "idx_clientes_cuit")
+  @@index([nombre], map: "idx_clientes_nombre")
+  @@map("clientes")
+}
+
+model Proveedor {
+  id_proveedor Int        @id @default(autoincrement())
+  nombre       String     @db.VarChar(255)
+  activo       Boolean?   @default(true)
+  created_at   DateTime?  @default(now()) @db.DateTime(0)
+  updated_at   DateTime?  @default(now()) @db.DateTime(0)
+  created_by   Int?
+  updated_by   Int?
+  productos    Producto[]
+
+  @@map("proveedores")
+}
+
+model Producto {
+  id_producto           Int                  @id @default(autoincrement())
+  nombre                String               @db.VarChar(100)
+  descripcion           String?              @db.Text
+  precio_unitario       Decimal              @db.Decimal(10, 2)
+  stock                 Int?
+  id_proveedor          Int?
+  created_at            DateTime?            @default(now()) @db.DateTime(0)
+  updated_at            DateTime?            @default(now()) @db.DateTime(0)
+  created_by            Int?
+  updated_by            Int?
+  descuentos            Descuento[]
+  detalle_pedido        DetallePedido[]
+  historial_precios     HistorialPrecio[]
+  proveedores           Proveedor?           @relation(fields: [id_proveedor], references: [id_proveedor], onDelete: NoAction, onUpdate: NoAction, map: "productos_ibfk_1")
+  productos_habilitados ProductoHabilitado[]
+
+  @@index([id_proveedor], map: "id_proveedor")
+  @@index([nombre], map: "idx_productos_nombre")
+  @@map("productos")
+}
+
+model ProductoHabilitado {
+  id_cliente  Int
+  id_producto Int
+  clientes    Cliente  @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "productos_habilitados_ibfk_1")
+  productos   Producto @relation(fields: [id_producto], references: [id_producto], onDelete: NoAction, onUpdate: NoAction, map: "productos_habilitados_ibfk_2")
+
+  @@id([id_cliente, id_producto])
+  @@index([id_producto], map: "id_producto")
+  @@map("productos_habilitados")
+}
+
+model Pedido {
+  id_pedido            Int             @id @default(autoincrement())
+  id_cliente           Int
+  id_usuario           Int
+  fecha_pedido         DateTime?       @default(now()) @db.DateTime(0)
+  total                Decimal?        @db.Decimal(10, 2)
+  seguimiento_dist     String          @db.VarChar(50)
+  estado               String?         @default("pendiente") @db.VarChar(50)
+  fecha_proximo_pedido DateTime?       @db.Date
+  created_at           DateTime?       @default(now()) @db.DateTime(0)
+  updated_at           DateTime?       @default(now()) @db.DateTime(0)
+  created_by           Int?
+  updated_by           Int?
+  detalle_pedido       DetallePedido[]
+  clientes             Cliente         @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "pedidos_ibfk_1")
+  usuarios             Usuario         @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "pedidos_ibfk_2")
+
+  @@index([id_usuario], map: "id_usuario")
+  @@index([id_cliente, estado], map: "idx_pedidos_cliente_estado")
+  @@index([estado], map: "idx_pedidos_estado")
+  @@index([fecha_pedido], map: "idx_pedidos_fecha")
+  @@index([fecha_pedido, estado], map: "idx_pedidos_fecha_estado")
+  @@index([fecha_proximo_pedido], map: "idx_pedidos_fecha_prox")
+  @@map("pedidos")
+}
+
+model DetallePedido {
+  id_detalle      Int       @id @default(autoincrement())
+  id_pedido       Int
+  id_producto     Int
+  cantidad        Int
+  precio_unitario Decimal   @db.Decimal(10, 2)
+  subtotal        Decimal?  @db.Decimal(10, 2)
+  created_at      DateTime? @default(now()) @db.DateTime(0)
+  updated_at      DateTime? @default(now()) @db.DateTime(0)
+  created_by      Int?
+  updated_by      Int?
+  pedidos         Pedido    @relation(fields: [id_pedido], references: [id_pedido], onDelete: NoAction, onUpdate: NoAction, map: "detalle_pedido_ibfk_1")
+  productos       Producto  @relation(fields: [id_producto], references: [id_producto], onDelete: NoAction, onUpdate: NoAction, map: "detalle_pedido_ibfk_2")
+
+  @@index([id_pedido], map: "id_pedido")
+  @@index([id_producto], map: "id_producto")
+  @@map("detalle_pedido")
+}
+
+model Descuento {
+  id_descuento Int             @id @default(autoincrement())
+  nombre       String          @db.VarChar(100)
+  tipo         descuentos_tipo
+  valor        Decimal         @db.Decimal(10, 2)
+  fecha_inicio DateTime        @db.Date
+  fecha_fin    DateTime?       @db.Date
+  id_cliente   Int?
+  id_producto  Int?
+  activo       Boolean?        @default(true)
+  created_at   DateTime?       @default(now()) @db.DateTime(0)
+  updated_at   DateTime?       @default(now()) @db.DateTime(0)
+  created_by   Int?
+  updated_by   Int?
+  clientes     Cliente?        @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade, onUpdate: NoAction, map: "fk_descuentos_clientes")
+  productos    Producto?       @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction, map: "fk_descuentos_productos")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@index([id_producto], map: "id_producto")
+  @@index([activo], map: "idx_descuentos_activo")
+  @@index([fecha_inicio, fecha_fin], map: "idx_descuentos_fecha")
+  @@map("descuentos")
+}
+
+model HistorialPrecio {
+  id_historial    Int       @id @default(autoincrement())
+  id_producto     Int
+  precio_anterior Decimal   @db.Decimal(10, 2)
+  precio_nuevo    Decimal   @db.Decimal(10, 2)
+  fecha_cambio    DateTime? @default(now()) @db.DateTime(0)
+  id_usuario      Int?
+  productos       Producto  @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction, map: "fk_historial_productos")
+  usuarios        Usuario?  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_historial_usuarios")
+
+  @@index([id_producto], map: "id_producto")
+  @@index([id_usuario], map: "id_usuario")
+  @@map("historial_precios")
+}
+
+model PedidoToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique(map: "token") @db.VarChar(100)
+  id_cliente Int
+  expires_at DateTime @db.DateTime(0)
+  usado      Boolean? @default(false)
+  clientes   Cliente  @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "pedido_tokens_ibfk_1")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@map("pedido_tokens")
+}
+
+model Notificacion {
+  id_notificacion Int       @id @default(autoincrement())
+  id_usuario      Int?
+  id_cliente      Int?
+  tipo            String    @db.VarChar(50)
+  mensaje         String    @db.Text
+  leida           Boolean?  @default(false)
+  fecha_creacion  DateTime? @default(now()) @db.DateTime(0)
+  fecha_lectura   DateTime? @db.DateTime(0)
+  clientes        Cliente?  @relation(fields: [id_cliente], references: [id_cliente], onUpdate: NoAction, map: "fk_notificaciones_clientes")
+  usuarios        Usuario?  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_notificaciones_usuarios")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@index([id_usuario], map: "id_usuario")
+  @@map("notificaciones")
+}
+
+model Configuracion {
+  clave       String    @id @db.VarChar(50)
+  valor       String    @db.Text
+  descripcion String?   @db.VarChar(255)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_by  Int?
+  usuarios    Usuario?  @relation(fields: [updated_by], references: [id_usuario], onUpdate: NoAction, map: "fk_config_usuarios")
+
+  @@index([updated_by], map: "updated_by")
+  @@map("configuraciones")
+}
+
+model AuditoriaAccion {
+  id_auditoria   Int       @id @default(autoincrement())
+  id_usuario     Int?
+  tipo_accion    String    @db.VarChar(50)
+  tabla          String    @db.VarChar(50)
+  registro_id    Int?
+  detalle        String?   @db.Text
+  valor_anterior String?   @db.Text
+  valor_nuevo    String?   @db.Text
+  direccion_ip   String?   @db.VarChar(45)
+  fecha_accion   DateTime? @default(now()) @db.DateTime(0)
+  usuario        Usuario?  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_auditoria_usuarios")
+
+  @@index([id_usuario], map: "id_usuario")
+  @@index([fecha_accion], map: "idx_auditoria_fecha")
+  @@index([tabla], map: "idx_auditoria_tabla")
+  @@index([tipo_accion], map: "idx_auditoria_tipo")
+  @@map("auditoria_acciones")
+}
+
+enum descuentos_tipo {
+  porcentaje
+  monto_fijo
+}
