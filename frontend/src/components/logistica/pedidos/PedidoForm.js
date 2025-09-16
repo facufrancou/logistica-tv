@@ -4,7 +4,7 @@ import {
   getProductos,
   crearPedido,
   getProveedores,
-} from "../services/api";
+} from "../../../services/api";
 
 function PedidoForm({ onPedidoCreado }) {
   const [clientes, setClientes] = useState([]);

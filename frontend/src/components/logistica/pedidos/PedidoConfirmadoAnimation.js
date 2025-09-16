@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './common/LoginAnimation.css';
+import '../../common/LoginAnimation.css';
 import './PedidoAnimation.css';
 import { FaCheck, FaShoppingCart } from 'react-icons/fa';
 

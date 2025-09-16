@@ -9,8 +9,8 @@ import {
   getProductosHabilitados,
   setProductosHabilitados,
   getProveedores,
-} from "../services/api";
-import { AuthContext } from "../context/AuthContext";
+} from "../../../services/api";
+import { AuthContext } from "../../../context/AuthContext";
 
 function ClienteList() {
   const { usuario } = useContext(AuthContext);
@@ -177,7 +177,7 @@ function ClienteList() {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Clientes</h2>
+        <h2 className="text-dark">Clientes</h2>
         <div>
           <button
             className={`btn me-2 ${mostrarBloqueados ? 'btn-secondary' : 'btn-dark'}`}
@@ -187,7 +187,7 @@ function ClienteList() {
           </button>
           {usuario?.rol_id !== 1 && (
             <button
-              className="btn btn-primary"
+              className="btn btn-dark"
               onClick={() => abrirModal(null, "nuevo")}
             >
               + Agregar Cliente
@@ -447,7 +447,7 @@ function ClienteList() {
                   Cerrar
                 </button>
                 {modo !== "ver" && (
-                  <button className="btn btn-primary" onClick={handleGuardar}>
+                  <button className="btn btn-dark" onClick={handleGuardar}>
                     Guardar
                   </button>
                 )}
@@ -496,7 +496,7 @@ function ClienteList() {
               </div>
               <div className="modal-footer">
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-dark"
                   onClick={() => {
                     navigator.clipboard.writeText(linkGenerado);
                     setCopiado(true);

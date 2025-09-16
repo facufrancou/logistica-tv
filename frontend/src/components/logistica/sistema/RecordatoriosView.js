@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getPedidosProximos, getPedidoPorId } from '../services/api';
+import { getPedidosProximos, getPedidoPorId } from "../../../services/api";
 
 function RecordatoriosView() {
   const [desde, setDesde] = useState('');

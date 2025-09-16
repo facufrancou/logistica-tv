@@ -1,0 +1,118 @@
+.dashboard-container {
+  padding: var(--espaciado-lg);
+}
+
+.dashboard-title {
+  margin-bottom: var(--espaciado-lg);
+  color: var(--color-principal);
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+.dashboard-row {
+  display: flex;
+  gap: var(--espaciado-lg);
+  margin-bottom: var(--espaciado-lg);
+}
+
+.dashboard-col-wide {
+  flex: 2;
+}
+
+.dashboard-col-narrow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ingresos Card */
+.ingresos-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--espaciado-lg) var(--espaciado-md);
+  text-align: center;
+}
+
+.ingresos-icon {
+  font-size: 2.5rem;
+  color: var(--color-principal);
+  margin-bottom: var(--espaciado-md);
+  background: rgba(var(--color-principal-rgb), 0.1);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ingresos-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-principal);
+  margin-bottom: var(--espaciado-xs);
+}
+
+.ingresos-label {
+  color: var(--color-texto-muted);
+  font-size: var(--tamano-texto-sm);
+}
+
+/* Acciones rápidas */
+.acciones-rapidas {
+  padding: var(--espaciado-sm);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25em 0.75em;
+  border-radius: 30px;
+  font-size: var(--tamano-texto-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background-color: rgba(var(--color-exito-rgb), 0.1);
+  color: var(--color-exito);
+}
+
+.badge-warning {
+  background-color: rgba(var(--color-advertencia-rgb), 0.1);
+  color: var(--color-advertencia);
+}
+
+.badge-danger {
+  background-color: rgba(var(--color-error-rgb), 0.1);
+  color: var(--color-error);
+}
+
+.badge-info {
+  background-color: rgba(var(--color-info-rgb), 0.1);
+  color: var(--color-info);
+}
+
+/* Loading indicator */
+.loading-indicator {
+  text-align: center;
+  padding: var(--espaciado-xl);
+  color: var(--color-texto-muted);
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .dashboard-row {
+    flex-direction: column;
+  }
+  
+  .dashboard-col-wide,
+  .dashboard-col-narrow {
+    width: 100%;
+  }
+}

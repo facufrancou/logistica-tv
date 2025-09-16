@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   getPedidosPorSemana,
   getUltimoPedidoPorCliente,
-} from "../services/api";
+} from "../../../services/api";
 import "./VistaSemanal.css";
 
 function VistaSemanal() {

@@ -143,6 +143,18 @@ body {
   color: var(--color-texto-claro);
 }
 
+.btn-dark {
+  background-color: #212529 !important;
+  color: #ffffff !important;
+  border-color: #212529 !important;
+}
+
+.btn-dark:hover, .btn-dark:focus {
+  background-color: #1a1e21 !important;
+  color: #ffffff !important;
+  border-color: #1a1e21 !important;
+}
+
 .btn-outline {
   background: transparent;
   border: 1px solid var(--color-principal);
@@ -379,7 +391,7 @@ body {
 .table th {
   font-weight: 600;
   background: linear-gradient(to right, var(--color-fondo-claro), #ffffff);
-  color: var(--color-principal);
+  color: var(--color-principal) !important;
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;

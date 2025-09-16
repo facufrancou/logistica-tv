@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getClientes } from "../services/api";
+import { getClientes } from "../../../services/api";
 
 function CtaCteForm() {
   const [clientes, setClientes] = useState([]);

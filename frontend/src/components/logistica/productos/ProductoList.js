@@ -4,8 +4,8 @@ import {
   crearProducto,
   actualizarProducto,
   getProveedores,
-} from "../services/api";
-import { AuthContext } from "../context/AuthContext";
+} from "../../../services/api";
+import { AuthContext } from "../../../context/AuthContext";
 
 function ProductoList() {
   const { usuario } = useContext(AuthContext);
@@ -88,10 +88,10 @@ function ProductoList() {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Productos</h2>
+        <h2 className="text-dark">Productos</h2>
         {usuario?.rol_id !== 1 && (
           <button
-            className="btn btn-primary"
+            className="btn btn-dark"
             onClick={() => abrirModal(null, "nuevo")}
           >
             + Agregar Producto
@@ -233,7 +233,7 @@ function ProductoList() {
                   Cerrar
                 </button>
                 {modo !== "ver" && (
-                  <button className="btn btn-primary" onClick={handleGuardar}>
+                  <button className="btn btn-dark" onClick={handleGuardar}>
                     Guardar
                   </button>
                 )}

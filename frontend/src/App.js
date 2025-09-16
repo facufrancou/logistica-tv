@@ -27,22 +27,31 @@ import {
   FaFileInvoiceDollar,
   FaMoneyBill,
   FaFileAlt,
-  FaChartLine
+  FaChartLine,
+  FaShoppingCart,
+  FaBuilding,
+  FaFlask,
+  FaStethoscope,
+  FaSearch,
+  FaEye,
+  FaUserCog
 } from "react-icons/fa";
 
 import Login from "./components/Login";
-import ClienteList from "./components/ClienteList";
-import ProductoList from "./components/ProductoList";
-import PedidoList from "./components/PedidoList";
-import PedidoForm from "./components/PedidoForm";
-import PedidoAcceso from "./components/PedidoAcceso";
-import RecordatoriosView from "./components/RecordatoriosView";
+import Dashboard from "./components/Dashboard";
+import ClienteList from "./components/logistica/clientes/ClienteList";
+import ProductoList from "./components/logistica/productos/ProductoList";
+import PedidoList from "./components/logistica/pedidos/PedidoList";
+import PedidoForm from "./components/logistica/pedidos/PedidoForm";
+import NuevoPedido from "./components/logistica/pedidos/NuevoPedido";
+import PedidoAcceso from "./components/logistica/pedidos/PedidoAcceso";
+import RecordatoriosView from "./components/logistica/sistema/RecordatoriosView";
 import ReportesView from "./components/ReportesView";
-import VistaSemanal from "./components/VistaSemanal";
-import ProveedorList from "./components/ProveedorList";
-import SistemaView from "./components/SistemaView";
-import UsuarioForm from "./components/UsuarioForm";
-import CtaCteForm from "./components/CtaCteForm";
+import VistaSemanal from "./components/logistica/sistema/VistaSemanal";
+import ProveedorList from "./components/logistica/proveedores/ProveedorList";
+import SistemaView from "./components/logistica/sistema/SistemaView";
+import UsuarioForm from "./components/logistica/sistema/UsuarioForm";
+import CtaCteForm from "./components/logistica/clientes/CtaCteForm";
 
 // Nuevos componentes para Planes Vacunales
 import PlanesVacunalesList from "./components/planesVacunales/PlanesVacunalesList";
@@ -140,14 +149,16 @@ function Navbar() {
 
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav me-auto">
+            
+            {/* 🏠 Dashboard Principal */}
             <li className="nav-item">
               <Link className="nav-link d-flex align-items-center" to="/">
                 <FaHome className="me-1" />
-                <span>Home</span>
+                <span>Dashboard</span>
               </Link>
             </li>
 
-            {/* Dropdown de Planes Vacunales */}
+            {/* 💉 Planes Vacunales (Sprint 1-2) */}
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
@@ -161,15 +172,34 @@ function Navbar() {
                 <span>Planes Vacunales</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="planesDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaSyringe className="me-2" /> Gestión de Planes</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaStethoscope className="me-2" /> Gestión de Planes</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
-                <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/stock"><FaWarehouse className="me-2" /> Gestión de Stock</Link></li>
               </ul>
             </li>
 
-            {/* Dropdown de Seguimiento de Dosis */}
+            {/* 📦 Stock & Inventario (Sprint 3) */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="stockDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaWarehouse className="me-1" />
+                <span>Stock</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="stockDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/stock"><FaChartBar className="me-2" /> Dashboard Stock</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/stock/movimientos"><FaTruck className="me-2" /> Movimientos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/stock/alertas"><FaBell className="me-2" /> Alertas</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/stock/reservas"><FaClipboardList className="me-2" /> Reservas</Link></li>
+              </ul>
+            </li>
+
+            {/* 📊 Seguimiento (Sprint 4) */}
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
@@ -179,60 +209,19 @@ function Navbar() {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <FaClipboardList className="me-1" />
+                <FaChartBar className="me-1" />
                 <span>Seguimiento</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="seguimientoDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento"><FaChartBar className="me-2" /> Dashboard</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/aplicaciones"><FaSyringe className="me-2" /> Aplicaciones</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento"><FaEye className="me-2" /> Dashboard</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/aplicaciones"><FaSyringe className="me-2" /> Aplicaciones Dosis</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/retiros"><FaTruck className="me-2" /> Retiros de Campo</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/cumplimiento"><FaChartBar className="me-2" /> Cumplimiento</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/cumplimiento"><FaClipboardList className="me-2" /> Cumplimiento</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/notificaciones"><FaBell className="me-2" /> Notificaciones</Link></li>
               </ul>
             </li>
 
-            {/* Dropdown de gestión */}
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle d-flex align-items-center"
-                href="#"
-                id="gestionDropdown"
-                role="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <FaBoxOpen className="me-1" />
-                <span>Gestión</span>
-              </a>
-              <ul className="dropdown-menu" aria-labelledby="gestionDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/pedidos"><FaBoxOpen className="me-2" /> Pedidos</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/clientes"><FaUsers className="me-2" /> Clientes</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/proveedores"><FaTruck className="me-2" /> Proveedores</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/productos"><FaBoxOpen className="me-2" /> Productos</Link></li>
-              </ul>
-            </li>
-
-            {/* Admin: reportes, recordatorios, semanal */}
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle d-flex align-items-center"
-                href="#"
-                id="adminDropdown"
-                role="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <FaChartBar className="me-1" />
-                <span>Admin</span>
-              </a>
-              <ul className="dropdown-menu" aria-labelledby="adminDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes"><FaChartBar className="me-2" /> Reportes</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/recordatorios"><FaBell className="me-2" /> Próximos pedidos</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/semanal"><FaCalendarAlt className="me-2" /> Vista Semanal</Link></li>
-              </ul>
-            </li>
-
-            {/* Facturación */}
+            {/* 💰 Facturación (Sprint 5) */}
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
@@ -246,17 +235,43 @@ function Navbar() {
                 <span>Facturación</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="facturacionDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/facturacion"><FaFileInvoiceDollar className="me-2" /> Dashboard Facturación</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/facturas"><FaFileInvoice className="me-2" /> Gestión de Facturas</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/cobros"><FaMoneyBill className="me-2" /> Gestión de Cobros</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/facturacion"><FaChartLine className="me-2" /> Dashboard</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/facturas"><FaFileInvoice className="me-2" /> Gestión Facturas</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/cobros"><FaMoneyBill className="me-2" /> Gestión Cobros</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/notas-credito-debito"><FaFileAlt className="me-2" /> Notas Créd./Déb.</Link></li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/configuracion-facturacion"><FaCog className="me-2" /> Configuración AFIP</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes-facturacion"><FaChartLine className="me-2" /> Reportes Fiscales</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/configuracion-facturacion"><FaCog className="me-2" /> Config. AFIP</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes-facturacion"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
             </li>
 
-            {/* Sistema: usuarios y cuentas corrientes */}
+            {/* 🚚 Logística */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="logisticaDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaTruck className="me-1" />
+                <span>Logística</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="logisticaDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/logistica/nuevo-pedido"><FaShoppingCart className="me-2" /> Nuevo Pedido</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/pedidos"><FaShoppingCart className="me-2" /> Gestión Pedidos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/clientes"><FaBuilding className="me-2" /> Clientes</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/proveedores"><FaTruck className="me-2" /> Proveedores</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/productos"><FaFlask className="me-2" /> Productos</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/recordatorios"><FaBell className="me-2" /> Próximos Pedidos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/semanal"><FaCalendarAlt className="me-2" /> Vista Semanal</Link></li>
+              </ul>
+            </li>
+
+            {/* ⚙️ Sistema & Reportes (Sprint 6) */}
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
@@ -270,9 +285,11 @@ function Navbar() {
                 <span>Sistema</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="sistemaDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes"><FaChartBar className="me-2" /> Reportes Avanzados</Link></li>
+                <li><hr className="dropdown-divider" /></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/sistema"><FaCog className="me-2" /> Panel Sistema</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/usuarios"><FaUsers className="me-2" /> Crear usuario</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/ctacte"><FaChartBar className="me-2" /> Crear Cta. Cte.</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/usuarios"><FaUserCog className="me-2" /> Usuarios</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/ctacte"><FaFileInvoice className="me-2" /> Cuentas Corrientes</Link></li>
               </ul>
             </li>
           </ul>
@@ -314,77 +331,17 @@ function MainRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/pedido/acceso" element={<PedidoAcceso />} />
 
-        {/* 🔐 Rutas protegidas - Sistema Legacy */}
+        {/* 🏠 DASHBOARD PRINCIPAL */}
         <Route
           path="/"
           element={
             <RutaPrivada>
-              <PedidoForm onPedidoCreado={loadPedidos} />
-              {/* <PedidoList pedidos={pedidos} onActualizar={loadPedidos} /> */}
+              <Dashboard />
             </RutaPrivada>
           }
         />
-        <Route
-          path="/pedidos"
-          element={
-            <RutaPrivada>
-              <PedidoList pedidos={pedidos} onActualizar={loadPedidos} />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/clientes"
-          element={
-            <RutaPrivada>
-              <ClienteList />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/productos"
-          element={
-            <RutaPrivada>
-              <ProductoList />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/recordatorios"
-          element={
-            <RutaPrivada>
-              <RecordatoriosView />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/reportes"
-          element={
-            <RutaPrivada>
-              <ReportesView />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/semanal"
-          element={
-            <RutaPrivada>
-              <VistaSemanal />
-            </RutaPrivada>
-          }
-        />
-        <Route
-          path="/proveedores"
-          element={
-            <RutaPrivada>
-              <ProveedorList />
-            </RutaPrivada>
-          }
-        />
-        <Route path="/sistema" element={<RutaPrivada><SistemaView /></RutaPrivada>} />
-        <Route path="/sistema/usuarios" element={<RutaPrivada><UsuarioForm /></RutaPrivada>} />
-        <Route path="/sistema/ctacte" element={<RutaPrivada><CtaCteForm /></RutaPrivada>} />
 
-        {/* 🔐 Rutas protegidas - Planes Vacunales (Nuevo Sistema) */}
+        {/* 💉 PLANES VACUNALES (Sprint 1-2) */}
         <Route
           path="/planes-vacunales"
           element={
@@ -458,7 +415,7 @@ function MainRoutes() {
           }
         />
 
-        {/* 🗂️ Rutas de Stock (Sprint 3) */}
+        {/* 📦 STOCK & INVENTARIO (Sprint 3) */}
         <Route
           path="/stock"
           element={
@@ -508,7 +465,7 @@ function MainRoutes() {
           }
         />
 
-        {/* 📊 Rutas de Seguimiento de Dosis (Sprint 4) */}
+        {/* 📊 SEGUIMIENTO (Sprint 4) */}
         <Route
           path="/seguimiento"
           element={
@@ -533,8 +490,24 @@ function MainRoutes() {
             </RutaPrivada>
           }
         />
+        <Route
+          path="/seguimiento/cumplimiento"
+          element={
+            <RutaPrivada>
+              <CumplimientoPanel />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/seguimiento/notificaciones"
+          element={
+            <RutaPrivada>
+              <NotificacionesCenter />
+            </RutaPrivada>
+          }
+        />
         
-        {/* 💰 Rutas de Facturación (Sprint 5) */}
+        {/* 💰 FACTURACIÓN (Sprint 5) */}
         <Route
           path="/facturacion"
           element={
@@ -583,21 +556,97 @@ function MainRoutes() {
             </RutaPrivada>
           }
         />
+
+        {/* 🚚 LOGÍSTICA */}
         <Route
-          path="/seguimiento/cumplimiento"
+          path="/pedidos"
           element={
             <RutaPrivada>
-              <CumplimientoPanel />
+              <PedidoList pedidos={pedidos} onActualizar={loadPedidos} />
             </RutaPrivada>
           }
         />
         <Route
-          path="/seguimiento/notificaciones"
+          path="/logistica/nuevo-pedido"
           element={
             <RutaPrivada>
-              <NotificacionesCenter />
+              <NuevoPedido onPedidoCreado={loadPedidos} />
             </RutaPrivada>
           }
+        />
+        <Route
+          path="/clientes"
+          element={
+            <RutaPrivada>
+              <ClienteList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/proveedores"
+          element={
+            <RutaPrivada>
+              <ProveedorList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/productos"
+          element={
+            <RutaPrivada>
+              <ProductoList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/recordatorios"
+          element={
+            <RutaPrivada>
+              <RecordatoriosView />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/semanal"
+          element={
+            <RutaPrivada>
+              <VistaSemanal />
+            </RutaPrivada>
+          }
+        />
+
+        {/* ⚙️ SISTEMA & REPORTES (Sprint 6) */}
+        <Route
+          path="/reportes"
+          element={
+            <RutaPrivada>
+              <ReportesView />
+            </RutaPrivada>
+          }
+        />
+        <Route 
+          path="/sistema" 
+          element={
+            <RutaPrivada>
+              <SistemaView />
+            </RutaPrivada>
+          } 
+        />
+        <Route 
+          path="/sistema/usuarios" 
+          element={
+            <RutaPrivada>
+              <UsuarioForm />
+            </RutaPrivada>
+          } 
+        />
+        <Route 
+          path="/sistema/ctacte" 
+          element={
+            <RutaPrivada>
+              <CtaCteForm />
+            </RutaPrivada>
+          } 
         />
       </Routes>
     </div>

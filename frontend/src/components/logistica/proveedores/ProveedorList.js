@@ -4,8 +4,8 @@ import {
   crearProveedor,
   actualizarProveedor,
   eliminarProveedor
-} from '../services/api';
-import { AuthContext } from "../context/AuthContext";
+} from '../../../services/api';
+import { AuthContext } from "../../../context/AuthContext";
 
 function ProveedorList() {
   const { usuario } = useContext(AuthContext);
@@ -58,9 +58,9 @@ function ProveedorList() {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Proveedores</h2>
+        <h2 className="text-dark">Proveedores</h2>
         {usuario?.rol_id !== 1 && (
-          <button className="btn btn-primary" onClick={() => abrirModal(null, 'nuevo')}>
+          <button className="btn btn-dark" onClick={() => abrirModal(null, 'nuevo')}>
             + Agregar Proveedor
           </button>
         )}
@@ -130,7 +130,7 @@ function ProveedorList() {
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={cerrarModal}>Cerrar</button>
                 {modo !== 'ver' && (
-                  <button className="btn btn-primary" onClick={handleGuardar}>Guardar</button>
+                  <button className="btn btn-dark text-white" onClick={handleGuardar}>Guardar</button>
                 )}
               </div>
             </div>

@@ -1,218 +1,309 @@
-import React, { useState, useEffect } from 'react';
-import Card, { CardGroup, CardStat } from './common/Card';
-import DataTable from './common/DataTable';
-import { FaShoppingCart, FaUsers, FaBox, FaMoneyBillWave, FaTruck } from 'react-icons/fa';
-import { useNotification } from '../context/NotificationContext';
-import { getPedidos, getClientes, getProductos } from '../services/api';
-import './Dashboard.css';
+import React, { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+import "./Dashboard.css";
+import { 
+  FaSyringe, 
+  FaWarehouse, 
+  FaChartBar, 
+  FaFileInvoiceDollar,
+  FaTruck,
+  FaCog,
+  FaShoppingCart,
+  FaBuilding,
+  FaFlask,
+  FaUsers,
+  FaCalendarAlt,
+  FaBell,
+  FaArrowRight,
+  FaChartLine,
+  FaStethoscope,
+  FaEye
+} from "react-icons/fa";
 
-/**
- * Dashboard principal del sistema con estadísticas y datos recientes
- */
-const Dashboard = () => {
-  const [stats, setStats] = useState({
-    pedidosPendientes: 0,
-    pedidosCompletados: 0,
-    clientesActivos: 0,
-    productosActivos: 0,
-    ingresosRecientes: 0
-  });
-  const [pedidosRecientes, setPedidosRecientes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  const { showError } = useNotification();
-  
-  // Cargar datos del dashboard
+function Dashboard() {
+  const { usuario } = useContext(AuthContext);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        const [pedidosData, clientesData, productosData] = await Promise.all([
-          getPedidos(),
-          getClientes(),
-          getProductos()
-        ]);
-        
-        // Calcular estadísticas
-        const pendientes = pedidosData.filter(p => p.estado === 'Pendiente').length;
-        const completados = pedidosData.filter(p => p.estado === 'Entregado').length;
-        
-        // Calcular ingresos recientes (últimos 30 días)
-        const hoy = new Date();
-        const hace30Dias = new Date();
-        hace30Dias.setDate(hoy.getDate() - 30);
-        
-        const pedidosRecientes = pedidosData
-          .filter(p => new Date(p.fecha) >= hace30Dias)
-          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        
-        const ingresos = pedidosRecientes
-          .filter(p => p.estado === 'Entregado')
-          .reduce((sum, pedido) => sum + (pedido.total || 0), 0);
-        
-        // Actualizar stats
-        setStats({
-          pedidosPendientes: pendientes,
-          pedidosCompletados: completados,
-          clientesActivos: clientesData.length,
-          productosActivos: productosData.length,
-          ingresosRecientes: ingresos
-        });
-        
-        // Mostrar pedidos recientes
-        setPedidosRecientes(pedidosRecientes.slice(0, 5));
-        
-      } catch (error) {
-        console.error("Error al cargar datos del dashboard", error);
-        showError("Error al cargar", "No se pudieron obtener los datos del dashboard");
-      } finally {
-        setLoading(false);
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    // Mostrar modal de bienvenida solo si acabamos de iniciar sesión
+    if (usuario) {
+      const welcomeShown = sessionStorage.getItem(`welcomeModalShown_${usuario.id || usuario.nombre}`);
+      if (!welcomeShown) {
+        setTimeout(() => {
+          setShowWelcomeModal(true);
+        }, 500); // Pequeño delay para mejor UX
+        sessionStorage.setItem(`welcomeModalShown_${usuario.id || usuario.nombre}`, 'true');
       }
-    };
-    
-    fetchData();
-  }, [showError]);
-  
-  // Formatear moneda
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS'
-    }).format(amount);
-  };
-  
-  // Formatear fecha
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-AR').format(date);
-  };
-  
-  // Columnas para la tabla de pedidos recientes
-  const pedidosColumns = [
-    { key: 'id', label: 'ID', sortable: true },
-    { key: 'fecha', label: 'Fecha', sortable: true, render: (row) => formatDate(row.fecha) },
-    { key: 'cliente', label: 'Cliente', sortable: true },
-    { 
-      key: 'estado', 
-      label: 'Estado', 
-      sortable: true,
-      render: (row) => (
-        <span className={`badge badge-${getEstadoBadgeClass(row.estado)}`}>
-          {row.estado}
-        </span>
-      )
-    },
-    { key: 'total', label: 'Total', sortable: true, render: (row) => formatCurrency(row.total) }
-  ];
-  
-  // Determinar clase para el badge de estado
-  const getEstadoBadgeClass = (estado) => {
-    switch (estado) {
-      case 'Entregado': return 'success';
-      case 'Pendiente': return 'warning';
-      case 'Cancelado': return 'danger';
-      default: return 'info';
     }
+  }, [usuario]);
+
+  const handleCloseWelcomeModal = () => {
+    setShowWelcomeModal(false);
   };
-  
+
+  // Función de debug para mostrar el modal manualmente
+  const showWelcomeModalForTesting = () => {
+    setShowWelcomeModal(true);
+  };
+
+  const quickActions = [
+    {
+      title: "Nuevo Pedido",
+      description: "Crear un nuevo pedido de productos",
+      icon: FaShoppingCart,
+      link: "/logistica/nuevo-pedido",
+      color: "dark",
+      urgent: true
+    },
+    {
+      title: "Ver Stock",
+      description: "Consultar inventario actual",
+      icon: FaWarehouse,
+      link: "/stock",
+      color: "secondary"
+    },
+    {
+      title: "Nuevo Plan Vacunal",
+      description: "Crear plan de vacunación",
+      icon: FaStethoscope,
+      link: "/planes-vacunales/nuevo",
+      color: "info"
+    },
+    {
+      title: "Seguimiento",
+      description: "Monitorear aplicaciones",
+      icon: FaEye,
+      link: "/seguimiento",
+      color: "warning"
+    }
+  ];
+
+  const modules = [
+    {
+      title: "Planes Vacunales",
+      description: "Gestión completa de planes de vacunación y cotizaciones",
+      icon: FaSyringe,
+      link: "/planes-vacunales",
+      color: "gradient-success",
+      stats: "Sprint 1-2 Completado"
+    },
+    {
+      title: "Stock & Inventario",
+      description: "Control de inventario, movimientos y alertas de stock",
+      icon: FaWarehouse,
+      link: "/stock",
+      color: "gradient-info",
+      stats: "Sprint 3 Completado"
+    },
+    {
+      title: "Seguimiento",
+      description: "Seguimiento de dosis y cumplimiento de vacunación",
+      icon: FaChartBar,
+      link: "/seguimiento",
+      color: "gradient-warning",
+      stats: "Sprint 4 Completado"
+    },
+    {
+      title: "Facturación",
+      description: "Sistema de facturación e integración con AFIP",
+      icon: FaFileInvoiceDollar,
+      link: "/facturacion",
+      color: "gradient-secondary",
+      stats: "Sprint 5 Completado"
+    },
+    {
+      title: "Logística",
+      description: "Gestión de pedidos, clientes, proveedores y productos",
+      icon: FaTruck,
+      link: "/pedidos",
+      color: "gradient-dark",
+      stats: "Operaciones Diarias"
+    },
+    {
+      title: "Sistema",
+      description: "Reportes avanzados y administración del sistema",
+      icon: FaCog,
+      link: "/sistema",
+      color: "gradient-muted",
+      stats: "Sprint 6 Completado"
+    }
+  ];
+
   return (
     <div className="dashboard-container">
-      <h1 className="dashboard-title">Panel de Control</h1>
-      
-      {/* Tarjetas de estadísticas */}
-      <CardGroup>
-        <Card hoverable>
-          <CardStat
-            label="Pedidos Pendientes"
-            value={stats.pedidosPendientes}
-            icon={<FaShoppingCart />}
-          />
-        </Card>
-        
-        <Card hoverable>
-          <CardStat
-            label="Pedidos Completados"
-            value={stats.pedidosCompletados}
-            icon={<FaTruck />}
-            trend="up"
-            trendLabel="Este mes"
-          />
-        </Card>
-        
-        <Card hoverable>
-          <CardStat
-            label="Clientes Activos"
-            value={stats.clientesActivos}
-            icon={<FaUsers />}
-          />
-        </Card>
-        
-        <Card hoverable>
-          <CardStat
-            label="Productos Disponibles"
-            value={stats.productosActivos}
-            icon={<FaBox />}
-          />
-        </Card>
-      </CardGroup>
-      
-      <div className="dashboard-row">
-        <div className="dashboard-col-wide">
-          <Card 
-            title="Pedidos Recientes"
-            actions={<button className="btn btn-sm btn-outline">Ver todos</button>}
-          >
-            {loading ? (
-              <div className="loading-indicator">Cargando datos...</div>
-            ) : (
-              <DataTable 
-                columns={pedidosColumns}
-                data={pedidosRecientes}
-                options={{ 
-                  searchable: true,
-                  paginated: false
-                }}
-              />
-            )}
-          </Card>
-        </div>
-        
-        <div className="dashboard-col-narrow">
-          <Card 
-            title="Ingresos Recientes"
-            className="card-primary"
-          >
-            <div className="ingresos-card">
-              <div className="ingresos-icon">
-                <FaMoneyBillWave />
-              </div>
-              <div className="ingresos-amount">
-                {formatCurrency(stats.ingresosRecientes)}
-              </div>
-              <div className="ingresos-label">
-                Últimos 30 días
-              </div>
-            </div>
-          </Card>
-          
-          <Card title="Acciones Rápidas">
-            <div className="acciones-rapidas">
-              <button className="btn btn-primary btn-block mb-2">
-                <FaShoppingCart className="btn-icon" /> Nuevo Pedido
-              </button>
-              <button className="btn btn-outline btn-block mb-2">
-                <FaUsers className="btn-icon" /> Nuevo Cliente
-              </button>
-              <button className="btn btn-outline btn-block">
-                <FaBox className="btn-icon" /> Nuevo Producto
-              </button>
-            </div>
-          </Card>
+      {/* Header Section - Simplificado */}
+      <div className="dashboard-header mb-5">
+        <div className="row align-items-center">
+          <div className="col-md-8">
+            <h1 className="display-4 fw-bold text-dark mb-2">
+              Sistema de Gestión
+            </h1>
+          </div>
+          <div className="col-md-4 text-end">
+            <img 
+              src="/img/logo.svg" 
+              alt="Tierra Volga" 
+              className="img-fluid"
+              style={{ maxHeight: '80px' }}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Quick Actions */}
+      <div className="mb-5">
+        <h3 className="h4 mb-3 text-dark">
+          <FaArrowRight className="me-2" />
+          Accesos Rápidos
+        </h3>
+        <div className="row g-3">
+          {quickActions.map((action, index) => (
+            <div key={index} className="col-md-6 col-lg-3">
+              <Link to={action.link} className="text-decoration-none">
+                <div className={`card h-100 border-0 shadow-sm hover-lift ${action.urgent ? 'border-start border-5 border-dark' : ''}`}>
+                  <div className="card-body text-center">
+                    <div className={`rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-${action.color} text-white`}
+                         style={{ width: '60px', height: '60px' }}>
+                      <action.icon size={24} />
+                    </div>
+                    <h6 className="card-title fw-semibold">{action.title}</h6>
+                    <p className="card-text text-muted small">{action.description}</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modules Grid */}
+      <div className="mb-5">
+        <h3 className="h4 mb-4 text-dark">
+          <FaChartLine className="me-2" />
+          Módulos del Sistema
+        </h3>
+        <div className="row g-4">
+          {modules.map((module, index) => (
+            <div key={index} className="col-md-6 col-lg-4">
+              <Link to={module.link} className="text-decoration-none">
+                <div className={`card h-100 border-0 shadow module-card ${module.color}`}>
+                  <div className="card-body text-white">
+                    <div className="d-flex align-items-start mb-3">
+                      <div className="module-icon me-3">
+                        <module.icon size={32} />
+                      </div>
+                      <div className="flex-grow-1">
+                        <h5 className="card-title fw-bold mb-1">{module.title}</h5>
+                        <small className="opacity-75">{module.stats}</small>
+                      </div>
+                    </div>
+                    <p className="card-text opacity-90">{module.description}</p>
+                    <div className="mt-auto">
+                      <small className="opacity-75">
+                        <FaArrowRight className="me-1" />
+                        Acceder al módulo
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div className="row mt-5 pt-4 border-top">
+        <div className="col-12 text-center">
+          <h6 className="text-dark mb-3">Sistema de Gestión</h6>
+          <p className="text-muted small mb-1">
+            Plataforma integral para la gestión de planes vacunales, 
+            inventario, facturación y logística de productos veterinarios.
+          </p>
+          <small className="text-muted">
+            <strong>Versión 2.0</strong> - Tierra Volga © 2025
+          </small>
+          
+          {/* Botón de debug - remover en producción */}
+          <div className="mt-3">
+            <button 
+              className="btn btn-sm btn-outline-secondary"
+              onClick={showWelcomeModalForTesting}
+            >
+              Mostrar Modal de Bienvenida (Debug)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Bienvenida */}
+      {showWelcomeModal && (
+        <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header bg-dark text-white border-0">
+                <h5 className="modal-title fw-bold">
+                  <FaStethoscope className="me-2" />
+                  ¡Bienvenido al Sistema!
+                </h5>
+              </div>
+              <div className="modal-body text-center p-4">
+                <div className="mb-4">
+                  <div className="rounded-circle d-inline-flex align-items-center justify-content-center bg-dark bg-opacity-10 mb-3"
+                       style={{ width: '80px', height: '80px' }}>
+                    <FaUsers size={40} className="text-dark" />
+                  </div>
+                  <h4 className="text-dark mb-3">
+                    Hola, <strong>{usuario?.nombre}</strong>
+                  </h4>
+                  <p className="text-muted mb-3">
+                    Te damos la bienvenida al <strong>Sistema de Gestión</strong>
+                  </p>
+                  <div className="bg-light p-3 rounded mb-3">
+                    <small className="text-muted d-block">
+                      <FaCalendarAlt className="me-1" />
+                      {currentTime.toLocaleDateString('es-AR', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </small>
+                  </div>
+                  <p className="small text-muted">
+                    Plataforma integral para la gestión de planes vacunales, 
+                    inventario, facturación y logística veterinaria.
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer border-0 justify-content-center">
+                <button 
+                  type="button" 
+                  className="btn btn-dark btn-lg px-4"
+                  onClick={handleCloseWelcomeModal}
+                >
+                  <FaArrowRight className="me-2" />
+                  Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default Dashboard;

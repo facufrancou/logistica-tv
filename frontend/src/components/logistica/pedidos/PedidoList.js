@@ -7,7 +7,7 @@ import {
   actualizarPedido,
   completarPedido,
   eliminarPedido,
-} from "../services/api";
+} from "../../../services/api";
 
 function PedidoList({ pedidos, onActualizar }) {
   const [pagina, setPagina] = useState(0);
