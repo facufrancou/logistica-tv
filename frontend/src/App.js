@@ -6,6 +6,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
+import { PlanesVacunalesProvider } from "./context/PlanesVacunalesContext";
 import RutaPrivada from "./components/RutaPrivada";
 import { NotificationProvider } from "./context/NotificationContext";
 import { 
@@ -18,7 +19,15 @@ import {
   FaCalendarAlt, 
   FaCog, 
   FaSignOutAlt,
-  FaBars
+  FaBars,
+  FaSyringe,
+  FaFileInvoice,
+  FaClipboardList,
+  FaWarehouse,
+  FaFileInvoiceDollar,
+  FaMoneyBill,
+  FaFileAlt,
+  FaChartLine
 } from "react-icons/fa";
 
 import Login from "./components/Login";
@@ -35,6 +44,41 @@ import SistemaView from "./components/SistemaView";
 import UsuarioForm from "./components/UsuarioForm";
 import CtaCteForm from "./components/CtaCteForm";
 
+// Nuevos componentes para Planes Vacunales
+import PlanesVacunalesList from "./components/planesVacunales/PlanesVacunalesList";
+import PlanVacunalForm from "./components/planesVacunales/PlanVacunalForm";
+import PlanVacunalDetalle from "./components/planesVacunales/PlanVacunalDetalle";
+import ListasPreciosList from "./components/planesVacunales/ListasPreciosList";
+import CotizacionesList from "./components/planesVacunales/CotizacionesList";
+import CotizacionForm from "./components/planesVacunales/CotizacionForm";
+import CotizacionDetalle from "./components/planesVacunales/CotizacionDetalle";
+
+// Componentes de Stock (Sprint 3)
+import StockDashboard from "./components/stock/StockDashboard";
+import MovimientosStock from "./components/stock/MovimientosStock";
+import RegistroMovimiento from "./components/stock/RegistroMovimiento";
+import ReservasStock from "./components/stock/ReservasStock";
+import AlertasStock from "./components/stock/AlertasStock";
+import ProductoStock from "./components/stock/ProductoStock";
+
+// Componentes de Seguimiento (Sprint 4)
+import SeguimientoDashboard from "./components/seguimiento/SeguimientoDashboard";
+import AplicacionesDosis from "./components/seguimiento/AplicacionesDosis";
+import RetirosCampo from "./components/seguimiento/RetirosCampo";
+import CumplimientoPanel from "./components/seguimiento/CumplimientoPanel";
+import NotificacionesCenter from "./components/seguimiento/NotificacionesCenter";
+
+// Componentes de Facturación (Sprint 5)
+import FacturacionDashboard from "./components/facturacion/FacturacionDashboard";
+import FacturasList from "./components/facturacion/FacturasList";
+import FacturaForm from "./components/facturacion/FacturaForm";
+import FacturaDetalle from "./components/facturacion/FacturaDetalle";
+import ConfiguracionFacturacion from "./components/facturacion/ConfiguracionFacturacion";
+import NotasCreditoDebito from "./components/facturacion/NotasCreditoDebito";
+// Crear componentes faltantes como alias temporales
+const CobrosFacturacion = FacturasList; // Temporal - mismo componente
+const ReportesFacturacion = ReportesView; // Temporal - usar reportes existente
+
 import { getPedidos } from "./services/api";
 import { useEffect, useState, useContext } from "react";
 import { observeTableMutations } from './utils/responsiveTables';
@@ -49,10 +93,12 @@ function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <Router>
-          <Navbar />
-          <MainRoutes />
-        </Router>
+        <PlanesVacunalesProvider>
+          <Router>
+            <Navbar />
+            <MainRoutes />
+          </Router>
+        </PlanesVacunalesProvider>
       </NotificationProvider>
     </AuthProvider>
   );
@@ -101,6 +147,50 @@ function Navbar() {
               </Link>
             </li>
 
+            {/* Dropdown de Planes Vacunales */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="planesDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaSyringe className="me-1" />
+                <span>Planes Vacunales</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="planesDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaSyringe className="me-2" /> Gestión de Planes</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/stock"><FaWarehouse className="me-2" /> Gestión de Stock</Link></li>
+              </ul>
+            </li>
+
+            {/* Dropdown de Seguimiento de Dosis */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="seguimientoDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaClipboardList className="me-1" />
+                <span>Seguimiento</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="seguimientoDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento"><FaChartBar className="me-2" /> Dashboard</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/aplicaciones"><FaSyringe className="me-2" /> Aplicaciones</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/retiros"><FaTruck className="me-2" /> Retiros de Campo</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/cumplimiento"><FaChartBar className="me-2" /> Cumplimiento</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/notificaciones"><FaBell className="me-2" /> Notificaciones</Link></li>
+              </ul>
+            </li>
+
             {/* Dropdown de gestión */}
             <li className="nav-item dropdown">
               <a
@@ -139,6 +229,30 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/reportes"><FaChartBar className="me-2" /> Reportes</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/recordatorios"><FaBell className="me-2" /> Próximos pedidos</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/semanal"><FaCalendarAlt className="me-2" /> Vista Semanal</Link></li>
+              </ul>
+            </li>
+
+            {/* Facturación */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="facturacionDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaFileInvoiceDollar className="me-1" />
+                <span>Facturación</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="facturacionDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/facturacion"><FaFileInvoiceDollar className="me-2" /> Dashboard Facturación</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/facturas"><FaFileInvoice className="me-2" /> Gestión de Facturas</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/cobros"><FaMoneyBill className="me-2" /> Gestión de Cobros</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/notas-credito-debito"><FaFileAlt className="me-2" /> Notas Créd./Déb.</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/configuracion-facturacion"><FaCog className="me-2" /> Configuración AFIP</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes-facturacion"><FaChartLine className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
             </li>
 
@@ -200,7 +314,7 @@ function MainRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/pedido/acceso" element={<PedidoAcceso />} />
 
-        {/* 🔐 Rutas protegidas */}
+        {/* 🔐 Rutas protegidas - Sistema Legacy */}
         <Route
           path="/"
           element={
@@ -269,6 +383,222 @@ function MainRoutes() {
         <Route path="/sistema" element={<RutaPrivada><SistemaView /></RutaPrivada>} />
         <Route path="/sistema/usuarios" element={<RutaPrivada><UsuarioForm /></RutaPrivada>} />
         <Route path="/sistema/ctacte" element={<RutaPrivada><CtaCteForm /></RutaPrivada>} />
+
+        {/* 🔐 Rutas protegidas - Planes Vacunales (Nuevo Sistema) */}
+        <Route
+          path="/planes-vacunales"
+          element={
+            <RutaPrivada>
+              <PlanesVacunalesList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/planes-vacunales/nuevo"
+          element={
+            <RutaPrivada>
+              <PlanVacunalForm />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/planes-vacunales/:id"
+          element={
+            <RutaPrivada>
+              <PlanVacunalDetalle />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/planes-vacunales/:id/editar"
+          element={
+            <RutaPrivada>
+              <PlanVacunalForm />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/listas-precios"
+          element={
+            <RutaPrivada>
+              <ListasPreciosList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/cotizaciones"
+          element={
+            <RutaPrivada>
+              <CotizacionesList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/cotizaciones/nueva"
+          element={
+            <RutaPrivada>
+              <CotizacionForm />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/cotizaciones/editar/:id"
+          element={
+            <RutaPrivada>
+              <CotizacionForm />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/cotizaciones/:id"
+          element={
+            <RutaPrivada>
+              <CotizacionDetalle />
+            </RutaPrivada>
+          }
+        />
+
+        {/* 🗂️ Rutas de Stock (Sprint 3) */}
+        <Route
+          path="/stock"
+          element={
+            <RutaPrivada>
+              <StockDashboard />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/stock/movimientos"
+          element={
+            <RutaPrivada>
+              <MovimientosStock />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/stock/movimientos/nuevo"
+          element={
+            <RutaPrivada>
+              <RegistroMovimiento />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/stock/reservas"
+          element={
+            <RutaPrivada>
+              <ReservasStock />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/stock/alertas"
+          element={
+            <RutaPrivada>
+              <AlertasStock />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/stock/producto/:id"
+          element={
+            <RutaPrivada>
+              <ProductoStock />
+            </RutaPrivada>
+          }
+        />
+
+        {/* 📊 Rutas de Seguimiento de Dosis (Sprint 4) */}
+        <Route
+          path="/seguimiento"
+          element={
+            <RutaPrivada>
+              <SeguimientoDashboard />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/seguimiento/aplicaciones"
+          element={
+            <RutaPrivada>
+              <AplicacionesDosis />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/seguimiento/retiros"
+          element={
+            <RutaPrivada>
+              <RetirosCampo />
+            </RutaPrivada>
+          }
+        />
+        
+        {/* 💰 Rutas de Facturación (Sprint 5) */}
+        <Route
+          path="/facturacion"
+          element={
+            <RutaPrivada>
+              <FacturacionDashboard />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/facturas"
+          element={
+            <RutaPrivada>
+              <FacturasList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/cobros"
+          element={
+            <RutaPrivada>
+              <CobrosFacturacion />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/notas-credito-debito"
+          element={
+            <RutaPrivada>
+              <NotasCreditoDebito />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/configuracion-facturacion"
+          element={
+            <RutaPrivada>
+              <ConfiguracionFacturacion />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/reportes-facturacion"
+          element={
+            <RutaPrivada>
+              <ReportesFacturacion />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/seguimiento/cumplimiento"
+          element={
+            <RutaPrivada>
+              <CumplimientoPanel />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/seguimiento/notificaciones"
+          element={
+            <RutaPrivada>
+              <NotificacionesCenter />
+            </RutaPrivada>
+          }
+        />
       </Routes>
     </div>
   );

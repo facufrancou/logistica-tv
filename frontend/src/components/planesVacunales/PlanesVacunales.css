@@ -1,0 +1,583 @@
+/* Estilos específicos para Planes Vacunales */
+
+/* Container principal */
+.planes-vacunales-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header de la página */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid var(--color-fondo-medio);
+}
+
+.header-content .header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.header-icon {
+  font-size: 2rem;
+  color: var(--color-principal);
+}
+
+.header-content h1 {
+  color: var(--color-principal);
+  margin: 0;
+  font-weight: 700;
+  font-size: 2.5rem;
+}
+
+.header-subtitle {
+  color: var(--color-texto-muted);
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Estadísticas rápidas */
+.stat-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  margin-right: 15px;
+}
+
+.stat-content h3 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-principal);
+}
+
+.stat-content p {
+  margin: 0;
+  color: var(--color-texto-muted);
+  font-size: 0.9rem;
+}
+
+/* Loading container */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--color-texto-muted);
+}
+
+/* Estado vacío */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--color-texto-muted);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  color: var(--color-fondo-oscuro);
+  margin-bottom: 20px;
+}
+
+.empty-state h4 {
+  color: var(--color-principal);
+  margin-bottom: 10px;
+}
+
+/* Información del plan */
+.plan-info {
+  max-width: 250px;
+}
+
+.plan-info strong {
+  color: var(--color-principal);
+}
+
+/* Badge de duración */
+.duration-badge {
+  background: linear-gradient(135deg, var(--color-acento), #e0c646);
+  color: var(--color-texto-oscuro);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Badge de lista */
+.lista-badge {
+  background: linear-gradient(135deg, var(--color-principal), #4a2a19);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Botones de acción */
+.action-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.action-buttons .btn {
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+
+/* Animaciones para las tarjetas del calendario */
+.plan-calendario-semana {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.plan-calendario-semana:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.plan-calendario-semana.tiene-productos {
+  background: linear-gradient(135deg, 
+    rgba(61, 33, 19, 0.05),
+    rgba(204, 177, 55, 0.05)
+  );
+  border-left: 4px solid var(--color-principal);
+}
+
+.plan-calendario-semana.sin-productos {
+  background: var(--color-fondo-claro);
+  border-left: 4px solid var(--color-fondo-oscuro);
+}
+
+/* Badges personalizados para estados */
+.estado-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.estado-badge.activo {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+}
+
+.estado-badge.inactivo {
+  background: linear-gradient(135deg, #6c757d, #495057);
+  color: white;
+}
+
+.estado-badge.borrador {
+  background: linear-gradient(135deg, #ffc107, #fd7e14);
+  color: var(--color-texto-oscuro);
+}
+
+/* Animación para el cálculo de precios */
+.precio-calculando {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Estilos para las tarjetas de resumen */
+.resumen-card {
+  background: linear-gradient(135deg, white, var(--color-fondo-claro));
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.resumen-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.resumen-valor {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--color-principal), var(--color-acento));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Modal de productos */
+.producto-modal .modal-content {
+  border-radius: 15px;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.producto-modal .modal-header {
+  background: linear-gradient(135deg, var(--color-principal), var(--color-secundario));
+  color: white;
+  border-radius: 15px 15px 0 0;
+  border: none;
+}
+
+.producto-modal .modal-header .btn-close {
+  filter: invert(1);
+}
+
+/* Tabla de productos mejorada */
+.productos-table {
+  border: none;
+}
+
+.productos-table thead th {
+  background: linear-gradient(135deg, var(--color-fondo-claro), var(--color-fondo-medio));
+  border: none;
+  font-weight: 600;
+  color: var(--color-principal);
+  padding: 1rem;
+}
+
+.productos-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.productos-table tbody tr:hover {
+  background: linear-gradient(135deg, 
+    rgba(var(--color-acento-rgb), 0.05),
+    rgba(var(--color-principal-rgb), 0.05)
+  );
+  transform: scale(1.01);
+}
+
+.productos-table td {
+  padding: 1rem;
+  border-color: var(--color-fondo-medio);
+  vertical-align: middle;
+}
+
+/* Filtros avanzados */
+.filtros-container {
+  background: linear-gradient(135deg, white, var(--color-fondo-claro));
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.filtros-container .form-control,
+.filtros-container .form-select {
+  border: 1px solid var(--color-fondo-oscuro);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.filtros-container .form-control:focus,
+.filtros-container .form-select:focus {
+  border-color: var(--color-principal);
+  box-shadow: 0 0 0 0.2rem rgba(var(--color-principal-rgb), 0.25);
+}
+
+/* Badges de listas de precios */
+.lista-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lista-badge.l15 {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+}
+
+.lista-badge.l18 {
+  background: linear-gradient(135deg, #17a2b8, #117a8b);
+  color: white;
+}
+
+.lista-badge.l20 {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+}
+
+.lista-badge.l25 {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: var(--color-texto-oscuro);
+}
+
+.lista-badge.l30 {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+/* Animación de carga personalizada */
+.planes-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.planes-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--color-fondo-medio);
+  border-top: 4px solid var(--color-principal);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Botones de acción mejorados */
+.btn-planes {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.3s ease;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-planes::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-planes:hover::before {
+  left: 100%;
+}
+
+.btn-planes.primary {
+  background: linear-gradient(135deg, var(--color-principal), var(--color-principal-hover));
+  color: white;
+}
+
+.btn-planes.success {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+}
+
+.btn-planes.warning {
+  background: linear-gradient(135deg, var(--color-acento), var(--color-acento-hover));
+  color: var(--color-texto-oscuro);
+}
+
+.btn-planes.danger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+/* Stats cards con gradientes */
+.stats-card {
+  border: none;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.stats-card.primary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.stats-card.success {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.stats-card.warning {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+}
+
+.stats-card.secondary {
+  background: linear-gradient(135deg, #6c757d, #495057);
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(30px, -30px);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .resumen-valor {
+    font-size: 1.5rem;
+  }
+  
+  .plan-calendario-semana {
+    margin-bottom: 0.5rem;
+  }
+  
+  .btn-planes {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mejoras para accesibilidad */
+.plan-item:focus,
+.btn-planes:focus {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
+}
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(90deg, 
+    var(--color-fondo-claro) 25%, 
+    var(--color-fondo-medio) 50%, 
+    var(--color-fondo-claro) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+.skeleton-title {
+  height: 1.5rem;
+  width: 60%;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+}
+
+/* ===== TIMELINE ===== */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--color-border);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -2rem;
+  top: 0.25rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--color-border);
+}
+
+.timeline-marker.bg-primary {
+  background-color: var(--color-brown-primary);
+  box-shadow: 0 0 0 2px var(--color-brown-primary);
+}
+
+.timeline-marker.bg-info {
+  background-color: #17a2b8;
+  box-shadow: 0 0 0 2px #17a2b8;
+}
+
+.timeline-marker.bg-success {
+  background-color: #28a745;
+  box-shadow: 0 0 0 2px #28a745;
+}
+
+.timeline-marker.bg-danger {
+  background-color: #dc3545;
+  box-shadow: 0 0 0 2px #dc3545;
+}
+
+.timeline-content {
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.timeline-title {
+  font-weight: 600;
+  color: var(--color-brown-primary);
+  margin-bottom: 0.5rem;
+}
+
+.timeline-date {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+/* Responsive para timeline */
+@media (max-width: 768px) {
+  .timeline {
+    padding-left: 1.5rem;
+  }
+  
+  .timeline-marker {
+    left: -1.5rem;
+  }
+}

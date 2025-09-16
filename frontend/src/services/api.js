@@ -1,4 +1,4 @@
-const API = "https://api.tierravolga.com.ar";
+const API = "http://localhost:3001";
 
 // Función reutilizable para fetch con sesión
 const fetchConSesion = async (url, options = {}) => {
@@ -6,6 +6,9 @@ const fetchConSesion = async (url, options = {}) => {
   if (!res.ok) throw new Error("No autorizado");
   return await res.json();
 };
+
+// Exportar funciones de la nueva API de Planes Vacunales
+export * from './planesVacunalesApi';
 
 // CLIENTES
 export const getClientes = () => fetchConSesion(API + "/clientes");

@@ -1,0 +1,785 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id       BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  rol_type BigInt
+  usuarios Usuario[]
+
+  @@map("rol")
+}
+
+model Usuario {
+  id_usuario                 Int               @id @default(autoincrement())
+  nombre                     String            @db.VarChar(100)
+  email                      String?           @db.VarChar(100)
+  password                   String            @db.VarChar(255)
+  rol_id                     BigInt            @db.UnsignedBigInt
+  aplicaciones_dosis_creadas AplicacionDosis[]
+  auditoria_acciones         AuditoriaAccion[]
+  configuraciones            Configuracion[]
+  historial_precios          HistorialPrecio[]
+  movimientos_stock          MovimientoStock[]
+  notificaciones             Notificacion[]
+  pedidos                    Pedido[]
+  retiros_campo_creados      RetiroCampo[]
+  rol                        Rol               @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
+
+  @@index([email], map: "idx_usuarios_email")
+  @@index([rol_id], map: "rol_id")
+  @@map("usuarios")
+}
+
+model Cliente {
+  id_cliente                Int                        @id @default(autoincrement())
+  nombre                    String                     @db.VarChar(255)
+  cuit                      String                     @db.VarChar(255)
+  email                     String?                    @db.Text
+  telefono                  String?                    @db.VarChar(255)
+  direccion                 String?                    @db.Text
+  habilitado                Boolean?                   @default(true)
+  bloqueado                 Boolean?                   @default(false)
+  fecha_proximo_pedido      DateTime?                  @db.Date
+  created_at                DateTime?                  @default(now()) @db.DateTime(0)
+  updated_at                DateTime?                  @default(now()) @db.DateTime(0)
+  created_by                Int?
+  updated_by                Int?
+  configuracion_facturacion ConfiguracionFacturacion[]
+  cotizaciones              Cotizacion[]
+  descuentos                Descuento[]
+  notificaciones            Notificacion[]
+  pedido_tokens             PedidoToken[]
+  pedidos                   Pedido[]
+  productos_habilitados     ProductoHabilitado[]
+
+  @@index([cuit], map: "idx_clientes_cuit")
+  @@index([nombre], map: "idx_clientes_nombre")
+  @@map("clientes")
+}
+
+model Proveedor {
+  id_proveedor Int        @id @default(autoincrement())
+  nombre       String     @db.VarChar(255)
+  activo       Boolean?   @default(true)
+  created_at   DateTime?  @default(now()) @db.DateTime(0)
+  updated_at   DateTime?  @default(now()) @db.DateTime(0)
+  created_by   Int?
+  updated_by   Int?
+  productos    Producto[]
+
+  @@map("proveedores")
+}
+
+model Producto {
+  id_producto                Int                      @id @default(autoincrement())
+  nombre                     String                   @db.VarChar(100)
+  descripcion                String?                  @db.Text
+  precio_unitario            Decimal                  @db.Decimal(10, 2)
+  stock                      Int?                     @default(0)
+  id_proveedor               Int?
+  created_at                 DateTime?                @default(now()) @db.DateTime(0)
+  updated_at                 DateTime?                @default(now()) @db.DateTime(0)
+  created_by                 Int?
+  updated_by                 Int?
+  requiere_control_stock     Boolean?                 @default(true)
+  stock_minimo               Int?                     @default(0)
+  stock_reservado            Int?                     @default(0)
+  aplicaciones_dosis         AplicacionDosis[]
+  calendario_vacunacion      CalendarioVacunacion[]
+  descuentos                 Descuento[]
+  detalle_cotizacion         DetalleCotizacion[]
+  detalle_pedido             DetallePedido[]
+  historial_precios          HistorialPrecio[]
+  movimientos_stock          MovimientoStock[]
+  notificaciones_automaticas NotificacionAutomatica[]
+  productos_plan             PlanProducto[]
+  precios_por_lista          PrecioPorLista[]
+  proveedores                Proveedor?               @relation(fields: [id_proveedor], references: [id_proveedor], onDelete: NoAction, onUpdate: NoAction, map: "productos_ibfk_1")
+  productos_habilitados      ProductoHabilitado[]
+  reservas_stock             ReservaStock[]
+  retiros_campo              RetiroCampo[]
+
+  @@index([id_proveedor], map: "id_proveedor")
+  @@index([nombre], map: "idx_productos_nombre")
+  @@index([stock], map: "idx_productos_stock")
+  @@index([stock_minimo], map: "idx_productos_stock_minimo")
+  @@index([precio_unitario], map: "idx_productos_precio")
+  @@index([requiere_control_stock], map: "idx_productos_control_stock")
+  @@index([created_at], map: "idx_productos_fecha_creacion")
+  @@map("productos")
+}
+
+model ProductoHabilitado {
+  id_cliente  Int
+  id_producto Int
+  clientes    Cliente  @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "productos_habilitados_ibfk_1")
+  productos   Producto @relation(fields: [id_producto], references: [id_producto], onDelete: NoAction, onUpdate: NoAction, map: "productos_habilitados_ibfk_2")
+
+  @@id([id_cliente, id_producto])
+  @@index([id_producto], map: "id_producto")
+  @@map("productos_habilitados")
+}
+
+model Pedido {
+  id_pedido            Int             @id @default(autoincrement())
+  id_cliente           Int
+  id_usuario           Int
+  fecha_pedido         DateTime?       @default(now()) @db.DateTime(0)
+  total                Decimal?        @db.Decimal(10, 2)
+  seguimiento_dist     String          @db.VarChar(50)
+  estado               String?         @default("pendiente") @db.VarChar(50)
+  fecha_proximo_pedido DateTime?       @db.Date
+  created_at           DateTime?       @default(now()) @db.DateTime(0)
+  updated_at           DateTime?       @default(now()) @db.DateTime(0)
+  created_by           Int?
+  updated_by           Int?
+  detalle_pedido       DetallePedido[]
+  clientes             Cliente         @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "pedidos_ibfk_1")
+  usuarios             Usuario         @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "pedidos_ibfk_2")
+
+  @@index([id_usuario], map: "id_usuario")
+  @@index([id_cliente, estado], map: "idx_pedidos_cliente_estado")
+  @@index([estado], map: "idx_pedidos_estado")
+  @@index([fecha_pedido], map: "idx_pedidos_fecha")
+  @@index([fecha_pedido, estado], map: "idx_pedidos_fecha_estado")
+  @@index([fecha_proximo_pedido], map: "idx_pedidos_fecha_prox")
+  @@map("pedidos")
+}
+
+model DetallePedido {
+  id_detalle      Int       @id @default(autoincrement())
+  id_pedido       Int
+  id_producto     Int
+  cantidad        Int
+  precio_unitario Decimal   @db.Decimal(10, 2)
+  subtotal        Decimal?  @db.Decimal(10, 2)
+  created_at      DateTime? @default(now()) @db.DateTime(0)
+  updated_at      DateTime? @default(now()) @db.DateTime(0)
+  created_by      Int?
+  updated_by      Int?
+  pedidos         Pedido    @relation(fields: [id_pedido], references: [id_pedido], onDelete: NoAction, onUpdate: NoAction, map: "detalle_pedido_ibfk_1")
+  productos       Producto  @relation(fields: [id_producto], references: [id_producto], onDelete: NoAction, onUpdate: NoAction, map: "detalle_pedido_ibfk_2")
+
+  @@index([id_pedido], map: "id_pedido")
+  @@index([id_producto], map: "id_producto")
+  @@map("detalle_pedido")
+}
+
+model Descuento {
+  id_descuento Int             @id @default(autoincrement())
+  nombre       String          @db.VarChar(100)
+  tipo         descuentos_tipo
+  valor        Decimal         @db.Decimal(10, 2)
+  fecha_inicio DateTime        @db.Date
+  fecha_fin    DateTime?       @db.Date
+  id_cliente   Int?
+  id_producto  Int?
+  activo       Boolean?        @default(true)
+  created_at   DateTime?       @default(now()) @db.DateTime(0)
+  updated_at   DateTime?       @default(now()) @db.DateTime(0)
+  created_by   Int?
+  updated_by   Int?
+  clientes     Cliente?        @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade, onUpdate: NoAction, map: "fk_descuentos_clientes")
+  productos    Producto?       @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction, map: "fk_descuentos_productos")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@index([id_producto], map: "id_producto")
+  @@index([activo], map: "idx_descuentos_activo")
+  @@index([fecha_inicio, fecha_fin], map: "idx_descuentos_fecha")
+  @@map("descuentos")
+}
+
+model HistorialPrecio {
+  id_historial    Int          @id @default(autoincrement())
+  id_producto     Int
+  precio_anterior Decimal      @db.Decimal(10, 2)
+  precio_nuevo    Decimal      @db.Decimal(10, 2)
+  fecha_cambio    DateTime?    @default(now()) @db.DateTime(0)
+  id_usuario      Int?
+  id_lista_precio Int?
+  motivo_cambio   String?      @db.VarChar(255)
+  observaciones   String?      @db.Text
+  lista_precio    ListaPrecio? @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction, map: "fk_historial_lista_precio")
+  productos       Producto     @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction, map: "fk_historial_productos")
+  usuarios        Usuario?     @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_historial_usuarios")
+
+  @@index([id_producto], map: "id_producto")
+  @@index([id_usuario], map: "id_usuario")
+  @@index([id_lista_precio], map: "idx_historial_lista_precio")
+  @@index([fecha_cambio], map: "idx_historial_fecha")
+  @@index([id_producto, id_lista_precio], map: "idx_historial_producto_lista")
+  @@index([precio_anterior, precio_nuevo], map: "idx_historial_precios")
+  @@map("historial_precios")
+}
+
+model PedidoToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique(map: "token") @db.VarChar(100)
+  id_cliente Int
+  expires_at DateTime @db.DateTime(0)
+  usado      Boolean? @default(false)
+  clientes   Cliente  @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "pedido_tokens_ibfk_1")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@map("pedido_tokens")
+}
+
+model Notificacion {
+  id_notificacion Int       @id @default(autoincrement())
+  id_usuario      Int?
+  id_cliente      Int?
+  tipo            String    @db.VarChar(50)
+  mensaje         String    @db.Text
+  leida           Boolean?  @default(false)
+  fecha_creacion  DateTime? @default(now()) @db.DateTime(0)
+  fecha_lectura   DateTime? @db.DateTime(0)
+  clientes        Cliente?  @relation(fields: [id_cliente], references: [id_cliente], onUpdate: NoAction, map: "fk_notificaciones_clientes")
+  usuarios        Usuario?  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_notificaciones_usuarios")
+
+  @@index([id_cliente], map: "id_cliente")
+  @@index([id_usuario], map: "id_usuario")
+  @@map("notificaciones")
+}
+
+model Configuracion {
+  clave       String    @id @db.VarChar(50)
+  valor       String    @db.Text
+  descripcion String?   @db.VarChar(255)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_by  Int?
+  usuarios    Usuario?  @relation(fields: [updated_by], references: [id_usuario], onUpdate: NoAction, map: "fk_config_usuarios")
+
+  @@index([updated_by], map: "updated_by")
+  @@map("configuraciones")
+}
+
+model AuditoriaAccion {
+  id_auditoria   Int       @id @default(autoincrement())
+  id_usuario     Int?
+  tipo_accion    String    @db.VarChar(50)
+  tabla          String    @db.VarChar(50)
+  registro_id    Int?
+  detalle        String?   @db.Text
+  valor_anterior String?   @db.Text
+  valor_nuevo    String?   @db.Text
+  direccion_ip   String?   @db.VarChar(45)
+  fecha_accion   DateTime? @default(now()) @db.DateTime(0)
+  usuario        Usuario?  @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction, map: "fk_auditoria_usuarios")
+
+  @@index([id_usuario], map: "id_usuario")
+  @@index([fecha_accion], map: "idx_auditoria_fecha")
+  @@index([tabla], map: "idx_auditoria_tabla")
+  @@index([tipo_accion], map: "idx_auditoria_tipo")
+  @@map("auditoria_acciones")
+}
+
+model ListaPrecio {
+  id_lista          Int               @id @default(autoincrement())
+  tipo              tipo_lista_precio @unique
+  nombre            String            @db.VarChar(50)
+  descripcion       String?           @db.Text
+  activa            Boolean           @default(true)
+  created_at        DateTime?         @default(now()) @db.DateTime(0)
+  updated_at        DateTime?         @default(now()) @db.DateTime(0)
+  created_by        Int?
+  updated_by        Int?
+  cotizaciones      Cotizacion[]
+  historial_precios HistorialPrecio[]
+  planes_vacunales  PlanVacunal[]
+  precios_por_lista PrecioPorLista[]
+
+  @@map("listas_precios")
+}
+
+model PlanVacunal {
+  id_plan          Int            @id @default(autoincrement())
+  nombre           String         @db.VarChar(255)
+  descripcion      String?        @db.Text
+  duracion_semanas Int            @db.TinyInt
+  estado           estado_plan    @default(borrador)
+  id_lista_precio  Int?
+  precio_total     Decimal?       @db.Decimal(10, 2)
+  observaciones    String?        @db.Text
+  created_at       DateTime?      @default(now()) @db.DateTime(0)
+  updated_at       DateTime?      @default(now()) @db.DateTime(0)
+  created_by       Int?
+  updated_by       Int?
+  cotizaciones     Cotizacion[]
+  productos_plan   PlanProducto[]
+  lista_precio     ListaPrecio?   @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction)
+
+  @@index([estado], map: "idx_planes_estado")
+  @@index([id_lista_precio], map: "idx_planes_lista_precio")
+  @@index([duracion_semanas], map: "idx_planes_duracion")
+  @@map("planes_vacunales")
+}
+
+model PlanProducto {
+  id_plan_producto Int         @id @default(autoincrement())
+  id_plan          Int
+  id_producto      Int
+  cantidad_total   Int
+  dosis_por_semana Int         @default(1)
+  semana_inicio    Int         @db.TinyInt
+  semana_fin       Int?        @db.TinyInt
+  observaciones    String?     @db.Text
+  created_at       DateTime?   @default(now()) @db.DateTime(0)
+  updated_at       DateTime?   @default(now()) @db.DateTime(0)
+  plan             PlanVacunal @relation(fields: [id_plan], references: [id_plan], onDelete: Cascade, onUpdate: NoAction)
+  producto         Producto    @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_plan], map: "idx_plan_productos_plan")
+  @@index([id_producto], map: "idx_plan_productos_producto")
+  @@index([semana_inicio, semana_fin], map: "idx_plan_productos_semanas")
+  @@map("plan_productos")
+}
+
+model PrecioPorLista {
+  id_precio_lista Int         @id @default(autoincrement())
+  id_producto     Int
+  id_lista        Int
+  precio          Decimal     @db.Decimal(10, 2)
+  fecha_vigencia  DateTime    @db.Date
+  activo          Boolean     @default(true)
+  created_at      DateTime?   @default(now()) @db.DateTime(0)
+  updated_at      DateTime?   @default(now()) @db.DateTime(0)
+  created_by      Int?
+  updated_by      Int?
+  lista           ListaPrecio @relation(fields: [id_lista], references: [id_lista], onDelete: Cascade, onUpdate: NoAction)
+  producto        Producto    @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id_producto, id_lista, fecha_vigencia], map: "unique_precio_producto_lista_fecha")
+  @@index([id_producto], map: "idx_precios_producto")
+  @@index([id_lista], map: "idx_precios_lista")
+  @@index([fecha_vigencia], map: "idx_precios_vigencia")
+  @@index([activo], map: "idx_precios_activo")
+  @@index([precio], map: "idx_precios_monto")
+  @@index([id_producto, activo], map: "idx_precios_producto_activo")
+  @@map("precios_por_lista")
+}
+
+model Cotizacion {
+  id_cotizacion              Int                       @id @default(autoincrement())
+  numero_cotizacion          String                    @unique @db.VarChar(50)
+  id_cliente                 Int
+  id_plan                    Int
+  id_lista_precio            Int?
+  estado                     estado_cotizacion         @default(en_proceso)
+  fecha_inicio_plan          DateTime                  @db.Date
+  precio_total               Decimal                   @db.Decimal(10, 2)
+  observaciones              String?                   @db.Text
+  fecha_envio                DateTime?                 @db.DateTime(0)
+  fecha_aceptacion           DateTime?                 @db.DateTime(0)
+  created_at                 DateTime?                 @default(now()) @db.DateTime(0)
+  updated_at                 DateTime?                 @default(now()) @db.DateTime(0)
+  created_by                 Int?
+  updated_by                 Int?
+  modalidad_facturacion      modalidad_facturacion?    @default(total_inicio)
+  porcentaje_aplicado        Decimal?                  @db.Decimal(5, 2)
+  aplicaciones_dosis         AplicacionDosis[]
+  calendario_vacunacion      CalendarioVacunacion[]
+  cliente                    Cliente                   @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade, onUpdate: NoAction)
+  lista_precio               ListaPrecio?              @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction)
+  plan                       PlanVacunal               @relation(fields: [id_plan], references: [id_plan], onUpdate: NoAction)
+  detalle_cotizacion         DetalleCotizacion[]
+  facturas                   Factura[]
+  movimientos_stock          MovimientoStock[]
+  notificaciones_automaticas NotificacionAutomatica[]
+  reservas_stock             ReservaStock[]
+  retiros_campo              RetiroCampo[]
+  seguimiento_cumplimiento   SeguimientoCumplimiento[]
+
+  @@index([id_cliente], map: "idx_cotizaciones_cliente")
+  @@index([id_plan], map: "idx_cotizaciones_plan")
+  @@index([estado], map: "idx_cotizaciones_estado")
+  @@index([fecha_inicio_plan], map: "idx_cotizaciones_fecha_inicio")
+  @@index([numero_cotizacion], map: "idx_cotizaciones_numero")
+  @@index([modalidad_facturacion], map: "idx_cotizaciones_modalidad")
+  @@index([precio_total], map: "idx_cotizaciones_precio_total")
+  @@index([created_at], map: "idx_cotizaciones_fecha_creacion")
+  @@index([id_lista_precio], map: "cotizaciones_id_lista_precio_fkey")
+  @@map("cotizaciones")
+}
+
+model DetalleCotizacion {
+  id_detalle_cotizacion Int        @id @default(autoincrement())
+  id_cotizacion         Int
+  id_producto           Int
+  cantidad_total        Int
+  precio_unitario       Decimal    @db.Decimal(10, 2)
+  subtotal              Decimal    @db.Decimal(10, 2)
+  semana_inicio         Int        @db.TinyInt
+  semana_fin            Int?       @db.TinyInt
+  dosis_por_semana      Int        @default(1)
+  observaciones         String?    @db.Text
+  created_at            DateTime?  @default(now()) @db.DateTime(0)
+  cotizacion            Cotizacion @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto              Producto   @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+
+  @@index([id_cotizacion], map: "idx_detalle_cotizacion")
+  @@index([id_producto], map: "idx_detalle_producto")
+  @@map("detalle_cotizacion")
+}
+
+model CalendarioVacunacion {
+  id_calendario              Int                      @id @default(autoincrement())
+  id_cotizacion              Int
+  id_producto                Int
+  numero_semana              Int                      @db.TinyInt
+  fecha_programada           DateTime                 @db.Date
+  cantidad_dosis             Int
+  estado_dosis               estado_dosis             @default(pendiente)
+  fecha_aplicacion           DateTime?                @db.DateTime(0)
+  observaciones              String?                  @db.Text
+  created_at                 DateTime?                @default(now()) @db.DateTime(0)
+  updated_at                 DateTime?                @default(now()) @db.DateTime(0)
+  aplicaciones_dosis         AplicacionDosis[]
+  cotizacion                 Cotizacion               @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto                   Producto                 @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  notificaciones_automaticas NotificacionAutomatica[]
+
+  @@unique([id_cotizacion, id_producto, numero_semana], map: "unique_calendario_cotizacion_producto_semana")
+  @@index([id_cotizacion], map: "idx_calendario_cotizacion")
+  @@index([fecha_programada], map: "idx_calendario_fecha")
+  @@index([estado_dosis], map: "idx_calendario_estado")
+  @@index([id_producto], map: "calendario_vacunacion_id_producto_fkey")
+  @@map("calendario_vacunacion")
+}
+
+model MovimientoStock {
+  id_movimiento   Int                   @id @default(autoincrement())
+  id_producto     Int
+  tipo_movimiento tipo_movimiento_stock
+  cantidad        Int
+  stock_anterior  Int
+  stock_posterior Int
+  motivo          String                @db.VarChar(255)
+  observaciones   String?               @db.Text
+  id_cotizacion   Int?
+  id_usuario      Int?
+  created_at      DateTime?             @default(now()) @db.DateTime(0)
+  cotizacion      Cotizacion?           @relation(fields: [id_cotizacion], references: [id_cotizacion], onUpdate: NoAction)
+  producto        Producto              @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+  usuario         Usuario?              @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+
+  @@index([id_producto], map: "idx_movimientos_producto")
+  @@index([tipo_movimiento], map: "idx_movimientos_tipo")
+  @@index([created_at], map: "idx_movimientos_fecha")
+  @@index([id_cotizacion], map: "idx_movimientos_cotizacion")
+  @@index([id_usuario], map: "movimientos_stock_id_usuario_fkey")
+  @@map("movimientos_stock")
+}
+
+model ReservaStock {
+  id_reserva         Int            @id @default(autoincrement())
+  id_producto        Int
+  id_cotizacion      Int
+  cantidad_reservada Int
+  estado_reserva     estado_reserva @default(activa)
+  fecha_vencimiento  DateTime?      @db.Date
+  motivo             String         @db.VarChar(255)
+  observaciones      String?        @db.Text
+  fecha_utilizacion  DateTime?      @db.DateTime(0)
+  fecha_liberacion   DateTime?      @db.DateTime(0)
+  created_at         DateTime?      @default(now()) @db.DateTime(0)
+  updated_at         DateTime?      @default(now()) @db.DateTime(0)
+  created_by         Int?
+  updated_by         Int?
+  cotizacion         Cotizacion     @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto           Producto       @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_producto], map: "idx_reservas_producto")
+  @@index([id_cotizacion], map: "idx_reservas_cotizacion")
+  @@index([estado_reserva], map: "idx_reservas_estado")
+  @@index([fecha_vencimiento], map: "idx_reservas_vencimiento")
+  @@map("reservas_stock")
+}
+
+model AplicacionDosis {
+  id_aplicacion          Int                  @id @default(autoincrement())
+  id_calendario          Int
+  id_cotizacion          Int
+  id_producto            Int
+  cantidad_aplicada      Int
+  fecha_aplicacion       DateTime             @db.DateTime(0)
+  lote_producto          String?              @db.VarChar(50)
+  animal_identificacion  String?              @db.VarChar(100)
+  responsable_aplicacion String?              @db.VarChar(100)
+  observaciones          String?              @db.Text
+  estado_aplicacion      estado_aplicacion    @default(exitosa)
+  created_at             DateTime?            @default(now()) @db.DateTime(0)
+  created_by             Int?
+  usuario_creador        Usuario?             @relation(fields: [created_by], references: [id_usuario], onUpdate: NoAction)
+  calendario             CalendarioVacunacion @relation(fields: [id_calendario], references: [id_calendario], onDelete: Cascade, onUpdate: NoAction)
+  cotizacion             Cotizacion           @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto               Producto             @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_calendario], map: "idx_aplicaciones_calendario")
+  @@index([id_cotizacion], map: "idx_aplicaciones_cotizacion")
+  @@index([id_producto], map: "idx_aplicaciones_producto")
+  @@index([fecha_aplicacion], map: "idx_aplicaciones_fecha")
+  @@index([estado_aplicacion], map: "idx_aplicaciones_estado")
+  @@index([created_by], map: "aplicaciones_dosis_created_by_fkey")
+  @@map("aplicaciones_dosis")
+}
+
+model RetiroCampo {
+  id_retiro          Int           @id @default(autoincrement())
+  id_cotizacion      Int
+  id_producto        Int
+  cantidad_retirada  Int
+  fecha_retiro       DateTime      @db.DateTime(0)
+  motivo_retiro      motivo_retiro
+  descripcion_motivo String?       @db.Text
+  afecta_calendario  Boolean?      @default(true)
+  responsable_retiro String?       @db.VarChar(100)
+  observaciones      String?       @db.Text
+  created_at         DateTime?     @default(now()) @db.DateTime(0)
+  created_by         Int?
+  usuario_creador    Usuario?      @relation(fields: [created_by], references: [id_usuario], onUpdate: NoAction)
+  cotizacion         Cotizacion    @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto           Producto      @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_cotizacion], map: "idx_retiros_cotizacion")
+  @@index([id_producto], map: "idx_retiros_producto")
+  @@index([fecha_retiro], map: "idx_retiros_fecha")
+  @@index([motivo_retiro], map: "idx_retiros_motivo")
+  @@index([created_by], map: "retiros_campo_created_by_fkey")
+  @@map("retiros_campo")
+}
+
+model SeguimientoCumplimiento {
+  id_seguimiento          Int                 @id @default(autoincrement())
+  id_cotizacion           Int
+  fecha_evaluacion        DateTime            @db.Date
+  total_dosis_programadas Int
+  total_dosis_aplicadas   Int
+  porcentaje_cumplimiento Decimal             @db.Decimal(5, 2)
+  dias_atraso_promedio    Int?                @default(0)
+  productos_pendientes    Int?                @default(0)
+  observaciones           String?             @db.Text
+  estado_general          estado_cumplimiento
+  created_at              DateTime?           @default(now()) @db.DateTime(0)
+  updated_at              DateTime?           @default(now()) @db.DateTime(0)
+  cotizacion              Cotizacion          @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id_cotizacion, fecha_evaluacion], map: "unique_cotizacion_fecha")
+  @@index([id_cotizacion], map: "idx_seguimiento_cotizacion")
+  @@index([fecha_evaluacion], map: "idx_seguimiento_fecha")
+  @@index([estado_general], map: "idx_seguimiento_estado")
+  @@index([porcentaje_cumplimiento], map: "idx_seguimiento_porcentaje")
+  @@map("seguimiento_cumplimiento")
+}
+
+model NotificacionAutomatica {
+  id_notificacion     Int                   @id @default(autoincrement())
+  tipo_notificacion   tipo_notificacion
+  id_cotizacion       Int
+  id_calendario       Int?
+  id_producto         Int?
+  titulo              String                @db.VarChar(255)
+  mensaje             String                @db.Text
+  fecha_programada    DateTime              @db.DateTime(0)
+  fecha_enviada       DateTime?             @db.DateTime(0)
+  estado_notificacion estado_notificacion   @default(pendiente)
+  canal_envio         canal_notificacion    @default(sistema)
+  destinatarios       Json?
+  created_at          DateTime?             @default(now()) @db.DateTime(0)
+  calendario          CalendarioVacunacion? @relation(fields: [id_calendario], references: [id_calendario], onUpdate: NoAction)
+  cotizacion          Cotizacion            @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto            Producto?             @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+
+  @@index([tipo_notificacion], map: "idx_notificaciones_tipo")
+  @@index([id_cotizacion], map: "idx_notificaciones_cotizacion")
+  @@index([fecha_programada], map: "idx_notificaciones_fecha_prog")
+  @@index([estado_notificacion], map: "idx_notificaciones_estado")
+  @@index([id_calendario], map: "notificaciones_automaticas_id_calendario_fkey")
+  @@index([id_producto], map: "notificaciones_automaticas_id_producto_fkey")
+  @@map("notificaciones_automaticas")
+}
+
+model Factura {
+  id_factura           Int              @id @default(autoincrement())
+  numero_factura       String           @unique @db.VarChar(50)
+  id_cotizacion        Int
+  estado_factura       estado_factura   @default(pendiente)
+  fecha_emision        DateTime         @db.Date
+  fecha_vencimiento    DateTime?        @db.Date
+  fecha_pago           DateTime?        @db.Date
+  monto_total          Decimal          @db.Decimal(10, 2)
+  monto_pagado         Decimal?         @default(0.00) @db.Decimal(10, 2)
+  descuento_aplicado   Decimal?         @default(0.00) @db.Decimal(10, 2)
+  porcentaje_facturado Decimal?         @db.Decimal(5, 2)
+  observaciones        String?          @db.Text
+  datos_fiscales       Json?
+  created_at           DateTime?        @default(now()) @db.DateTime(0)
+  updated_at           DateTime?        @default(now()) @db.DateTime(0)
+  created_by           Int?
+  updated_by           Int?
+  detalle_factura      DetalleFactura[]
+  cotizacion           Cotizacion       @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_cotizacion], map: "idx_facturas_cotizacion")
+  @@index([estado_factura], map: "idx_facturas_estado")
+  @@index([fecha_emision], map: "idx_facturas_fecha_emision")
+  @@index([fecha_vencimiento], map: "idx_facturas_vencimiento")
+  @@index([numero_factura], map: "idx_facturas_numero")
+  @@map("facturas")
+}
+
+model DetalleFactura {
+  id_detalle_factura Int       @id @default(autoincrement())
+  id_factura         Int
+  concepto           String    @db.VarChar(255)
+  descripcion        String?   @db.Text
+  cantidad           Int       @default(1)
+  precio_unitario    Decimal   @db.Decimal(10, 2)
+  subtotal           Decimal   @db.Decimal(10, 2)
+  descuento          Decimal?  @default(0.00) @db.Decimal(10, 2)
+  impuestos          Decimal?  @default(0.00) @db.Decimal(10, 2)
+  tipo_item          String?   @db.VarChar(50)
+  referencia_id      Int?
+  created_at         DateTime? @default(now()) @db.DateTime(0)
+  factura            Factura   @relation(fields: [id_factura], references: [id_factura], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_factura], map: "idx_detalle_factura")
+  @@index([tipo_item, referencia_id], map: "idx_detalle_referencia")
+  @@map("detalle_factura")
+}
+
+model ConfiguracionFacturacion {
+  id_configuracion       Int                   @id @default(autoincrement())
+  id_cliente             Int?
+  modalidad_default      modalidad_facturacion @default(total_inicio)
+  porcentaje_default     Decimal?              @db.Decimal(5, 2)
+  dias_vencimiento       Int?                  @default(30)
+  incluir_impuestos      Boolean?              @default(true)
+  moneda                 String?               @default("ARS") @db.VarChar(10)
+  descuento_pronto_pago  Decimal?              @default(0.00) @db.Decimal(5, 2)
+  observaciones_default  String?               @db.Text
+  datos_fiscales_default Json?
+  activo                 Boolean?              @default(true)
+  created_at             DateTime?             @default(now()) @db.DateTime(0)
+  updated_at             DateTime?             @default(now()) @db.DateTime(0)
+  created_by             Int?
+  updated_by             Int?
+  cliente                Cliente?              @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_cliente], map: "idx_config_facturacion_cliente")
+  @@index([modalidad_default], map: "idx_config_modalidad")
+  @@map("configuracion_facturacion")
+}
+
+enum descuentos_tipo {
+  porcentaje
+  monto_fijo
+}
+
+enum tipo_lista_precio {
+  L15
+  L18
+  L20
+  L25
+  L30
+}
+
+enum estado_plan {
+  activo
+  inactivo
+  borrador
+}
+
+enum estado_cotizacion {
+  en_proceso
+  enviada
+  aceptada
+  rechazada
+  cancelada
+}
+
+enum estado_dosis {
+  pendiente
+  programada
+  aplicada
+  omitida
+  reprogramada
+}
+
+enum tipo_movimiento_stock {
+  ingreso
+  egreso
+  ajuste_positivo
+  ajuste_negativo
+  reserva
+  liberacion_reserva
+}
+
+enum estado_reserva {
+  activa
+  utilizada
+  liberada
+  vencida
+}
+
+enum estado_aplicacion {
+  exitosa
+  parcial
+  fallida
+}
+
+enum motivo_retiro {
+  vencimiento
+  decision_tecnica
+  reaccion_adversa
+  cambio_plan
+  otros
+}
+
+enum estado_cumplimiento {
+  en_tiempo
+  atrasado
+  critico
+  completado
+}
+
+enum tipo_notificacion {
+  recordatorio_aplicacion
+  aplicacion_vencida
+  stock_insuficiente
+  retiro_necesario
+}
+
+enum estado_notificacion {
+  pendiente
+  enviada
+  leida
+  descartada
+}
+
+enum canal_notificacion {
+  email
+  sms
+  sistema
+  todos
+}
+
+enum estado_factura {
+  pendiente
+  enviada
+  pagada
+  vencida
+  cancelada
+}
+
+enum modalidad_facturacion {
+  total_inicio
+  por_aplicacion
+  porcentaje_custom
+  mensual
+}

@@ -95,13 +95,48 @@ A continuación se describen las funcionalidades ya aplicadas en el sistema:
 ### Paneles y Reportes
 - Paneles de gestión y reportes básicos de ventas, clientes y productos.
 
+### Sistema de Planes Vacunales (NUEVO - 2025)
+Implementación completa del sistema de gestión de planes de vacunación veterinaria.
+
+#### Sprint 1: Planes y Precios ✅ COMPLETADO
+- **4 modelos nuevos**: PlanVacunal, ListaPrecio, PlanProducto, PrecioPorLista
+- **11 endpoints**: CRUD completo de planes y listas de precios
+- **Funcionalidades**: Creación de planes por especie/edad, múltiples listas de precios, cálculo automático de totales
+- **Validación**: 5 listas de precios activas, 1 plan test con 3 productos
+- **Documentación**: `/DOCS/SPRINT-1-PLANES-PRECIOS.md`
+
+#### Sprint 2: Cotizaciones y Calendario ✅ COMPLETADO  
+- **3 modelos nuevos**: Cotizacion, DetalleCotizacion, CalendarioVacunacion
+- **8 endpoints**: Gestión completa de cotizaciones con calendario automático
+- **Funcionalidades**: Cotizaciones basadas en planes, generación automática de calendario de aplicaciones, control de estados
+- **Validación**: 1 cotización activa con 9 aplicaciones programadas
+- **Documentación**: `/DOCS/SPRINT-2-COTIZACIONES-CALENDARIO.md`
+
+#### Sprint 3: Gestión Avanzada de Stock ✅ COMPLETADO
+- **2 modelos nuevos**: MovimientoStock, ReservaStock  
+- **9 endpoints**: Control granular de inventario y reservas automáticas
+- **Funcionalidades**: Tracking de movimientos, reservas automáticas por cotización, alertas de stock bajo, verificación de disponibilidad
+- **Integración**: 100% integrado con sistema de cotizaciones
+- **Validación**: 152 productos con control de stock, 4 movimientos registrados
+- **Documentación**: `/DOCS/SPRINT-3-GESTION-STOCK.md`
+
+**Próximo Sprint 4**: Seguimiento de Dosis y Retiros (En planificación)
+
 ### Integración con n8n
 - API preparada para integración con n8n y otros sistemas de automatización.
 
 ### Estructura del Proyecto
 - **backend/**: API Node.js/Express, controladores, rutas, modelos, SQL.
+  - `controllers/`: Controladores de negocio (auth, clientes, productos, pedidos, proveedores, planesVacunales, cotizaciones, stock)
+  - `routes/`: Definición de rutas REST API
+  - `prisma/`: Schema de base de datos y migraciones
+  - `middlewares/`: Autenticación y validaciones
 - **frontend/**: React, componentes, servicios, contexto de autenticación.
 - **sql/**: Scripts de estructura y datos de la base.
+- **DOCS/**: Documentación técnica de sprints y funcionalidades.
+  - `SPRINT-1-PLANES-PRECIOS.md`: Documentación completa del sistema de planes
+  - `SPRINT-2-COTIZACIONES-CALENDARIO.md`: Sistema de cotizaciones y calendario automático  
+  - `SPRINT-3-GESTION-STOCK.md`: Gestión avanzada de stock y reservas
 
 ### Propiedad Intelectual
 Este sistema y su código fuente son propiedad de Tierra Volga y sus autores. Queda prohibida la copia, distribución o uso no autorizado de ideas, código o arquitectura sin consentimiento expreso. El sistema está protegido por derechos de autor y acuerdos de confidencialidad.

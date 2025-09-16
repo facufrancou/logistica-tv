@@ -1,0 +1,501 @@
+/* Seguimiento.css - Estilos para componentes de seguimiento */
+
+/* Dashboard de Seguimiento */
+.seguimiento-dashboard {
+    padding: 20px 0;
+}
+
+.seguimiento-dashboard .stats-card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.seguimiento-dashboard .stats-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.seguimiento-dashboard .stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.seguimiento-dashboard .stats-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+    color: #2c3e50 !important;
+}
+
+.seguimiento-dashboard .stats-label {
+    font-size: 0.9rem;
+    margin: 0;
+    color: #6c757d !important;
+}
+
+.seguimiento-dashboard .card-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.seguimiento-dashboard .card-header h5 {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+.seguimiento-dashboard .table th {
+    color: #2c3e50 !important;
+    font-weight: 600;
+    border-top: none;
+}
+
+.seguimiento-dashboard .table td {
+    color: #495057 !important;
+    vertical-align: middle;
+}
+
+.seguimiento-dashboard .alertas-list .alert {
+    border-left: 4px solid;
+    margin-bottom: 0.5rem;
+}
+
+.seguimiento-dashboard .cumplimiento-summary .progress {
+    height: 20px;
+}
+
+/* Aplicaciones de Dosis */
+.aplicaciones-dosis {
+    padding: 20px 0;
+}
+
+.aplicaciones-dosis .card-header {
+    background-color: #f8f9fa !important;
+}
+
+.aplicaciones-dosis .card-header h5 {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+.aplicaciones-dosis .form-label {
+    color: #2c3e50 !important;
+    font-weight: 500;
+}
+
+.aplicaciones-dosis .table th {
+    color: #2c3e50 !important;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.aplicaciones-dosis .table td {
+    color: #495057 !important;
+    vertical-align: middle;
+}
+
+.aplicaciones-dosis .btn-group .btn {
+    border-radius: 0.25rem;
+    margin-right: 2px;
+}
+
+.aplicaciones-dosis .modal-title {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+/* Retiros de Campo */
+.retiros-campo {
+    padding: 20px 0;
+}
+
+.retiros-campo .stats-card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.retiros-campo .stats-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.retiros-campo .stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.retiros-campo .stats-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+    color: #2c3e50 !important;
+}
+
+.retiros-campo .stats-label {
+    font-size: 0.9rem;
+    margin: 0;
+    color: #6c757d !important;
+}
+
+.retiros-campo .card-header {
+    background-color: #f8f9fa !important;
+}
+
+.retiros-campo .card-header h5 {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+.retiros-campo .form-label {
+    color: #2c3e50 !important;
+    font-weight: 500;
+}
+
+.retiros-campo .table th {
+    color: #2c3e50 !important;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.retiros-campo .table td {
+    color: #495057 !important;
+    vertical-align: middle;
+}
+
+/* Panel de Cumplimiento */
+.cumplimiento-panel {
+    padding: 20px 0;
+}
+
+.cumplimiento-panel .stats-card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.cumplimiento-panel .stats-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.cumplimiento-panel .stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.cumplimiento-panel .stats-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.cumplimiento-panel .stats-label {
+    font-size: 0.9rem;
+    margin: 0;
+    color: #6c757d !important;
+}
+
+.cumplimiento-panel .nav-tabs .nav-link {
+    color: #495057;
+    border: 1px solid transparent;
+    border-bottom-color: #dee2e6;
+}
+
+.cumplimiento-panel .nav-tabs .nav-link.active {
+    color: #007bff;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.cumplimiento-panel .card-header {
+    background-color: #f8f9fa !important;
+}
+
+.cumplimiento-panel .card-header h5 {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+.cumplimiento-panel .form-label {
+    color: #2c3e50 !important;
+    font-weight: 500;
+}
+
+.cumplimiento-panel .table th {
+    color: #2c3e50 !important;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.cumplimiento-panel .table td {
+    color: #495057 !important;
+    vertical-align: middle;
+}
+
+.cumplimiento-panel .progress {
+    height: 20px;
+    background-color: #e9ecef;
+}
+
+/* Centro de Notificaciones */
+.notificaciones-center {
+    padding: 20px 0;
+}
+
+.notificaciones-center .nav-tabs .nav-link {
+    color: #495057;
+    border: 1px solid transparent;
+    border-bottom-color: #dee2e6;
+}
+
+.notificaciones-center .nav-tabs .nav-link.active {
+    color: #007bff;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.notificaciones-center .card-header {
+    background-color: #f8f9fa !important;
+}
+
+.notificaciones-center .card-header h5 {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+.notificaciones-center .form-label {
+    color: #2c3e50 !important;
+    font-weight: 500;
+}
+
+.notificaciones-center .notification-item {
+    transition: all 0.3s ease;
+}
+
+.notificaciones-center .notification-item:hover {
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.notificaciones-center .notification-item.border-primary {
+    border-left: 4px solid #007bff !important;
+}
+
+.notificaciones-center .notification-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background-color: #f8f9fa;
+    border-radius: 50%;
+}
+
+.notificaciones-center .notification-content h6 {
+    color: #2c3e50 !important;
+}
+
+.notificaciones-center .notification-content p {
+    color: #495057 !important;
+    margin-bottom: 0.5rem;
+}
+
+.notificaciones-center .notification-details {
+    background-color: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.notificaciones-center .modal-title {
+    color: #2c3e50 !important;
+    font-weight: 600;
+}
+
+.notificaciones-center .form-check-label {
+    color: #2c3e50 !important;
+}
+
+/* Estilos generales para todos los componentes */
+.btn-group .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.badge {
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    color: #007bff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-card {
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group .btn-sm {
+        padding: 0.125rem 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    .notification-item {
+        margin-bottom: 1rem;
+    }
+    
+    .notification-icon {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+@media (max-width: 576px) {
+    .seguimiento-dashboard,
+    .aplicaciones-dosis,
+    .retiros-campo,
+    .cumplimiento-panel,
+    .notificaciones-center {
+        padding: 10px 0;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem !important;
+    }
+    
+    .stats-icon {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.notification-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* Estados de hover mejorados */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #007bff !important;
+    transition: color 0.2s ease;
+}
+
+/* Mejoras de accesibilidad */
+.form-control:focus,
+.form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Colores personalizados para badges */
+.bg-custom-success {
+    background-color: #28a745 !important;
+}
+
+.bg-custom-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.bg-custom-danger {
+    background-color: #dc3545 !important;
+}
+
+.bg-custom-info {
+    background-color: #17a2b8 !important;
+}
+
+/* Estilos para gráficos y visualizaciones */
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+
+.progress-ring {
+    transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+    transition: stroke-dasharray 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+/* Efectos de carga */
+.loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}

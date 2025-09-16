@@ -1,0 +1,378 @@
+/* Estilos para componentes de Stock */
+
+/* Asegurar visibilidad global */
+* {
+  color: inherit;
+}
+
+.stock-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #495057;
+}
+
+.stock-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--color-principal);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Stats Cards */
+.stats-card {
+  border: none;
+  border-radius: 10px;
+  transition: transform 0.2s ease-in-out;
+  color: white !important;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+}
+
+.stats-card.primary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.stats-card.danger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.stats-card.warning {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: #212529 !important;
+}
+
+.stats-card.success {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.stats-card.info {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.stats-card.secondary {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+}
+
+/* Asegurar visibilidad de texto en las cards */
+.stats-card .card-title,
+.stats-card h4,
+.stats-card h6 {
+  color: inherit !important;
+  margin-bottom: 0.5rem;
+}
+
+.stats-card.warning .card-title,
+.stats-card.warning h4,
+.stats-card.warning h6 {
+  color: #212529 !important;
+}
+
+/* Alertas de Stock */
+.alert {
+  border-radius: 8px;
+  border: none;
+  color: #212529 !important;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404 !important;
+}
+
+.alert strong {
+  color: inherit !important;
+}
+
+/* Estados específicos para mejor visibilidad */
+.text-muted {
+  color: #6c757d !important;
+}
+
+.text-primary {
+  color: #007bff !important;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
+.text-info {
+  color: #17a2b8 !important;
+}
+
+/* Tabla de Stock */
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Asegurar visibilidad de encabezados de tabla */
+.table thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  color: #495057;
+  font-weight: 600;
+}
+
+/* Asegurar contraste en celdas de tabla */
+.table td, .table th {
+  color: #212529 !important;
+}
+
+.table td strong,
+.table th strong {
+  color: #212529 !important;
+}
+
+/* Encabezados de cards */
+.card-header {
+  background-color: #f8f9fa !important;
+  border-bottom: 1px solid #dee2e6;
+  color: #495057 !important;
+}
+
+.card-header h3,
+.card-header h5 {
+  color: #495057 !important;
+  margin-bottom: 0;
+}
+
+/* Títulos principales */
+.container-fluid h3,
+.container-fluid h5 {
+  color: #495057 !important;
+}
+
+/* Asegurar visibilidad en cards blancas */
+.card-body {
+  color: #212529;
+}
+
+.card-body h6,
+.card-body strong {
+  color: inherit;
+}
+
+/* Fix para textos pequeños */
+.small,
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Asegurar contraste en botones */
+.btn {
+  color: inherit;
+}
+
+.btn-outline-primary {
+  color: #007bff;
+  border-color: #007bff;
+}
+
+.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Labels en formularios */
+.form-label {
+  color: #495057 !important;
+  font-weight: 500;
+}
+
+/* Filtros de Stock */
+.stock-filters {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Estados de Stock */
+.badge {
+  font-size: 0.75em;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+}
+
+/* Botones */
+.btn-group .btn {
+  border-radius: 4px;
+  margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+  margin-right: 0;
+}
+
+/* Movimientos */
+.movimiento-item {
+  border-left: 4px solid #dee2e6;
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+}
+
+.movimiento-item.ingreso {
+  border-left-color: #28a745;
+}
+
+.movimiento-item.egreso {
+  border-left-color: #dc3545;
+}
+
+.movimiento-item.ajuste {
+  border-left-color: #17a2b8;
+}
+
+.movimiento-item.reserva {
+  border-left-color: #007bff;
+}
+
+/* Formularios */
+.stock-form {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-floating {
+  margin-bottom: 1rem;
+}
+
+/* Reservas */
+.reserva-card {
+  border-left: 4px solid #007bff;
+  transition: all 0.2s ease-in-out;
+}
+
+.reserva-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.reserva-card.activa {
+  border-left-color: #28a745;
+}
+
+.reserva-card.vencida {
+  border-left-color: #dc3545;
+}
+
+.reserva-card.liberada {
+  border-left-color: #6c757d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-card h4 {
+    font-size: 1.5rem;
+  }
+  
+  .stock-filters {
+    padding: 0.5rem;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+  }
+  
+  .btn-group .btn {
+    margin-bottom: 0.25rem;
+    margin-right: 0;
+  }
+}
+
+/* Indicadores de estado */
+.stock-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.stock-indicator.critico {
+  background-color: #dc3545;
+}
+
+.stock-indicator.bajo {
+  background-color: #ffc107;
+}
+
+.stock-indicator.normal {
+  background-color: #28a745;
+}
+
+.stock-indicator.alto {
+  background-color: #17a2b8;
+}
+
+/* Gráficos y métricas */
+.metric-box {
+  text-align: center;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  margin-bottom: 1rem;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--color-principal);
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+/* Alertas específicas */
+.alert-stock {
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.alert-stock::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background-color: currentColor;
+}
+
+.alert-stock.critico {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.alert-stock.bajo {
+  background-color: #fff3cd;
+  color: #856404;
+}
