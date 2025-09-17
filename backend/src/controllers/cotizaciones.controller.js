@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const PriceCalculator = require('../lib/priceCalculator');
 
 // ===== FUNCIONES AUXILIARES =====
 
@@ -17,7 +18,7 @@ function calcularFechaProgramada(fechaInicio, numeroSemana) {
   return fecha;
 }
 
-async function generarCalendarioVacunacion(cotizacionId, fechaInicio, productosDelPlan) {
+async function generarCalendarioVacunacion(cotizacionId, fechaInicio, productosDelPlan, tx = prisma) {
   const calendarioItems = [];
 
   for (const planProducto of productosDelPlan) {
@@ -48,7 +49,7 @@ async function generarCalendarioVacunacion(cotizacionId, fechaInicio, productosD
   }
 
   if (calendarioItems.length > 0) {
-    await prisma.calendarioVacunacion.createMany({
+    await tx.calendarioVacunacion.createMany({
       data: calendarioItems
     });
   }
@@ -135,17 +136,23 @@ async function reservarStockParaCotizacion(cotizacionId, detalleProductos, idUsu
 
     // Solo reservar si el producto requiere control de stock
     if (producto && producto.requiere_control_stock) {
+      // CORRECCIÓN: Calcular la cantidad total de dosis correctamente
+      // cantidad_total = semanas de tratamiento
+      // dosis_por_semana = dosis necesarias por semana
+      // Total de dosis = cantidad_total × dosis_por_semana
+      const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
+      
       const stockDisponible = (producto.stock || 0) - (producto.stock_reservado || 0);
       
-      if (stockDisponible >= detalle.cantidad_total) {
+      if (stockDisponible >= totalDosisRequeridas) {
         // Crear reserva
         const reserva = await prisma.reservaStock.create({
           data: {
             id_producto: detalle.id_producto,
             id_cotizacion: cotizacionId,
-            cantidad_reservada: detalle.cantidad_total,
+            cantidad_reservada: totalDosisRequeridas,
             motivo: 'Reserva automática por cotización aceptada',
-            observaciones: `Reserva automática para ${detalle.cantidad_total} unidades`,
+            observaciones: `Reserva automática para ${totalDosisRequeridas} dosis (${detalle.cantidad_total} semanas × ${detalle.dosis_por_semana} dosis/semana)`,
             created_by: idUsuario
           }
         });
@@ -154,16 +161,16 @@ async function reservarStockParaCotizacion(cotizacionId, detalleProductos, idUsu
         await registrarMovimientoStock(
           detalle.id_producto,
           'reserva',
-          detalle.cantidad_total,
+          totalDosisRequeridas,
           'Reserva automática por cotización aceptada',
-          `Cotización: ${cotizacionId}`,
+          `Cotización: ${cotizacionId} - ${totalDosisRequeridas} dosis (${detalle.cantidad_total} semanas × ${detalle.dosis_por_semana} dosis/semana)`,
           cotizacionId,
           idUsuario
         );
 
         reservasCreadas.push(reserva);
       } else {
-        throw new Error(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockDisponible}, requerido: ${detalle.cantidad_total}`);
+        throw new Error(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockDisponible}, requerido: ${totalDosisRequeridas} dosis`);
       }
     }
   }
@@ -277,9 +284,19 @@ exports.getCotizaciones = async (req, res) => {
 exports.getCotizacionById = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validar que el ID existe y es un número válido
+    if (!id) {
+      return res.status(400).json({ error: 'ID de cotización requerido' });
+    }
+    
+    const idCotizacion = parseInt(id);
+    if (isNaN(idCotizacion)) {
+      return res.status(400).json({ error: 'ID de cotización debe ser un número válido' });
+    }
 
     const cotizacion = await prisma.cotizacion.findUnique({
-      where: { id_cotizacion: parseInt(id) },
+      where: { id_cotizacion: idCotizacion },
       include: {
         cliente: true,
         plan: {
@@ -423,32 +440,47 @@ exports.createCotizacion = async (req, res) => {
         existeNumero = !!cotizacionExistente;
       }
 
-      // Calcular precios usando la lista especificada o la del plan
+      // Calcular precios usando la nueva lógica de recargos
       const listaPrecios = id_lista_precio ? parseInt(id_lista_precio) : plan.id_lista_precio;
+      let listaPrecio = null;
       let precioTotal = 0;
       const detalleProductos = [];
 
-      for (const planProducto of plan.productos_plan) {
-        let precioUnitario = parseFloat(planProducto.producto.precio_unitario);
+      // Obtener lista de precios si se especificó
+      if (listaPrecios) {
+        listaPrecio = await tx.listaPrecio.findUnique({
+          where: { id_lista: listaPrecios }
+        });
         
-        // Si hay lista de precios, usar ese precio
-        if (listaPrecios) {
-          const precioPorLista = planProducto.producto.precios_por_lista.find(
-            precio => precio.id_lista === listaPrecios && precio.activo
-          );
-          if (precioPorLista) {
-            precioUnitario = parseFloat(precioPorLista.precio);
-          }
+        if (!listaPrecio || !listaPrecio.activa) {
+          throw new Error('Lista de precios no encontrada o inactiva');
+        }
+      }
+
+      for (const planProducto of plan.productos_plan) {
+        const precioBase = parseFloat(planProducto.producto.precio_unitario);
+        let precioFinal = precioBase;
+        let porcentajeAplicado = 0;
+
+        // Aplicar recargo si hay lista de precios
+        if (listaPrecio && listaPrecio.porcentaje_recargo > 0) {
+          porcentajeAplicado = parseFloat(listaPrecio.porcentaje_recargo);
+          precioFinal = PriceCalculator.calcularPrecioConRecargo(precioBase, porcentajeAplicado);
         }
 
-        const subtotal = precioUnitario * planProducto.cantidad_total;
+        const subtotal = PriceCalculator.calcularSubtotal(precioFinal, planProducto.cantidad_total);
         precioTotal += subtotal;
 
         detalleProductos.push({
           id_producto: planProducto.id_producto,
           cantidad_total: planProducto.cantidad_total,
-          precio_unitario: precioUnitario,
+          precio_base_producto: precioBase,
+          porcentaje_aplicado: porcentajeAplicado || null,
+          precio_unitario: precioFinal, // Para compatibilidad
+          precio_final_calculado: precioFinal,
           subtotal: subtotal,
+          facturacion_tipo: 'pendiente',
+          editado_manualmente: false,
           semana_inicio: planProducto.semana_inicio,
           semana_fin: planProducto.semana_fin,
           dosis_por_semana: planProducto.dosis_por_semana,
@@ -482,7 +514,8 @@ exports.createCotizacion = async (req, res) => {
       await generarCalendarioVacunacion(
         cotizacion.id_cotizacion,
         new Date(fecha_inicio_plan),
-        plan.productos_plan
+        plan.productos_plan,
+        tx
       );
 
       return cotizacion;
@@ -508,12 +541,19 @@ exports.updateEstadoCotizacion = async (req, res) => {
     const { estado, observaciones } = req.body;
     const idUsuario = req.user?.id_usuario;
 
+    console.log('=== UPDATE ESTADO DEBUG ===');
+    console.log('ID:', id);
+    console.log('Body:', req.body);
+    console.log('Usuario:', req.user);
+    console.log('Estado recibido:', estado);
+
     if (!estado) {
       return res.status(400).json({ error: 'Estado es obligatorio' });
     }
 
     const estadosValidos = ['en_proceso', 'enviada', 'aceptada', 'rechazada', 'cancelada'];
     if (!estadosValidos.includes(estado)) {
+      console.log('Estado no válido:', estado, 'válidos:', estadosValidos);
       return res.status(400).json({ error: 'Estado no válido' });
     }
 
@@ -530,6 +570,12 @@ exports.updateEstadoCotizacion = async (req, res) => {
       }
     });
 
+    console.log('Cotización encontrada:', cotizacionExistente ? {
+      id: cotizacionExistente.id_cotizacion,
+      estado_actual: cotizacionExistente.estado,
+      numero: cotizacionExistente.numero_cotizacion
+    } : 'NO ENCONTRADA');
+
     if (!cotizacionExistente) {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
@@ -545,37 +591,86 @@ exports.updateEstadoCotizacion = async (req, res) => {
     };
 
     if (!transicionesValidas[cotizacionExistente.estado]?.includes(estado)) {
+      console.log('Transición inválida:', {
+        estadoActual: cotizacionExistente.estado,
+        estadoDestino: estado,
+        transicionesPermitidas: transicionesValidas[cotizacionExistente.estado]
+      });
       return res.status(400).json({ 
         error: `Transición inválida de ${cotizacionExistente.estado} a ${estado}` 
       });
     }
 
+    console.log('Transición válida:', cotizacionExistente.estado, '->', estado);
+
     // Procesar lógicas específicas por estado
     let reservasCreadas = null;
     
+    console.log('Verificando estado para lógicas específicas...', estado);
+    
     if (estado === 'aceptada' && cotizacionExistente.estado !== 'aceptada') {
-      // Verificar disponibilidad de stock antes de aceptar
-      for (const detalle of cotizacionExistente.detalle_cotizacion) {
-        const producto = detalle.producto;
-        if (producto.requiere_control_stock) {
-          const stockDisponible = (producto.stock || 0) - (producto.stock_reservado || 0);
-          if (stockDisponible < detalle.cantidad_total) {
-            return res.status(400).json({
-              error: `Stock insuficiente para ${producto.nombre}. Disponible: ${stockDisponible}, requerido: ${detalle.cantidad_total}`
-            });
+      console.log('Procesando aceptación de cotización...');
+      
+      // Verificar si se debe forzar la aceptación (omitir verificación de stock)
+      const forzarAceptacion = req.body.forzar_aceptacion === true;
+      
+      if (!forzarAceptacion) {
+        // Verificar disponibilidad de stock antes de aceptar
+        const productosConStockInsuficiente = [];
+        
+        for (const detalle of cotizacionExistente.detalle_cotizacion) {
+          const producto = detalle.producto;
+          if (producto.requiere_control_stock) {
+            // CORRECCIÓN: Usar la misma lógica de cálculo que en reservarStockParaCotizacion
+            const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
+            const stockDisponible = (producto.stock || 0) - (producto.stock_reservado || 0);
+            console.log(`Stock check - Producto: ${producto.nombre}, Disponible: ${stockDisponible}, Requerido: ${totalDosisRequeridas}`);
+            
+            if (stockDisponible < totalDosisRequeridas) {
+              productosConStockInsuficiente.push({
+                id_producto: producto.id_producto,
+                nombre: producto.nombre,
+                descripcion: producto.descripcion,
+                stock_disponible: stockDisponible,
+                cantidad_requerida: totalDosisRequeridas,
+                deficit: totalDosisRequeridas - stockDisponible
+              });
+            }
           }
         }
+        
+        // Si hay productos con stock insuficiente, devolver error detallado
+        if (productosConStockInsuficiente.length > 0) {
+          return res.status(400).json({
+            error: 'STOCK_INSUFICIENTE',
+            message: 'No hay stock suficiente para uno o más productos de la cotización',
+            productos_insuficientes: productosConStockInsuficiente,
+            puede_forzar: true,
+            total_productos_afectados: productosConStockInsuficiente.length
+          });
+        }
+      } else {
+        console.log('Aceptación forzada: omitiendo verificación de stock');
       }
 
-      // Crear reservas automáticas de stock
+      // Crear reservas automáticas de stock (siempre, incluso si stock es insuficiente)
       try {
+        console.log('Creando reservas de stock...');
         reservasCreadas = await reservarStockParaCotizacion(
           cotizacionExistente.id_cotizacion, 
           cotizacionExistente.detalle_cotizacion,
           idUsuario
         );
+        console.log('Reservas creadas exitosamente:', reservasCreadas?.length || 0);
       } catch (stockError) {
-        return res.status(400).json({ error: stockError.message });
+        console.error('Error al crear reservas:', stockError.message);
+        // Si se está forzando la aceptación, permitir continuar incluso con errores de reserva
+        if (!forzarAceptacion) {
+          return res.status(400).json({ error: stockError.message });
+        } else {
+          console.log('Continuando a pesar del error de reserva (aceptación forzada)');
+          reservasCreadas = [];
+        }
       }
     }
 
@@ -594,7 +689,7 @@ exports.updateEstadoCotizacion = async (req, res) => {
           data: { 
             estado_reserva: 'liberada',
             fecha_liberacion: new Date(),
-            observaciones_liberacion: 'Liberada por cancelación de cotización'
+            observaciones: 'Liberada por cancelación de cotización'
           }
         });
 
@@ -629,19 +724,33 @@ exports.updateEstadoCotizacion = async (req, res) => {
       updateData.fecha_aceptacion = new Date();
     }
 
-    const cotizacionActualizada = await prisma.cotizacion.update({
-      where: { id_cotizacion: parseInt(id) },
-      data: updateData,
-      include: {
-        cliente: true,
-        plan_vacunal: true,
-        detalle_cotizacion: {
-          include: {
-            producto: true
+    console.log('Datos a actualizar:', updateData);
+    console.log('ID de cotización para actualizar:', parseInt(id));
+
+    let cotizacionActualizada;
+    try {
+      console.log('Ejecutando prisma.cotizacion.update...');
+      cotizacionActualizada = await prisma.cotizacion.update({
+        where: { id_cotizacion: parseInt(id) },
+        data: updateData,
+        include: {
+          cliente: true,
+          plan: true,
+          detalle_cotizacion: {
+            include: {
+              producto: true
+            }
           }
         }
-      }
-    });
+      });
+      
+      console.log('Actualización exitosa! Nuevo estado:', cotizacionActualizada.estado);
+    } catch (updateError) {
+      console.error('Error específico en la actualización:', updateError);
+      console.error('Código de error:', updateError.code);
+      console.error('Mensaje:', updateError.message);
+      throw updateError;
+    }
 
     const response = {
       message: 'Estado de cotización actualizado exitosamente',
@@ -664,7 +773,11 @@ exports.updateEstadoCotizacion = async (req, res) => {
 
   } catch (error) {
     console.error('Error al actualizar estado de cotización:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -843,7 +956,8 @@ exports.regenerarCalendario = async (req, res) => {
       await generarCalendarioVacunacion(
         parseInt(id),
         new Date(nueva_fecha_inicio),
-        cotizacion.plan.productos_plan
+        cotizacion.plan.productos_plan,
+        tx
       );
     });
 

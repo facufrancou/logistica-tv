@@ -4,12 +4,14 @@ import {
   getProductos,
   crearPedido,
   getProveedores,
+  getTiposProducto,
 } from "../../../services/api";
 
 function PedidoForm({ onPedidoCreado }) {
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
+  const [tiposProducto, setTiposProducto] = useState([]);
   const [form, setForm] = useState({
     id_cliente: "",
     seguimiento_dist: "",
@@ -26,6 +28,7 @@ function PedidoForm({ onPedidoCreado }) {
     getClientes().then(setClientes);
     getProductos().then(setProductos);
     getProveedores().then(setProveedores);
+    getTiposProducto().then(setTiposProducto);
   }, []);
 
 
@@ -37,6 +40,11 @@ function PedidoForm({ onPedidoCreado }) {
       agrupados[key].push(p);
     });
     return agrupados;
+  };
+
+  const getTipoLabel = (tipo) => {
+    const tipoObj = tiposProducto.find(t => t.value === tipo);
+    return tipoObj ? `${tipoObj.icon}` : '';
   };
 
   const handleAgregarProducto = () => {
@@ -233,7 +241,10 @@ function PedidoForm({ onPedidoCreado }) {
                           }`}
                           onClick={() => setProductoSeleccionado(p)}
                         >
-                          {p.nombre} - {p.descripcion}
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span>{p.nombre} - {p.descripcion}</span>
+                            <small className="text-muted">{getTipoLabel(p.tipo_producto)}</small>
+                          </div>
                         </button>
                       ))}
                     </div>

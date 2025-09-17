@@ -19,6 +19,13 @@ const CotizacionesList = () => {
     fecha_desde: '',
     busqueda: ''
   });
+
+  const [modalStockInsuficiente, setModalStockInsuficiente] = useState({ 
+    show: false, 
+    productos: [], 
+    cotizacionId: null,
+    estadoDestino: null
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [clientes, setClientes] = useState([]);
 
@@ -50,9 +57,37 @@ const CotizacionesList = () => {
     cargarCotizaciones();
   };
 
-  const handleCambiarEstado = async (id, nuevoEstado, observaciones = '') => {
-    if (window.confirm(`¿Está seguro que desea cambiar el estado a "${nuevoEstado}"?`)) {
-      await cambiarEstadoCotizacion(id, { estado: nuevoEstado, observaciones });
+  const handleCambiarEstado = async (id, nuevoEstado, observaciones = '', forzarAceptacion = false) => {
+    try {
+      const confirmar = forzarAceptacion || window.confirm(`¿Está seguro que desea cambiar el estado a "${nuevoEstado}"?`);
+      
+      if (confirmar) {
+        const datos = { estado: nuevoEstado, observaciones };
+        
+        // Si se está forzando la aceptación, agregar el parámetro
+        if (forzarAceptacion) {
+          datos.forzar_aceptacion = true;
+        }
+        
+        await cambiarEstadoCotizacion(id, datos);
+        setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null });
+      }
+    } catch (error) {
+      console.error('Error actualizando estado:', error);
+      
+      // Verificar si es un error de stock insuficiente
+      if (error.response?.data?.error === 'STOCK_INSUFICIENTE') {
+        const errorData = error.response.data;
+        setModalStockInsuficiente({
+          show: true,
+          productos: errorData.productos_insuficientes,
+          cotizacionId: id,
+          estadoDestino: nuevoEstado
+        });
+      } else {
+        // Mostrar error general si no es problema de stock
+        alert('Error al cambiar estado: ' + (error.response?.data?.message || error.message));
+      }
     }
   };
 
@@ -403,6 +438,99 @@ const CotizacionesList = () => {
                     .toLocaleString()}
                 </h4>
                 <small className="text-muted">Solo cotizaciones aceptadas</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para productos con stock insuficiente */}
+      {modalStockInsuficiente.show && (
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-backdrop fade show"></div>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  Stock Insuficiente
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null })}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warning">
+                  <strong>No hay stock suficiente para los siguientes productos:</strong>
+                </div>
+                
+                <div className="table-responsive">
+                  <table className="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Descripción</th>
+                        <th>Stock Disponible</th>
+                        <th>Cantidad Requerida</th>
+                        <th>Déficit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalStockInsuficiente.productos.map((producto, index) => (
+                        <tr key={index}>
+                          <td><strong>{producto.nombre}</strong></td>
+                          <td>{producto.descripcion}</td>
+                          <td>
+                            <span className="badge bg-danger">
+                              {producto.stock_disponible}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge bg-info">
+                              {producto.cantidad_requerida}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge bg-warning text-dark">
+                              -{producto.deficit}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="alert alert-info mt-3">
+                  <h6><i className="bi bi-info-circle me-2"></i>¿Qué deseas hacer?</h6>
+                  <ul className="mb-0">
+                    <li><strong>Cancelar:</strong> No cambiar el estado de la cotización</li>
+                    <li><strong>Aceptar de todas formas:</strong> Aceptar la cotización a pesar del stock insuficiente. Los productos quedarán en déficit en el sistema de stock</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null })}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  onClick={() => {
+                    // Forzar la aceptación ignorando el stock
+                    handleCambiarEstado(modalStockInsuficiente.cotizacionId, modalStockInsuficiente.estadoDestino, '', true);
+                  }}
+                >
+                  <i className="bi bi-exclamation-triangle me-2"></i>
+                  Aceptar de todas formas
+                </button>
               </div>
             </div>
           </div>

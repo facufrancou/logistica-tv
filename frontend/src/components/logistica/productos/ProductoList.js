@@ -4,6 +4,7 @@ import {
   crearProducto,
   actualizarProducto,
   getProveedores,
+  getTiposProducto,
 } from "../../../services/api";
 import { AuthContext } from "../../../context/AuthContext";
 
@@ -11,10 +12,12 @@ function ProductoList() {
   const { usuario } = useContext(AuthContext);
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
+  const [tiposProducto, setTiposProducto] = useState([]);
 
   const [pagina, setPagina] = useState(0);
   const porPagina = 15;
   const [busqueda, setBusqueda] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [productoActivo, setProductoActivo] = useState(null);
@@ -23,6 +26,7 @@ function ProductoList() {
   useEffect(() => {
     cargarProductos();
     getProveedores().then(setProveedores);
+    getTiposProducto().then(setTiposProducto);
   }, []);
 
   const cargarProductos = () => {
@@ -30,9 +34,14 @@ function ProductoList() {
   };
 
   const productosFiltrados = productos.filter(
-    (p) =>
-      p.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.descripcion?.toLowerCase().includes(busqueda.toLowerCase())
+    (p) => {
+      const coincideBusqueda = p.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        p.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
+      
+      const coincideTipo = !filtroTipo || p.tipo_producto === filtroTipo;
+      
+      return coincideBusqueda && coincideTipo;
+    }
   );
 
   const productosMostrados = productosFiltrados.slice(
@@ -47,6 +56,7 @@ function ProductoList() {
         nombre: "",
         descripcion: "",
         id_proveedor: "",
+        tipo_producto: "otros",
       }
     );
     setModo(modoAccion);
@@ -85,6 +95,23 @@ function ProductoList() {
     return p?.nombre || "—";
   };
 
+  const getTipoLabel = (tipo) => {
+    const tipoObj = tiposProducto.find(t => t.value === tipo);
+    return tipoObj ? `${tipoObj.icon} ${tipoObj.label}` : tipo;
+  };
+
+  const getTipoBadgeClass = (tipo) => {
+    const clases = {
+      'vacuna': 'bg-success',
+      'medicamento': 'bg-primary',
+      'suplemento': 'bg-info',
+      'insecticida': 'bg-warning',
+      'desinfectante': 'bg-secondary',
+      'otros': 'bg-light text-dark'
+    };
+    return clases[tipo] || 'bg-light text-dark';
+  };
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -99,19 +126,38 @@ function ProductoList() {
         )}
       </div>
 
-      <input
-        type="text"
-        className="form-control mb-3"
-        placeholder="Buscar por nombre o descripción"
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
+      <div className="row mb-3">
+        <div className="col-md-8">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar por nombre o descripción"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+        <div className="col-md-4">
+          <select
+            className="form-select"
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+          >
+            <option value="">Todos los tipos</option>
+            {tiposProducto.map((tipo) => (
+              <option key={tipo.value} value={tipo.value}>
+                {tipo.icon} {tipo.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
   <table className="table table-mobile table-responsive-stack">
         <thead>
           <tr>
             <th>ID</th>
             <th>Nombre</th>
+            <th>Tipo</th>
             <th>Descripción</th>
             <th>Marca</th>
             <th>Acciones</th>
@@ -122,6 +168,11 @@ function ProductoList() {
             <tr key={p.id_producto}>
       <td data-label="ID">{p.id_producto}</td>
       <td data-label="Nombre">{p.nombre}</td>
+      <td data-label="Tipo">
+        <span className={`badge ${getTipoBadgeClass(p.tipo_producto)}`}>
+          {getTipoLabel(p.tipo_producto)}
+        </span>
+      </td>
       <td data-label="Descripción">{p.descripcion}</td>
       <td data-label="Marca">{obtenerNombreProveedor(p.id_proveedor)}</td>
               <td>
@@ -205,6 +256,20 @@ function ProductoList() {
                   onChange={(e) => handleInput("descripcion", e.target.value)}
                   disabled={modo === "ver"}
                 />
+
+                <label className="form-label">Tipo de Producto</label>
+                <select
+                  className="form-select mb-2"
+                  value={productoActivo.tipo_producto || "otros"}
+                  onChange={(e) => handleInput("tipo_producto", e.target.value)}
+                  disabled={modo === "ver"}
+                >
+                  {tiposProducto.map((tipo) => (
+                    <option key={tipo.value} value={tipo.value}>
+                      {tipo.icon} {tipo.label}
+                    </option>
+                  ))}
+                </select>
 
                 <label className="form-label">Marca / Proveedor</label>
                 <select

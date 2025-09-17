@@ -3,7 +3,16 @@ const PriceTracker = require('../lib/priceTracker');
 
 exports.getProductos = async (req, res) => {
   try {
+    const { tipo_producto } = req.query;
+    
+    // Construir filtros
+    const where = {};
+    if (tipo_producto) {
+      where.tipo_producto = tipo_producto;
+    }
+
     const productos = await prisma.producto.findMany({
+      where,
       include: {
         proveedores: {
           select: {
@@ -33,7 +42,7 @@ exports.getProductos = async (req, res) => {
 
 exports.createProducto = async (req, res) => {
   try {
-    const { nombre, precio_unitario, descripcion, id_proveedor } = req.body;
+    const { nombre, precio_unitario, descripcion, id_proveedor, tipo_producto } = req.body;
 
     if (!nombre || precio_unitario === undefined) {
       return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
@@ -44,7 +53,8 @@ exports.createProducto = async (req, res) => {
         nombre,
         precio_unitario: parseFloat(precio_unitario),
         descripcion: descripcion || '',
-        id_proveedor: id_proveedor ? parseInt(id_proveedor) : null
+        id_proveedor: id_proveedor ? parseInt(id_proveedor) : null,
+        tipo_producto: tipo_producto || 'otros'
       }
     });
 
@@ -65,7 +75,7 @@ exports.createProducto = async (req, res) => {
 exports.updateProducto = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, precio_unitario, descripcion, id_proveedor } = req.body;
+    const { nombre, precio_unitario, descripcion, id_proveedor, tipo_producto } = req.body;
     const usuario_id = req.user?.id || null;
 
     if (!nombre || precio_unitario === undefined) {
@@ -88,7 +98,8 @@ exports.updateProducto = async (req, res) => {
         nombre,
         precio_unitario: parseFloat(precio_unitario),
         descripcion: descripcion || '',
-        id_proveedor: id_proveedor ? parseInt(id_proveedor) : null
+        id_proveedor: id_proveedor ? parseInt(id_proveedor) : null,
+        tipo_producto: tipo_producto || productoActual.tipo_producto
       }
     });
 
@@ -440,6 +451,62 @@ exports.detectarCambiosAnomalos = async (req, res) => {
     res.json(cambiosAnomalos);
   } catch (error) {
     console.error('Error detectando cambios anómalos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Obtener solo productos de tipo vacuna
+ */
+exports.getVacunas = async (req, res) => {
+  try {
+    const vacunas = await prisma.producto.findMany({
+      where: {
+        tipo_producto: 'vacuna'
+      },
+      include: {
+        proveedores: {
+          select: {
+            nombre: true
+          }
+        }
+      },
+      orderBy: {
+        nombre: 'asc'
+      }
+    });
+
+    const vacunasFormatted = vacunas.map(producto => ({
+      ...producto,
+      id_producto: Number(producto.id_producto),
+      id_proveedor: producto.id_proveedor ? Number(producto.id_proveedor) : null,
+      proveedor_nombre: producto.proveedores?.nombre || null
+    }));
+
+    res.json(vacunasFormatted);
+  } catch (error) {
+    console.error('Error al obtener vacunas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Obtener tipos de productos disponibles
+ */
+exports.getTiposProducto = async (req, res) => {
+  try {
+    const tipos = [
+      { value: 'vacuna', label: 'Vacuna', icon: '💉' },
+      { value: 'medicamento', label: 'Medicamento', icon: '💊' },
+      { value: 'suplemento', label: 'Suplemento', icon: '🧴' },
+      { value: 'insecticida', label: 'Insecticida', icon: '🪲' },
+      { value: 'desinfectante', label: 'Desinfectante', icon: '🧽' },
+      { value: 'otros', label: 'Otros', icon: '📦' }
+    ];
+
+    res.json(tipos);
+  } catch (error) {
+    console.error('Error al obtener tipos de producto:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

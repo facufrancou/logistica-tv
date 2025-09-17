@@ -8,13 +8,11 @@
 .seguimiento-dashboard .stats-card {
     border: none;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: all 0.3s ease;
     height: 100%;
 }
 
 .seguimiento-dashboard .stats-card:hover {
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
 }
 
 .seguimiento-dashboard .stats-icon {

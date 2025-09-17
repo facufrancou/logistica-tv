@@ -146,8 +146,12 @@ export const eliminarPlan = async (id) => {
   });
 };
 
-export const calcularPrecioPlan = async (id) => {
-  return await fetchConSesion(`${API_BASE_URL}/planes-vacunales/planes/${id}/calcular-precio`);
+export const calcularPrecioPlan = async (id, idListaPrecio = null) => {
+  let url = `${API_BASE_URL}/planes-vacunales/planes/${id}/calcular-precio`;
+  if (idListaPrecio) {
+    url += `?id_lista_precio=${idListaPrecio}`;
+  }
+  return await fetchConSesion(url);
 };
 
 // Listas de Precios
@@ -201,43 +205,43 @@ export const getCotizaciones = async (filters = {}) => {
   if (filters.id_cliente) params.append('id_cliente', filters.id_cliente);
   if (filters.fecha_desde) params.append('fecha_desde', filters.fecha_desde);
   
-  const url = `${API_BASE_URL}/cotizaciones/cotizaciones${params.toString() ? '?' + params.toString() : ''}`;
+  const url = `${API_BASE_URL}/cotizaciones${params.toString() ? '?' + params.toString() : ''}`;
   return await fetchConSesion(url);
 };
 
 export const getCotizacionById = async (id) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones/${id}`);
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`);
 };
 
 export const crearCotizacion = async (cotizacionData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones`, {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones`, {
     method: 'POST',
     body: JSON.stringify(cotizacionData)
   });
 };
 
 export const actualizarCotizacion = async (id, cotizacionData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones/${id}`, {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`, {
     method: 'PUT',
     body: JSON.stringify(cotizacionData)
   });
 };
 
 export const cambiarEstadoCotizacion = async (id, estadoData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones/${id}/estado`, {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/estado`, {
     method: 'PUT',
     body: JSON.stringify(estadoData)
   });
 };
 
 export const eliminarCotizacion = async (id) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones/${id}`, {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`, {
     method: 'DELETE'
   });
 };
 
 export const getCalendarioVacunacion = async (id) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones/${id}/calendario`);
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/calendario`);
 };
 
 export const actualizarEstadoDosis = async (id_calendario, estadoData) => {
@@ -248,7 +252,7 @@ export const actualizarEstadoDosis = async (id_calendario, estadoData) => {
 };
 
 export const regenerarCalendario = async (id, fechaData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/cotizaciones/${id}/regenerar-calendario`, {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/regenerar-calendario`, {
     method: 'POST',
     body: JSON.stringify(fechaData)
   });

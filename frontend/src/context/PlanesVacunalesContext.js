@@ -103,9 +103,9 @@ export const PlanesVacunalesProvider = ({ children }) => {
     }
   };
 
-  const calcularPrecioPlan = async (id) => {
+  const calcularPrecioPlan = async (id, idListaPrecio = null) => {
     try {
-      const data = await planesApi.calcularPrecioPlan(id);
+      const data = await planesApi.calcularPrecioPlan(id, idListaPrecio);
       return data;
     } catch (error) {
       setError(error.message);

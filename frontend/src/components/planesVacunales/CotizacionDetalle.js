@@ -14,8 +14,12 @@ import {
   FaExclamationTriangle,
   FaEye,
   FaArrowLeft,
-  FaInfoCircle
+  FaInfoCircle,
+  FaCalculator,
+  FaBalanceScale
 } from 'react-icons/fa';
+import ClasificacionFiscal from '../liquidaciones/ClasificacionFiscal';
+import ResumenLiquidacion from '../liquidaciones/ResumenLiquidacion';
 import './PlanesVacunales.css';
 
 const CotizacionDetalle = () => {
@@ -31,7 +35,15 @@ const CotizacionDetalle = () => {
 
   const [cotizacion, setCotizacion] = useState(null);
   const [modalConfirmacion, setModalConfirmacion] = useState({ show: false, accion: null });
+  const [modalStockInsuficiente, setModalStockInsuficiente] = useState({ 
+    show: false, 
+    productos: [], 
+    estadoDestino: null,
+    observaciones: null
+  });
   const [observacionesEstado, setObservacionesEstado] = useState('');
+  const [mostrarClasificacion, setMostrarClasificacion] = useState(false);
+  const [mostrarResumen, setMostrarResumen] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -70,19 +82,41 @@ const CotizacionDetalle = () => {
     );
   };
 
-  const handleCambiarEstado = async (nuevoEstado) => {
+  const handleCambiarEstado = async (nuevoEstado, forzarAceptacion = false) => {
     try {
       const datos = { 
         estado: nuevoEstado,
         observaciones: observacionesEstado || null
       };
       
+      // Si se está forzando la aceptación, agregar el parámetro
+      if (forzarAceptacion) {
+        datos.forzar_aceptacion = true;
+      }
+      
       await cambiarEstadoCotizacion(id, datos);
       setCotizacion(prev => ({ ...prev, estado: nuevoEstado }));
       setModalConfirmacion({ show: false, accion: null });
+      setModalStockInsuficiente({ show: false, productos: [], estadoDestino: null, observaciones: null });
       setObservacionesEstado('');
     } catch (error) {
       console.error('Error actualizando estado:', error);
+      
+      // Verificar si es un error de stock insuficiente
+      if (error.response?.data?.error === 'STOCK_INSUFICIENTE') {
+        const errorData = error.response.data;
+        setModalStockInsuficiente({
+          show: true,
+          productos: errorData.productos_insuficientes,
+          estadoDestino: nuevoEstado,
+          observaciones: observacionesEstado
+        });
+        // Cerrar el modal de confirmación actual
+        setModalConfirmacion({ show: false, accion: null });
+      } else {
+        // Mostrar error general si no es problema de stock
+        alert('Error al cambiar estado: ' + (error.response?.data?.message || error.message));
+      }
     }
   };
 
@@ -263,7 +297,7 @@ const CotizacionDetalle = () => {
                     <table className="table table-sm">
                       <thead className="table-light">
                         <tr>
-                          <th>Producto</th>
+                          <th>Vacuna</th>
                           <th>Dosis/Semana</th>
                           <th>Período</th>
                           <th>Total Dosis</th>
@@ -282,7 +316,16 @@ const CotizacionDetalle = () => {
                           
                           return (
                             <tr key={index}>
-                              <td>{pp.producto?.nombre || 'Producto no encontrado'}</td>
+                              <td>
+                                <div>
+                                  <strong>{pp.producto?.nombre || 'Vacuna no encontrada'}</strong>
+                                  {pp.producto?.descripcion && (
+                                    <div>
+                                      <small className="text-muted">{pp.producto.descripcion}</small>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
                               <td>{pp.dosis_por_semana}</td>
                               <td>
                                 Semana {pp.semana_inicio}
@@ -421,13 +464,35 @@ const CotizacionDetalle = () => {
                 )}
 
                 {(cotizacion.estado === 'aceptada' || cotizacion.estado === 'rechazada') && (
-                  <button
-                    className="btn btn-outline-secondary"
-                    onClick={() => navigate(`/planes-vacunales/${cotizacion.plan?.id_plan}`)}
-                  >
-                    <FaEye className="me-2" />
-                    Ver Plan Detallado
-                  </button>
+                  <>
+                    <button
+                      className="btn btn-outline-secondary mb-2"
+                      onClick={() => navigate(`/planes-vacunales/${cotizacion.plan?.id_plan}`)}
+                    >
+                      <FaEye className="me-2" />
+                      Ver Plan Detallado
+                    </button>
+                    
+                    {cotizacion.estado === 'aceptada' && (
+                      <>
+                        <button
+                          className="btn btn-warning mb-2"
+                          onClick={() => setMostrarClasificacion(!mostrarClasificacion)}
+                        >
+                          <FaBalanceScale className="me-2" />
+                          {mostrarClasificacion ? 'Ocultar' : 'Clasificar'} para Facturación
+                        </button>
+                        
+                        <button
+                          className="btn btn-info"
+                          onClick={() => setMostrarResumen(!mostrarResumen)}
+                        >
+                          <FaCalculator className="me-2" />
+                          {mostrarResumen ? 'Ocultar' : 'Ver'} Resumen de Liquidación
+                        </button>
+                      </>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -478,6 +543,46 @@ const CotizacionDetalle = () => {
         </div>
       </div>
 
+      {/* Sección de Clasificación Fiscal */}
+      {mostrarClasificacion && cotizacion.estado === 'aceptada' && (
+        <div className="row mt-4">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header bg-warning text-dark">
+                <h5 className="mb-0">
+                  <FaBalanceScale className="me-2" />
+                  Clasificación Fiscal
+                </h5>
+                <small className="d-block mt-1">
+                  Seleccione qué productos van facturados en Vía 1 y cuáles en Vía 2
+                </small>
+              </div>
+              <div className="card-body p-0">
+                <ClasificacionFiscal 
+                  cotizacionId={cotizacion.id_cotizacion}
+                  onClasificacionCompleta={() => {
+                    // Recargar datos si es necesario
+                    cargarDatos();
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sección de Resumen de Liquidación */}
+      {mostrarResumen && cotizacion.estado === 'aceptada' && (
+        <div className="row mt-4">
+          <div className="col-12">
+            <ResumenLiquidacion 
+              cotizacionId={cotizacion.id_cotizacion}
+              mostrarDetalle={true}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Modal de Confirmación */}
       {modalConfirmacion.show && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -527,6 +632,99 @@ const CotizacionDetalle = () => {
                   }}
                 >
                   {modalConfirmacion.accion === 'eliminar' ? 'Eliminar' : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para productos con stock insuficiente */}
+      {modalStockInsuficiente.show && (
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-backdrop fade show"></div>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  Stock Insuficiente
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], estadoDestino: null, observaciones: null })}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warning">
+                  <strong>No hay stock suficiente para los siguientes productos:</strong>
+                </div>
+                
+                <div className="table-responsive">
+                  <table className="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Descripción</th>
+                        <th>Stock Disponible</th>
+                        <th>Cantidad Requerida</th>
+                        <th>Déficit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalStockInsuficiente.productos.map((producto, index) => (
+                        <tr key={index}>
+                          <td><strong>{producto.nombre}</strong></td>
+                          <td>{producto.descripcion}</td>
+                          <td>
+                            <span className="badge bg-danger">
+                              {producto.stock_disponible}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge bg-info">
+                              {producto.cantidad_requerida}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge bg-warning text-dark">
+                              -{producto.deficit}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="alert alert-info mt-3">
+                  <h6><i className="bi bi-info-circle me-2"></i>¿Qué deseas hacer?</h6>
+                  <ul className="mb-0">
+                    <li><strong>Cancelar:</strong> No cambiar el estado de la cotización</li>
+                    <li><strong>Aceptar de todas formas:</strong> Aceptar la cotización a pesar del stock insuficiente. Los productos quedarán en déficit en el sistema de stock</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], estadoDestino: null, observaciones: null })}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  onClick={() => {
+                    // Forzar la aceptación ignorando el stock
+                    handleCambiarEstado(modalStockInsuficiente.estadoDestino, true);
+                  }}
+                >
+                  <i className="bi bi-exclamation-triangle me-2"></i>
+                  Aceptar de todas formas
                 </button>
               </div>
             </div>

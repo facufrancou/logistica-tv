@@ -76,8 +76,16 @@ const CotizacionForm = () => {
 
   useEffect(() => {
     // Calcular precio cuando cambie el plan o la lista de precios
-    if (formData.id_plan && (formData.id_lista_precio || planSeleccionado?.id_lista_precio)) {
+    console.log('useEffect calcularPrecio triggered:', { 
+      id_plan: formData.id_plan, 
+      id_lista_precio: formData.id_lista_precio 
+    });
+    
+    if (formData.id_plan) {
       calcularPrecio();
+    } else {
+      // Limpiar precio calculado si no hay plan seleccionado
+      setPrecioCalculado(null);
     }
   }, [formData.id_plan, formData.id_lista_precio]);
 
@@ -115,8 +123,16 @@ const CotizacionForm = () => {
   const calcularPrecio = async () => {
     try {
       setCalculandoPrecio(true);
-      const resultado = await calcularPrecioPlan(formData.id_plan);
+      // Usar la lista de precios seleccionada en el formulario
+      const listaPrecios = formData.id_lista_precio || planSeleccionado?.id_lista_precio;
+      console.log('Calculando precio con:', { 
+        id_plan: formData.id_plan, 
+        id_lista_precio: listaPrecios 
+      });
+      
+      const resultado = await calcularPrecioPlan(formData.id_plan, listaPrecios);
       if (resultado) {
+        console.log('Precio calculado:', resultado);
         setPrecioCalculado(resultado);
       }
     } catch (error) {
@@ -373,7 +389,7 @@ const CotizacionForm = () => {
                           <table className="table table-sm">
                             <thead className="table-light">
                               <tr>
-                                <th>Producto</th>
+                                <th>Vacuna</th>
                                 <th>Dosis/Semana</th>
                                 <th>Período</th>
                                 <th>Total Dosis</th>
@@ -387,14 +403,23 @@ const CotizacionForm = () => {
                                 
                                 return (
                                   <tr key={index}>
-                                    <td>{pp.producto?.nombre || 'Producto no encontrado'}</td>
+                                    <td>
+                                      <div>
+                                        <strong>{pp.producto?.nombre || 'Vacuna no encontrada'}</strong>
+                                        {pp.producto?.descripcion && (
+                                          <div>
+                                            <small className="text-muted">{pp.producto.descripcion}</small>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </td>
                                     <td>{pp.dosis_por_semana}</td>
                                     <td>
                                       Semana {pp.semana_inicio}
                                       {pp.semana_fin ? ` - ${pp.semana_fin}` : ' - final'}
                                     </td>
                                     <td>
-                                      <span className="badge bg-primary">{totalDosis} dosis</span>
+                                      <span className="badge bg-success">{totalDosis} dosis</span>
                                     </td>
                                   </tr>
                                 );

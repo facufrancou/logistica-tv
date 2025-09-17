@@ -33,12 +33,7 @@
 .stats-card {
   border: none;
   border-radius: 10px;
-  transition: transform 0.2s ease-in-out;
   color: white !important;
-}
-
-.stats-card:hover {
-  transform: translateY(-2px);
 }
 
 .stats-card.primary {

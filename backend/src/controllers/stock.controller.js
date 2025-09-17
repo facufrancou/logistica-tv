@@ -246,7 +246,21 @@ exports.registrarMovimiento = async (req, res) => {
 
 exports.getEstadoStock = async (req, res) => {
   try {
+    const { requiere_control_stock, tipo_producto } = req.query;
+    
+    // Construir filtros
+    let whereClause = {};
+    
+    if (requiere_control_stock !== undefined) {
+      whereClause.requiere_control_stock = requiere_control_stock === 'true';
+    }
+    
+    if (tipo_producto) {
+      whereClause.tipo_producto = tipo_producto;
+    }
+
     const productos = await prisma.producto.findMany({
+      where: whereClause,
       select: {
         id_producto: true,
         nombre: true,
@@ -255,6 +269,7 @@ exports.getEstadoStock = async (req, res) => {
         stock_minimo: true,
         stock_reservado: true,
         requiere_control_stock: true,
+        tipo_producto: true,
         proveedores: {
           select: {
             nombre: true
@@ -275,23 +290,24 @@ exports.getEstadoStock = async (req, res) => {
 
       let estado = 'normal';
       if (stock <= 0) {
-        estado = 'sin_stock';
-      } else if (stockDisponible <= 0) {
-        estado = 'stock_reservado';
+        estado = 'critico';
       } else if (stock <= stockMinimo) {
-        estado = 'stock_bajo';
+        estado = stockDisponible <= 0 ? 'critico' : 'bajo';
+      } else if (stockDisponible <= 0) {
+        estado = 'bajo';
       }
 
       return {
         id_producto: Number(producto.id_producto),
         nombre: producto.nombre,
         descripcion: producto.descripcion,
-        stock_actual: stock,
+        stock: stock,
         stock_reservado: stockReservado,
         stock_disponible: stockDisponible,
         stock_minimo: stockMinimo,
-        estado: estado,
-        requiere_control: producto.requiere_control_stock,
+        estado_stock: estado,
+        requiere_control_stock: producto.requiere_control_stock,
+        tipo_producto: producto.tipo_producto,
         proveedor_nombre: producto.proveedores?.nombre || null
       };
     });
@@ -305,13 +321,20 @@ exports.getEstadoStock = async (req, res) => {
 
 exports.getAlertasStock = async (req, res) => {
   try {
-    const { tipo_alerta } = req.query;
+    const { tipo_alerta, tipo_producto } = req.query;
+
+    // Construir filtros
+    let whereClause = {
+      requiere_control_stock: true
+    };
+    
+    if (tipo_producto) {
+      whereClause.tipo_producto = tipo_producto;
+    }
 
     // Obtener productos con stock bajo o sin stock
     const productos = await prisma.producto.findMany({
-      where: {
-        requiere_control_stock: true
-      },
+      where: whereClause,
       select: {
         id_producto: true,
         nombre: true,
@@ -319,6 +342,7 @@ exports.getAlertasStock = async (req, res) => {
         stock: true,
         stock_minimo: true,
         stock_reservado: true,
+        tipo_producto: true,
         proveedores: {
           select: {
             nombre: true
@@ -339,11 +363,11 @@ exports.getAlertasStock = async (req, res) => {
       if (stock > 0 && stock <= stockMinimo) {
         alertas.push({
           id_producto: Number(producto.id_producto),
-          nombre_producto: producto.nombre,
+          nombre: producto.nombre,
           tipo_alerta: 'stock_bajo',
           mensaje: `Stock bajo: ${stock} unidades (mínimo: ${stockMinimo})`,
           severidad: 'warning',
-          stock_actual: stock,
+          stock: stock,
           stock_minimo: stockMinimo,
           stock_disponible: stockDisponible,
           proveedor_nombre: producto.proveedores?.nombre || null
@@ -354,11 +378,11 @@ exports.getAlertasStock = async (req, res) => {
       if (stock <= 0) {
         alertas.push({
           id_producto: Number(producto.id_producto),
-          nombre_producto: producto.nombre,
+          nombre: producto.nombre,
           tipo_alerta: 'sin_stock',
           mensaje: `Sin stock disponible`,
           severidad: 'error',
-          stock_actual: stock,
+          stock: stock,
           stock_minimo: stockMinimo,
           stock_disponible: stockDisponible,
           proveedor_nombre: producto.proveedores?.nombre || null
@@ -369,11 +393,11 @@ exports.getAlertasStock = async (req, res) => {
       if (stock > 0 && stockDisponible <= 0) {
         alertas.push({
           id_producto: Number(producto.id_producto),
-          nombre_producto: producto.nombre,
+          nombre: producto.nombre,
           tipo_alerta: 'stock_reservado',
           mensaje: `Stock totalmente reservado: ${stockReservado} de ${stock} unidades`,
           severidad: 'warning',
-          stock_actual: stock,
+          stock: stock,
           stock_reservado: stockReservado,
           stock_disponible: stockDisponible,
           proveedor_nombre: producto.proveedores?.nombre || null
@@ -391,7 +415,7 @@ exports.getAlertasStock = async (req, res) => {
     alertasFiltradas.sort((a, b) => {
       if (a.severidad === 'error' && b.severidad === 'warning') return -1;
       if (a.severidad === 'warning' && b.severidad === 'error') return 1;
-      return a.nombre_producto.localeCompare(b.nombre_producto);
+      return a.nombre.localeCompare(b.nombre);
     });
 
     res.json({

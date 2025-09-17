@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
-import { getProductos } from '../../services/api';
+import { getVacunas } from '../../services/api';
 import { FaSave, FaTimes, FaPlus, FaTrash, FaSyringe, FaInfoCircle } from 'react-icons/fa';
 
 const PlanVacunalForm = () => {
@@ -45,7 +45,7 @@ const PlanVacunalForm = () => {
   const cargarDatos = async () => {
     try {
       const [productosData] = await Promise.all([
-        getProductos(),
+        getVacunas(), // Solo cargar vacunas para planes vacunales
         cargarListasPrecios({ activa: true })
       ]);
       setProductos(productosData);
@@ -132,7 +132,7 @@ const PlanVacunalForm = () => {
     }
 
     if (formData.productos.length === 0) {
-      newErrors.productos = 'Debe agregar al menos un producto al plan';
+      newErrors.productos = 'Debe agregar al menos una vacuna al plan';
     }
 
     // Validar productos
@@ -326,14 +326,14 @@ const PlanVacunalForm = () => {
             {/* Productos del Plan */}
             <div className="card mb-4">
               <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Productos del Plan</h5>
+                <h5 className="mb-0">Vacunas del Plan</h5>
                 <button
                   type="button"
                   className="btn btn-success btn-sm"
                   onClick={agregarProducto}
                 >
                   <FaPlus className="me-1" />
-                  Agregar Producto
+                  Agregar Vacuna
                 </button>
               </div>
               <div className="card-body">
@@ -347,14 +347,14 @@ const PlanVacunalForm = () => {
                 {formData.productos.length === 0 ? (
                   <div className="text-center py-4">
                     <FaSyringe className="text-muted mb-3" style={{ fontSize: '2rem' }} />
-                    <p className="text-muted">No hay productos agregados</p>
+                    <p className="text-muted">No hay vacunas agregadas</p>
                     <button
                       type="button"
                       className="btn btn-primary"
                       onClick={agregarProducto}
                     >
                       <FaPlus className="me-2" />
-                      Agregar Primer Producto
+                      Agregar Primera Vacuna
                     </button>
                   </div>
                 ) : (
@@ -362,7 +362,7 @@ const PlanVacunalForm = () => {
                     <table className="table table-hover">
                       <thead className="table-light">
                         <tr>
-                          <th>Producto</th>
+                          <th>Vacuna</th>
                           <th>Dosis/Semana</th>
                           <th>Semana Inicio</th>
                           <th>Semana Fin</th>
@@ -374,10 +374,21 @@ const PlanVacunalForm = () => {
                         {formData.productos.map((producto, index) => (
                           <tr key={index}>
                             <td>
-                              <strong>
-                                {producto.producto?.nombre || 
-                                 productos.find(p => p.id_producto === producto.id_producto)?.nombre}
-                              </strong>
+                              <div>
+                                <strong>
+                                  {producto.producto?.nombre || 
+                                   productos.find(p => p.id_producto === producto.id_producto)?.nombre}
+                                </strong>
+                                {(producto.producto?.descripcion || 
+                                  productos.find(p => p.id_producto === producto.id_producto)?.descripcion) && (
+                                  <div>
+                                    <small className="text-muted">
+                                      {producto.producto?.descripcion || 
+                                       productos.find(p => p.id_producto === producto.id_producto)?.descripcion}
+                                    </small>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td>{producto.dosis_por_semana}</td>
                             <td>{producto.semana_inicio}</td>
@@ -523,7 +534,7 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
     const newErrors = {};
 
     if (!productoData.id_producto) {
-      newErrors.id_producto = 'Debe seleccionar un producto';
+      newErrors.id_producto = 'Debe seleccionar una vacuna';
     }
 
     if (productoData.semana_inicio < 1 || productoData.semana_inicio > duracionSemanas) {
@@ -557,22 +568,22 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
       <div className="modal-dialog">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Agregar Producto al Plan</h5>
+            <h5 className="modal-title">Agregar Vacuna al Plan</h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <div className="modal-body">
             <div className="mb-3">
-              <label className="form-label">Producto *</label>
+              <label className="form-label">Vacuna *</label>
               <select
                 className={`form-select ${errors.id_producto ? 'is-invalid' : ''}`}
                 name="id_producto"
                 value={productoData.id_producto}
                 onChange={handleInputChange}
               >
-                <option value="">Seleccionar producto</option>
+                <option value="">Seleccionar vacuna</option>
                 {productos.map(producto => (
                   <option key={producto.id_producto} value={producto.id_producto}>
-                    {producto.nombre}
+                    {producto.nombre} - {producto.descripcion || 'Sin descripción'}
                   </option>
                 ))}
               </select>
@@ -657,7 +668,7 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
               Cancelar
             </button>
             <button type="button" className="btn btn-primary" onClick={handleSave}>
-              Agregar Producto
+              Agregar Vacuna
             </button>
           </div>
         </div>

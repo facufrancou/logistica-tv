@@ -66,6 +66,13 @@ function Dashboard() {
       urgent: true
     },
     {
+      title: "Ver Pedidos",
+      description: "Consultar pedidos realizados",
+      icon: FaEye,
+      link: "/pedidos",
+      color: "warning"
+    },
+    {
       title: "Ver Stock",
       description: "Consultar inventario actual",
       icon: FaWarehouse,
@@ -78,14 +85,7 @@ function Dashboard() {
       icon: FaStethoscope,
       link: "/planes-vacunales/nuevo",
       color: "info"
-    },
-    {
-      title: "Seguimiento",
-      description: "Monitorear aplicaciones",
-      icon: FaEye,
-      link: "/seguimiento",
-      color: "warning"
-    }
+      }
   ];
 
   const modules = [
@@ -95,7 +95,7 @@ function Dashboard() {
       icon: FaSyringe,
       link: "/planes-vacunales",
       color: "gradient-success",
-      stats: "Sprint 1-2 Completado"
+      stats: ""
     },
     {
       title: "Stock & Inventario",
@@ -103,7 +103,7 @@ function Dashboard() {
       icon: FaWarehouse,
       link: "/stock",
       color: "gradient-info",
-      stats: "Sprint 3 Completado"
+      stats: ""
     },
     {
       title: "Seguimiento",
@@ -111,7 +111,7 @@ function Dashboard() {
       icon: FaChartBar,
       link: "/seguimiento",
       color: "gradient-warning",
-      stats: "Sprint 4 Completado"
+      stats: ""
     },
     {
       title: "Facturación",
@@ -119,7 +119,7 @@ function Dashboard() {
       icon: FaFileInvoiceDollar,
       link: "/facturacion",
       color: "gradient-secondary",
-      stats: "Sprint 5 Completado"
+      stats: ""
     },
     {
       title: "Logística",
@@ -127,7 +127,7 @@ function Dashboard() {
       icon: FaTruck,
       link: "/pedidos",
       color: "gradient-dark",
-      stats: "Operaciones Diarias"
+      stats: ""
     },
     {
       title: "Sistema",
@@ -135,7 +135,7 @@ function Dashboard() {
       icon: FaCog,
       link: "/sistema",
       color: "gradient-muted",
-      stats: "Sprint 6 Completado"
+      stats: ""
     }
   ];
 
@@ -144,19 +144,12 @@ function Dashboard() {
       {/* Header Section - Simplificado */}
       <div className="dashboard-header mb-5">
         <div className="row align-items-center">
-          <div className="col-md-8">
-            <h1 className="display-4 fw-bold text-dark mb-2">
+          <div className="col-md-8 ">
+            <h3 className="display-6 fw-bold text-dark mb-1  ">
               Sistema de Gestión
-            </h1>
+            </h3>
           </div>
-          <div className="col-md-4 text-end">
-            <img 
-              src="/img/logo.svg" 
-              alt="Tierra Volga" 
-              className="img-fluid"
-              style={{ maxHeight: '80px' }}
-            />
-          </div>
+          
         </div>
       </div>
 

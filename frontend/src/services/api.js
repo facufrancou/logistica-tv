@@ -305,3 +305,11 @@ export const actualizarProducto = async (id, producto) => {
   }
 };
 
+// Nuevas funciones para tipos de producto
+export const getTiposProducto = () => fetchConSesion(API + "/productos/tipos");
+
+export const getVacunas = () => fetchConSesion(API + "/productos/vacunas");
+
+export const getProductosPorTipo = (tipo) => 
+  fetchConSesion(`${API}/productos?tipo_producto=${tipo}`);
+

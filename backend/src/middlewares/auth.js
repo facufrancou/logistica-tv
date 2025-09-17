@@ -1,8 +1,21 @@
 function validarSesion  (req, res, next) {
-  if (process.env.NODE_ENV === 'development') return next(); // Desactiva auth en desarrollo
+  if (process.env.NODE_ENV === 'development') {
+    // En desarrollo, crear un usuario mock para que los controladores funcionen
+    req.user = {
+      id_usuario: 1,
+      nombre: 'Usuario Dev',
+      email: 'dev@test.com',
+      rol_id: 1
+    };
+    return next();
+  }
+  
   if (!req.session || !req.session.usuario) {
     return res.status(401).json({ error: 'No autorizado' });
   }
+  
+  // Pasar datos del usuario al request
+  req.user = req.session.usuario;
   next();
 };
 

@@ -34,7 +34,8 @@ import {
   FaStethoscope,
   FaSearch,
   FaEye,
-  FaUserCog
+  FaUserCog,
+  FaBalanceScale
 } from "react-icons/fa";
 
 import Login from "./components/Login";
@@ -61,6 +62,9 @@ import ListasPreciosList from "./components/planesVacunales/ListasPreciosList";
 import CotizacionesList from "./components/planesVacunales/CotizacionesList";
 import CotizacionForm from "./components/planesVacunales/CotizacionForm";
 import CotizacionDetalle from "./components/planesVacunales/CotizacionDetalle";
+
+// Componentes de Liquidaciones
+import LiquidacionesDashboard from "./components/liquidaciones/LiquidacionesDashboard";
 
 // Componentes de Stock (Sprint 3)
 import StockDashboard from "./components/stock/StockDashboard";
@@ -242,6 +246,27 @@ function Navbar() {
                 <li><hr className="dropdown-divider" /></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/configuracion-facturacion"><FaCog className="me-2" /> Config. AFIP</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/reportes-facturacion"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
+              </ul>
+            </li>
+
+            {/* ⚖️ Liquidaciones */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="liquidacionesDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaBalanceScale className="me-1" />
+                <span>Liquidaciones</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="liquidacionesDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones"><FaChartBar className="me-2" /> Dashboard</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Clasificar Cotizaciones</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
             </li>
 
@@ -553,6 +578,16 @@ function MainRoutes() {
           element={
             <RutaPrivada>
               <ReportesFacturacion />
+            </RutaPrivada>
+          }
+        />
+
+        {/* ⚖️ LIQUIDACIONES */}
+        <Route
+          path="/liquidaciones"
+          element={
+            <RutaPrivada>
+              <LiquidacionesDashboard />
             </RutaPrivada>
           }
         />

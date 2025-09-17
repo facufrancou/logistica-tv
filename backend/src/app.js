@@ -44,4 +44,7 @@ app.use('/api', require('./routes/facturacion.routes'));
 app.use('/api/reportes', require('./routes/reportes.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 
+// Nuevas rutas para liquidaciones y clasificación fiscal
+app.use('/api/liquidaciones', require('./routes/liquidaciones.routes'));
+
 module.exports = app;

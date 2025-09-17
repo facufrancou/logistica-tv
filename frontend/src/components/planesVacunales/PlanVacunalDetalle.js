@@ -158,7 +158,7 @@ const PlanVacunalDetalle = () => {
                     <h4 className="text-success mb-1">
                       {plan.productos_plan?.length || 0}
                     </h4>
-                    <small className="text-muted">Productos incluidos</small>
+                    <small className="text-muted">Vacunas incluidas</small>
                   </div>
                 </div>
                 <div className="col-md-3">
@@ -212,7 +212,7 @@ const PlanVacunalDetalle = () => {
           {/* Productos del Plan */}
           <div className="card mb-4">
             <div className="card-header">
-              <h5 className="mb-0">Productos del Plan</h5>
+              <h5 className="mb-0">Vacunas del Plan</h5>
             </div>
             <div className="card-body">
               {plan.productos_plan && plan.productos_plan.length > 0 ? (
@@ -220,7 +220,7 @@ const PlanVacunalDetalle = () => {
                   <table className="table table-hover">
                     <thead className="table-light">
                       <tr>
-                        <th>Producto</th>
+                        <th>Vacuna</th>
                         <th>Dosis/Semana</th>
                         <th>Período</th>
                         <th>Total Dosis</th>
@@ -231,15 +231,17 @@ const PlanVacunalDetalle = () => {
                       {plan.productos_plan.map((producto, index) => (
                         <tr key={index}>
                           <td>
-                            <strong>{producto.producto?.nombre}</strong>
-                            {producto.producto?.descripcion && (
-                              <small className="d-block text-muted">
-                                {producto.producto.descripcion}
-                              </small>
-                            )}
+                            <div>
+                              <strong>{producto.producto?.nombre}</strong>
+                              {producto.producto?.descripcion && (
+                                <div>
+                                  <small className="text-muted">{producto.producto.descripcion}</small>
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td>
-                            <span className="badge bg-primary">
+                            <span className="badge bg-success">
                               {producto.dosis_por_semana} dosis
                             </span>
                           </td>
@@ -248,7 +250,7 @@ const PlanVacunalDetalle = () => {
                             {producto.semana_fin ? ` - ${producto.semana_fin}` : ' - final'}
                           </td>
                           <td>
-                            <span className="badge bg-success">
+                            <span className="badge bg-primary">
                               {calcularTotalDosis(producto)} dosis
                             </span>
                           </td>
@@ -265,7 +267,7 @@ const PlanVacunalDetalle = () => {
               ) : (
                 <div className="text-center py-4">
                   <FaSyringe className="text-muted mb-3" style={{ fontSize: '2rem' }} />
-                  <p className="text-muted">No hay productos configurados en este plan</p>
+                  <p className="text-muted">No hay vacunas configuradas en este plan</p>
                 </div>
               )}
             </div>
@@ -313,7 +315,7 @@ const PlanVacunalDetalle = () => {
               ) : (
                 <div className="text-center py-4">
                   <FaClipboardList className="text-muted mb-3" style={{ fontSize: '2rem' }} />
-                  <p className="text-muted">No se puede generar el calendario sin productos</p>
+                  <p className="text-muted">No se puede generar el calendario sin vacunas</p>
                 </div>
               )}
             </div>

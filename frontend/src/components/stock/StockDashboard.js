@@ -13,22 +13,21 @@ import {
 import { 
   getEstadoStock, 
   getAlertasStock, 
-  getMovimientosStock,
   getReservasStock,
   liberarReserva 
-} from '../../services/planesVacunalesApi';
+} from '../../services/stock/stockApi';
 import { useNotification } from '../../context/NotificationContext';
 import './Stock.css';
 
 const StockDashboard = () => {
   const [estadoStock, setEstadoStock] = useState([]);
   const [alertas, setAlertas] = useState([]);
-  const [movimientosRecientes, setMovimientosRecientes] = useState([]);
   const [reservasActivas, setReservasActivas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({
     mostrarSoloControladoStock: false,
-    estadoStock: ''
+    estadoStock: '',
+    tipoProducto: ''
   });
   const { showError, showSuccess } = useNotification();
 
@@ -41,16 +40,22 @@ const StockDashboard = () => {
       setLoading(true);
       
       // Cargar estado de stock
-      const filtroEstado = filtros.mostrarSoloControladoStock ? 
-        { requiere_control_stock: true } : {};
+      const filtroEstado = {};
+      if (filtros.mostrarSoloControladoStock) {
+        filtroEstado.requiere_control_stock = true;
+      }
+      if (filtros.tipoProducto) {
+        filtroEstado.tipo_producto = filtros.tipoProducto;
+      }
       
-      const [stockData, alertasData, movimientosData, reservasData] = await Promise.all([
+      const [stockData, alertasData, reservasData] = await Promise.all([
         getEstadoStock(filtroEstado),
-        getAlertasStock(),
-        getMovimientosStock({ fecha_desde: getFecha7DiasAtras() }),
+        getAlertasStock(filtros.tipoProducto ? { tipo_producto: filtros.tipoProducto } : {}),
         getReservasStock({ estado_reserva: 'activa' })
       ]);
       
+      // Los datos ya vienen filtrados del backend por tipo_producto y requiere_control_stock
+      // Solo aplicamos filtro adicional de estado si está especificado
       let stockFiltrado = stockData;
       if (filtros.estadoStock) {
         stockFiltrado = stockData.filter(item => item.estado_stock === filtros.estadoStock);
@@ -58,7 +63,6 @@ const StockDashboard = () => {
       
       setEstadoStock(stockFiltrado);
       setAlertas(alertasData);
-      setMovimientosRecientes(movimientosData.slice(0, 10)); // Últimos 10 movimientos
       setReservasActivas(reservasData.slice(0, 5)); // Últimas 5 reservas activas
       
     } catch (error) {
@@ -69,10 +73,16 @@ const StockDashboard = () => {
     }
   };
 
-  const getFecha7DiasAtras = () => {
-    const fecha = new Date();
-    fecha.setDate(fecha.getDate() - 7);
-    return fecha.toISOString().split('T')[0];
+  const getTipoProductoBadge = (tipo) => {
+    const tipos = {
+      'vacuna': { class: 'bg-success', text: 'Vacuna', icon: '💉' },
+      'medicamento': { class: 'bg-primary', text: 'Medicamento', icon: '💊' },
+      'suplemento': { class: 'bg-info', text: 'Suplemento', icon: '🧪' },
+      'insecticida': { class: 'bg-warning', text: 'Insecticida', icon: '🦟' },
+      'desinfectante': { class: 'bg-secondary', text: 'Desinfectante', icon: '🧽' },
+      'otros': { class: 'bg-dark', text: 'Otros', icon: '📦' }
+    };
+    return tipos[tipo] || { class: 'bg-secondary', text: tipo, icon: '📦' };
   };
 
   const getEstadoStockBadge = (estado) => {
@@ -85,25 +95,16 @@ const StockDashboard = () => {
     return estados[estado] || { class: 'bg-secondary', text: estado };
   };
 
-  const getTipoMovimientoBadge = (tipo) => {
-    const tipos = {
-      'ingreso': { class: 'bg-success', text: 'Ingreso' },
-      'egreso': { class: 'bg-danger', text: 'Egreso' },
-      'ajuste_positivo': { class: 'bg-info', text: 'Ajuste +' },
-      'ajuste_negativo': { class: 'bg-warning', text: 'Ajuste -' },
-      'reserva': { class: 'bg-primary', text: 'Reserva' },
-      'liberacion_reserva': { class: 'bg-secondary', text: 'Liberación' }
-    };
-    return tipos[tipo] || { class: 'bg-secondary', text: tipo };
-  };
-
   const calcularTotales = () => {
     const total = estadoStock.length;
     const criticos = estadoStock.filter(item => item.estado_stock === 'critico').length;
     const bajos = estadoStock.filter(item => item.estado_stock === 'bajo').length;
     const normales = estadoStock.filter(item => item.estado_stock === 'normal').length;
     
-    return { total, criticos, bajos, normales };
+    // Determinar si hay filtros activos
+    const hayFiltros = filtros.tipoProducto || filtros.estadoStock || filtros.mostrarSoloControladoStock;
+    
+    return { total, criticos, bajos, normales, hayFiltros };
   };
 
   const handleLiberarReserva = async (idReserva, nombreProducto) => {
@@ -167,7 +168,10 @@ const StockDashboard = () => {
             <div className="card-body text-white">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-white">Total Productos</h6>
+                  <h6 className="card-title text-white">
+                    Total Productos
+                    {totales.hayFiltros && <small className="d-block">(filtrados)</small>}
+                  </h6>
                   <h4 className="text-white">{totales.total}</h4>
                 </div>
                 <FaBoxOpen style={{ fontSize: '2rem', opacity: 0.7, color: 'white' }} />
@@ -180,7 +184,10 @@ const StockDashboard = () => {
             <div className="card-body text-white">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-white">Stock Crítico</h6>
+                  <h6 className="card-title text-white">
+                    Stock Crítico
+                    {totales.hayFiltros && <small className="d-block">(filtrados)</small>}
+                  </h6>
                   <h4 className="text-white">{totales.criticos}</h4>
                 </div>
                 <FaExclamationTriangle style={{ fontSize: '2rem', opacity: 0.7, color: 'white' }} />
@@ -193,7 +200,10 @@ const StockDashboard = () => {
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-dark">Stock Bajo</h6>
+                  <h6 className="card-title text-dark">
+                    Stock Bajo
+                    {totales.hayFiltros && <small className="d-block">(filtrados)</small>}
+                  </h6>
                   <h4 className="text-dark">{totales.bajos}</h4>
                 </div>
                 <FaExclamationTriangle style={{ fontSize: '2rem', opacity: 0.7, color: '#212529' }} />
@@ -206,7 +216,10 @@ const StockDashboard = () => {
             <div className="card-body text-white">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6 className="card-title text-white">Stock Normal</h6>
+                  <h6 className="card-title text-white">
+                    Stock Normal
+                    {totales.hayFiltros && <small className="d-block">(filtrados)</small>}
+                  </h6>
                   <h4 className="text-white">{totales.normales}</h4>
                 </div>
                 <FaChartBar style={{ fontSize: '2rem', opacity: 0.7, color: 'white' }} />
@@ -257,25 +270,41 @@ const StockDashboard = () => {
         </div>
       )}      <div className="row">
         {/* Estado de Stock */}
-        <div className="col-lg-8">
+        <div className="col-12">
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0 text-dark">
-                <FaWarehouse className="me-2" />
-                Estado de Stock
-              </h5>
-              <div className="d-flex gap-2">
+              <div>
+                <h5 className="mb-0 text-dark">
+                  <FaWarehouse className="me-2" />
+                  Estado de Stock
+                </h5>
+              </div>
+              <div className="d-flex gap-2 align-items-center flex-wrap">
+                <select 
+                  className="form-select form-select-sm"
+                  value={filtros.tipoProducto}
+                  onChange={(e) => setFiltros(prev => ({ ...prev, tipoProducto: e.target.value }))}
+                  style={{ width: '160px' }}
+                >
+                  <option value="">Todos los tipos</option>
+                  <option value="vacuna">💉 Solo Vacunas</option>
+                  <option value="medicamento">💊 Solo Medicamentos</option>
+                  <option value="suplemento">🧪 Solo Suplementos</option>
+                  <option value="insecticida">🦟 Solo Insecticidas</option>
+                  <option value="desinfectante">🧽 Solo Desinfectantes</option>
+                  <option value="otros">📦 Otros</option>
+                </select>
                 <select 
                   className="form-select form-select-sm"
                   value={filtros.estadoStock}
                   onChange={(e) => setFiltros(prev => ({ ...prev, estadoStock: e.target.value }))}
-                  style={{ width: 'auto' }}
+                  style={{ width: '150px' }}
                 >
                   <option value="">Todos los estados</option>
-                  <option value="critico">Crítico</option>
-                  <option value="bajo">Bajo</option>
-                  <option value="normal">Normal</option>
-                  <option value="alto">Alto</option>
+                  <option value="critico">🔴 Crítico</option>
+                  <option value="bajo">🟡 Bajo</option>
+                  <option value="normal">🟢 Normal</option>
+                  <option value="alto">🔵 Alto</option>
                 </select>
                 <div className="form-check">
                   <input 
@@ -285,13 +314,13 @@ const StockDashboard = () => {
                     checked={filtros.mostrarSoloControladoStock}
                     onChange={(e) => setFiltros(prev => ({ ...prev, mostrarSoloControladoStock: e.target.checked }))}
                   />
-                  <label className="form-check-label" htmlFor="soloControlados">
-                    Solo controlados
+                  <label className="form-check-label text-nowrap" htmlFor="soloControlados">
+                    📊 Solo con control de stock
                   </label>
                 </div>
               </div>
             </div>
-            <div className="card-body">
+            <div className="card-body p-0">
               {estadoStock.length === 0 ? (
                 <div className="text-center py-4">
                   <FaBoxOpen className="text-muted mb-3" style={{ fontSize: '3rem' }} />
@@ -299,29 +328,45 @@ const StockDashboard = () => {
                   <p className="text-muted">No se encontraron productos con los filtros aplicados</p>
                 </div>
               ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover">
+                <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                  <table className="table table-hover table-sm" style={{ minWidth: '1000px' }}>
                     <thead>
                       <tr>
-                        <th>Producto</th>
-                        <th>Stock Actual</th>
-                        <th>Stock Mínimo</th>
-                        <th>Reservado</th>
-                        <th>Disponible</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
+                        <th style={{ width: '20%', minWidth: '150px' }}>Producto</th>
+                        <th style={{ width: '10%', minWidth: '80px' }}>Tipo</th>
+                        <th style={{ width: '8%', minWidth: '70px' }}>Stock Actual</th>
+                        <th style={{ width: '8%', minWidth: '70px' }}>Stock Mínimo</th>
+                        <th style={{ width: '8%', minWidth: '70px' }}>Reservado</th>
+                        <th style={{ width: '10%', minWidth: '80px' }}>Disponible</th>
+                        <th style={{ width: '10%', minWidth: '80px' }}>Estado</th>
+                        <th style={{ width: '15%', minWidth: '120px' }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {estadoStock.map((item) => {
                         const estadoBadge = getEstadoStockBadge(item.estado_stock);
+                        const tipoBadge = getTipoProductoBadge(item.tipo_producto);
                         return (
                           <tr key={item.id_producto}>
                             <td>
-                              <strong>{item.nombre}</strong>
-                              {!item.requiere_control_stock && (
-                                <small className="d-block text-muted">Sin control de stock</small>
-                              )}
+                              <div>
+                                <strong>{item.nombre}</strong>
+                                {item.descripcion && (
+                                  <small className="d-block text-muted" style={{ fontSize: '0.75rem' }}>
+                                    {item.descripcion}
+                                  </small>
+                                )}
+                                {!item.requiere_control_stock && (
+                                  <small className="d-block text-warning" style={{ fontSize: '0.7rem' }}>
+                                    Sin control de stock
+                                  </small>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`badge ${tipoBadge.class}`}>
+                                {tipoBadge.icon} {tipoBadge.text}
+                              </span>
                             </td>
                             <td>
                               <span className="fw-bold">{item.stock}</span>
@@ -343,20 +388,22 @@ const StockDashboard = () => {
                               </span>
                             </td>
                             <td>
-                              <div className="btn-group">
+                              <div className="btn-group btn-group-sm">
                                 <Link
                                   to={`/stock/producto/${item.id_producto}`}
-                                  className="btn btn-sm btn-outline-primary"
+                                  className="btn btn-xs btn-outline-primary"
                                   title="Ver detalles"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.4rem' }}
                                 >
-                                  <FaChartBar />
+                                  <FaChartBar size={12} />
                                 </Link>
                                 <Link
                                   to={`/stock/movimientos/nuevo?producto=${item.id_producto}`}
-                                  className="btn btn-sm btn-outline-success"
+                                  className="btn btn-xs btn-outline-success"
                                   title="Registrar movimiento"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.4rem' }}
                                 >
-                                  <FaPlus />
+                                  <FaPlus size={12} />
                                 </Link>
                               </div>
                             </td>
@@ -365,57 +412,6 @@ const StockDashboard = () => {
                       })}
                     </tbody>
                   </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Movimientos Recientes */}
-        <div className="col-lg-4">
-          <div className="card">
-            <div className="card-header">
-              <h5 className="mb-0 text-dark">
-                <FaList className="me-2" />
-                Movimientos Recientes
-              </h5>
-            </div>
-            <div className="card-body">
-              {movimientosRecientes.length === 0 ? (
-                <div className="text-center py-4">
-                  <FaList className="text-muted mb-2" style={{ fontSize: '2rem' }} />
-                  <p className="text-muted">No hay movimientos recientes</p>
-                </div>
-              ) : (
-                <div className="list-group list-group-flush">
-                  {movimientosRecientes.map((movimiento, index) => {
-                    const tipoBadge = getTipoMovimientoBadge(movimiento.tipo_movimiento);
-                    return (
-                      <div key={index} className="list-group-item px-0">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div>
-                            <h6 className="mb-1">{movimiento.producto?.nombre}</h6>
-                            <p className="mb-1 small">
-                              <span className={`badge ${tipoBadge.class} me-2`}>
-                                {tipoBadge.text}
-                              </span>
-                              Cantidad: {movimiento.cantidad}
-                            </p>
-                            <small className="text-muted">
-                              {new Date(movimiento.created_at).toLocaleDateString('es-ES')}
-                            </small>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {movimientosRecientes.length > 0 && (
-                <div className="text-center mt-3">
-                  <Link to="/stock/movimientos" className="btn btn-sm btn-outline-primary">
-                    Ver todos los movimientos
-                  </Link>
                 </div>
               )}
             </div>

@@ -77,6 +77,10 @@ export const getEstadoStock = async (filtros = {}) => {
     params.append('requiere_control_stock', filtros.requiere_control_stock);
   }
   
+  if (filtros.tipo_producto) {
+    params.append('tipo_producto', filtros.tipo_producto);
+  }
+  
   const queryString = params.toString();
   const url = `${API_BASE_URL}/stock/estado${queryString ? `?${queryString}` : ''}`;
   
@@ -84,8 +88,16 @@ export const getEstadoStock = async (filtros = {}) => {
 };
 
 // Obtener alertas de stock bajo
-export const getAlertasStock = async () => {
-  return await fetchConSesion(`${API_BASE_URL}/stock/alertas`);
+export const getAlertasStock = async (filtros = {}) => {
+  const params = new URLSearchParams();
+  
+  if (filtros.tipo_producto) params.append('tipo_producto', filtros.tipo_producto);
+  if (filtros.tipo_alerta) params.append('tipo_alerta', filtros.tipo_alerta);
+  
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/stock/alertas${queryString ? `?${queryString}` : ''}`;
+  
+  return await fetchConSesion(url);
 };
 
 // Obtener reservas de stock

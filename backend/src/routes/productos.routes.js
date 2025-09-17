@@ -4,6 +4,8 @@ const controller = require('../controllers/productos.controller');
 const { validarSesion } = require('../middlewares/auth');
 
 router.get('/', validarSesion, controller.getProductos);
+router.get('/tipos', validarSesion, controller.getTiposProducto);
+router.get('/vacunas', validarSesion, controller.getVacunas);
 router.post('/', validarSesion, controller.createProducto);
 router.put('/:id', validarSesion, controller.updateProducto);
 

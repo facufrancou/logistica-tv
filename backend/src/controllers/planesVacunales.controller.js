@@ -564,6 +564,7 @@ exports.setPrecioPorLista = async (req, res) => {
 exports.calcularPrecioPlan = async (req, res) => {
   try {
     const { id } = req.params;
+    const { id_lista_precio } = req.query; // Nuevo: parámetro opcional
 
     const plan = await prisma.planVacunal.findUnique({
       where: { id_plan: parseInt(id) },
@@ -591,13 +592,16 @@ exports.calcularPrecioPlan = async (req, res) => {
     let precioTotal = 0;
     const detallePrecios = [];
 
+    // Determinar qué lista de precios usar (parámetro query o del plan)
+    const listaPrecios = id_lista_precio ? parseInt(id_lista_precio) : plan.id_lista_precio;
+
     for (const planProducto of plan.productos_plan) {
       let precioUnitario = parseFloat(planProducto.producto.precio_unitario);
       
-      // Si el plan tiene lista de precios, usar ese precio
-      if (plan.id_lista_precio) {
+      // Si hay lista de precios definida, usar ese precio
+      if (listaPrecios) {
         const precioPorLista = planProducto.producto.precios_por_lista.find(
-          precio => precio.id_lista === plan.id_lista_precio && precio.activo
+          precio => precio.id_lista === listaPrecios && precio.activo
         );
         if (precioPorLista) {
           precioUnitario = parseFloat(precioPorLista.precio);
