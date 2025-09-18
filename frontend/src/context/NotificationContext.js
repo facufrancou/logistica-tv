@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import Notification from '../components/common/Notification';
+import SimpleNotification from '../components/common/SimpleNotification';
 
 // Crear contexto para las notificaciones
 const NotificationContext = createContext();
@@ -72,7 +72,7 @@ export const NotificationProvider = ({ children }) => {
       {children}
       <div className="notification-container">
         {notifications.map(notification => (
-          <Notification
+          <SimpleNotification
             key={notification.id}
             type={notification.type}
             title={notification.title}

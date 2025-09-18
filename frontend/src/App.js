@@ -207,7 +207,7 @@ function Navbar() {
             </li>
 
             {/* 📊 Seguimiento (Sprint 4) */}
-            <li className="nav-item dropdown">
+            {/* <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -226,10 +226,10 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/cumplimiento"><FaClipboardList className="me-2" /> Cumplimiento</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/notificaciones"><FaBell className="me-2" /> Notificaciones</Link></li>
               </ul>
-            </li>
+            </li> */}
 
             {/* 💰 Facturación (Sprint 5) */}
-            <li className="nav-item dropdown">
+            {/* <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -250,10 +250,10 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/configuracion-facturacion"><FaCog className="me-2" /> Config. AFIP</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/reportes-facturacion"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
-            </li>
+            </li> */}
 
             {/* ⚖️ Liquidaciones */}
-            <li className="nav-item dropdown">
+            {/* <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -271,7 +271,7 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Clasificar Cotizaciones</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
-            </li>
+            </li> */}
 
             {/* 🚚 Logística */}
             <li className="nav-item dropdown">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
+import './Notification.css';
 
 /**
  * Componente de notificación moderno para reemplazar alertas tradicionales
@@ -10,8 +11,15 @@ import { FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaExclamationTriangle
  * @param {function} onClose - Función para cerrar la notificación
  */
 const Notification = ({ type = 'info', title, message, duration = 5000, onClose }) => {
+  console.log('Notification renderizado con props:', { type, title, message, duration });
   const [visible, setVisible] = useState(true);
   const timerRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  
+  // Actualizar la referencia cuando onClose cambie
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   
   const getIcon = () => {
     switch (type) {
@@ -28,32 +36,48 @@ const Notification = ({ type = 'info', title, message, duration = 5000, onClose 
   };
   
   const closeNotification = useCallback(() => {
+    console.log('closeNotification llamado');
     setVisible(false);
     setTimeout(() => {
-      if (onClose) onClose();
-    }, 500); // Dar tiempo para la animación de salida
-  }, [onClose]);
+      console.log('Llamando onClose después de la animación');
+      if (onCloseRef.current) onCloseRef.current();
+    }, 300); // Tiempo para la animación de salida
+  }, []);
   
   useEffect(() => {
-    if (duration !== null) {
-      timerRef.current = setTimeout(closeNotification, duration);
+    console.log('useEffect duration:', duration);
+    if (duration !== null && duration > 0) {
+      console.log('Configurando timer para', duration, 'ms');
+      timerRef.current = setTimeout(() => {
+        console.log('Timer ejecutado después de', duration, 'ms, cerrando notificación');
+        closeNotification();
+      }, duration);
     }
     
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        console.log('Limpiando timer');
+        clearTimeout(timerRef.current);
+      }
     };
-  }, [duration, closeNotification]);
-  
-  if (!visible) return null;
+  }, [duration]); // Solo duration en las dependencias
   
   return (
-    <div className={`notification notification-${type}`}>
+    <div 
+      className={`notification notification-${type} ${!visible ? 'closing' : ''}`}
+      role="alert"
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+    >
       <div className="notification-icon">{getIcon()}</div>
       <div className="notification-content">
         {title && <div className="notification-title">{title}</div>}
         {message && <div className="notification-message">{message}</div>}
       </div>
-      <button className="notification-close" onClick={closeNotification}>
+      <button 
+        className="notification-close" 
+        onClick={closeNotification}
+        aria-label="Cerrar notificación"
+      >
         <FaTimes />
       </button>
     </div>

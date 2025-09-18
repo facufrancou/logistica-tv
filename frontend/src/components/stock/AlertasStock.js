@@ -8,26 +8,38 @@ import {
   FaWarehouse,
   FaBoxOpen,
   FaSync,
-  FaExclamationCircle
+  FaExclamationCircle,
+  FaCog,
+  FaInfo,
+  FaBan,
+  FaLock
 } from 'react-icons/fa';
 import { 
   getAlertasStock,
   getEstadoStock,
   registrarMovimiento 
-} from '../../services/planesVacunalesApi';
+} from '../../services/stock/stockApi';
 import { useNotification } from '../../context/NotificationContext';
 import './Stock.css';
 
 const AlertasStock = () => {
   const [alertas, setAlertas] = useState([]);
+  const [estadisticas, setEstadisticas] = useState({
+    total_alertas: 0,
+    alertas_criticas: 0,
+    alertas_warning: 0,
+    alertas_info: 0,
+    productos_sin_configurar: 0
+  });
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({
     busqueda: '',
-    gravedad: '',
-    ordenPor: 'gravedad' // gravedad, nombre, stock
+    tipo_alerta: '',
+    severidad: '',
+    ordenPor: 'severidad'
   });
   const [procesandoAccion, setProcesandoAccion] = useState(null);
-  const { showError, showSuccess } = useNotification();
+  const { showError, showSuccess, showWarning, showInfo } = useNotification();
 
   useEffect(() => {
     cargarAlertas();
@@ -36,23 +48,28 @@ const AlertasStock = () => {
   const cargarAlertas = async () => {
     try {
       setLoading(true);
-      const [alertasData, estadoStockData] = await Promise.all([
-        getAlertasStock(),
-        getEstadoStock()
-      ]);
+      const response = await getAlertasStock();
       
-      // Enriquecer alertas con información adicional del estado de stock
-      const alertasEnriquecidas = alertasData.map(alerta => {
-        const productoStock = estadoStockData.find(p => p.id_producto === alerta.id_producto);
-        return {
-          ...alerta,
-          stock_reservado: productoStock?.stock_reservado || 0,
-          stock_disponible: productoStock?.stock_disponible || 0,
-          ultimo_movimiento: productoStock?.ultimo_movimiento || null
-        };
+      setAlertas(response.alertas || []);
+      setEstadisticas({
+        total_alertas: response.total_alertas || 0,
+        alertas_criticas: response.alertas_criticas || 0,
+        alertas_warning: response.alertas_warning || 0,
+        alertas_info: response.alertas_info || 0,
+        productos_sin_configurar: response.productos_sin_configurar || 0
       });
       
-      setAlertas(alertasEnriquecidas);
+      // Mostrar notificación informativa sobre las alertas cargadas
+      if (response.total_alertas > 0) {
+        if (response.alertas_criticas > 0) {
+          showWarning('Alertas Críticas', `Se encontraron ${response.alertas_criticas} alertas críticas de stock`);
+        } else {
+          showInfo('Alertas Actualizadas', `Se cargaron ${response.total_alertas} alertas de stock`);
+        }
+      } else {
+        showSuccess('Todo en orden', 'No hay alertas de stock pendientes');
+      }
+      
     } catch (error) {
       console.error('Error cargando alertas:', error);
       showError('Error', 'No se pudieron cargar las alertas de stock');
@@ -60,12 +77,14 @@ const AlertasStock = () => {
       setLoading(false);
     }
   };
-
   const alertasFiltradas = alertas.filter(alerta => {
     if (filtros.busqueda && !alerta.nombre.toLowerCase().includes(filtros.busqueda.toLowerCase())) {
       return false;
     }
-    if (filtros.gravedad && alerta.estado_stock !== filtros.gravedad) {
+    if (filtros.tipo_alerta && alerta.tipo_alerta !== filtros.tipo_alerta) {
+      return false;
+    }
+    if (filtros.severidad && alerta.severidad !== filtros.severidad) {
       return false;
     }
     return true;
@@ -74,9 +93,12 @@ const AlertasStock = () => {
   // Ordenar alertas
   const alertasOrdenadas = [...alertasFiltradas].sort((a, b) => {
     switch (filtros.ordenPor) {
-      case 'gravedad':
-        const gravedadOrder = { 'critico': 0, 'bajo': 1 };
-        return gravedadOrder[a.estado_stock] - gravedadOrder[b.estado_stock];
+      case 'severidad':
+        const prioridad = { 'error': 0, 'warning': 1, 'info': 2 };
+        if (prioridad[a.severidad] !== prioridad[b.severidad]) {
+          return prioridad[a.severidad] - prioridad[b.severidad];
+        }
+        return a.stock - b.stock;
       case 'nombre':
         return a.nombre.localeCompare(b.nombre);
       case 'stock':
@@ -86,20 +108,45 @@ const AlertasStock = () => {
     }
   });
 
-  const getGravedadBadge = (estado) => {
-    const estados = {
-      'critico': { class: 'bg-danger', text: 'Crítico', icon: FaExclamationCircle },
-      'bajo': { class: 'bg-warning text-dark', text: 'Bajo', icon: FaExclamationTriangle }
+  const getAlertaInfo = (alerta) => {
+    const configs = {
+      'stock_agotado': { 
+        class: 'border-danger bg-danger-subtle', 
+        badgeClass: 'bg-danger', 
+        text: 'Agotado', 
+        icon: FaBan,
+        color: 'text-danger'
+      },
+      'stock_critico': { 
+        class: 'border-danger bg-danger-subtle', 
+        badgeClass: 'bg-danger', 
+        text: 'Crítico', 
+        icon: FaExclamationCircle,
+        color: 'text-danger'
+      },
+      'stock_bajo': { 
+        class: 'border-warning bg-warning-subtle', 
+        badgeClass: 'bg-warning text-dark', 
+        text: 'Bajo', 
+        icon: FaExclamationTriangle,
+        color: 'text-warning'
+      },
+      'stock_reservado': { 
+        class: 'border-info bg-info-subtle', 
+        badgeClass: 'bg-info text-dark', 
+        text: 'Reservado', 
+        icon: FaLock,
+        color: 'text-info'
+      },
+      'configuracion_faltante': { 
+        class: 'border-secondary bg-light', 
+        badgeClass: 'bg-secondary', 
+        text: 'Sin Config.', 
+        icon: FaCog,
+        color: 'text-secondary'
+      }
     };
-    return estados[estado] || { class: 'bg-secondary', text: estado, icon: FaBoxOpen };
-  };
-
-  const calcularDiasStock = (stock, stockMinimo) => {
-    // Estimación simple: si está por debajo del mínimo, calcular días restantes
-    if (stock <= stockMinimo) {
-      return Math.floor(stock / (stockMinimo * 0.1)) || 0; // Estimación básica
-    }
-    return null;
+    return configs[alerta.tipo_alerta] || configs['stock_bajo'];
   };
 
   const handleRegistrarIngreso = async (idProducto, nombreProducto) => {
@@ -141,13 +188,12 @@ const AlertasStock = () => {
 
   return (
     <div className="container-fluid">
-      {/* Header */}
+      {/* Header con estadísticas */}
       <div className="card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center">
             <FaExclamationTriangle className="me-2 text-warning" />
             <h3 className="mb-0 text-dark">Alertas de Stock</h3>
-            <span className="badge bg-danger ms-3">{alertas.length} alertas activas</span>
           </div>
           <div className="d-flex gap-2">
             <button 
@@ -164,9 +210,43 @@ const AlertasStock = () => {
             </Link>
           </div>
         </div>
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-2">
+              <div className="text-center">
+                <div className="h4 mb-1 text-primary">{estadisticas.total_alertas}</div>
+                <small className="text-muted">Total Alertas</small>
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="text-center">
+                <div className="h4 mb-1 text-danger">{estadisticas.alertas_criticas}</div>
+                <small className="text-muted">Críticas</small>
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="text-center">
+                <div className="h4 mb-1 text-warning">{estadisticas.alertas_warning}</div>
+                <small className="text-muted">Advertencias</small>
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="text-center">
+                <div className="h4 mb-1 text-info">{estadisticas.alertas_info}</div>
+                <small className="text-muted">Información</small>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="text-center">
+                <div className="h4 mb-1 text-secondary">{estadisticas.productos_sin_configurar}</div>
+                <small className="text-muted">Sin Stock Mínimo</small>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros mejorados */}
       <div className="card mb-4">
         <div className="card-header">
           <h5 className="mb-0">
@@ -176,7 +256,7 @@ const AlertasStock = () => {
         </div>
         <div className="card-body">
           <div className="row g-3">
-            <div className="col-md-4">
+            <div className="col-md-3">
               <label className="form-label">Buscar producto</label>
               <div className="input-group">
                 <span className="input-group-text">
@@ -192,25 +272,41 @@ const AlertasStock = () => {
               </div>
             </div>
             <div className="col-md-3">
-              <label className="form-label">Gravedad</label>
+              <label className="form-label">Tipo de Alerta</label>
               <select 
                 className="form-select"
-                value={filtros.gravedad}
-                onChange={(e) => setFiltros(prev => ({ ...prev, gravedad: e.target.value }))}
+                value={filtros.tipo_alerta}
+                onChange={(e) => setFiltros(prev => ({ ...prev, tipo_alerta: e.target.value }))}
               >
-                <option value="">Todas las alertas</option>
-                <option value="critico">Solo Críticas</option>
-                <option value="bajo">Solo Stock Bajo</option>
+                <option value="">Todos los tipos</option>
+                <option value="stock_agotado">Stock Agotado</option>
+                <option value="stock_critico">Stock Crítico</option>
+                <option value="stock_bajo">Stock Bajo</option>
+                <option value="stock_reservado">Stock Reservado</option>
+                <option value="configuracion_faltante">Sin Configuración</option>
               </select>
             </div>
-            <div className="col-md-3">
+            <div className="col-md-2">
+              <label className="form-label">Severidad</label>
+              <select 
+                className="form-select"
+                value={filtros.severidad}
+                onChange={(e) => setFiltros(prev => ({ ...prev, severidad: e.target.value }))}
+              >
+                <option value="">Todas</option>
+                <option value="error">Error</option>
+                <option value="warning">Advertencia</option>
+                <option value="info">Información</option>
+              </select>
+            </div>
+            <div className="col-md-2">
               <label className="form-label">Ordenar por</label>
               <select 
                 className="form-select"
                 value={filtros.ordenPor}
                 onChange={(e) => setFiltros(prev => ({ ...prev, ordenPor: e.target.value }))}
               >
-                <option value="gravedad">Gravedad</option>
+                <option value="severidad">Severidad</option>
                 <option value="nombre">Nombre</option>
                 <option value="stock">Stock Actual</option>
               </select>
@@ -218,7 +314,7 @@ const AlertasStock = () => {
             <div className="col-md-2 d-flex align-items-end">
               <button 
                 className="btn btn-outline-secondary w-100"
-                onClick={() => setFiltros({ busqueda: '', gravedad: '', ordenPor: 'gravedad' })}
+                onClick={() => setFiltros({ busqueda: '', tipo_alerta: '', severidad: '', ordenPor: 'severidad' })}
               >
                 Limpiar
               </button>
@@ -240,7 +336,7 @@ const AlertasStock = () => {
               <FaWarehouse className="text-muted mb-3" style={{ fontSize: '3rem' }} />
               <h5 className="text-muted">No hay alertas de stock</h5>
               <p className="text-muted">
-                {filtros.busqueda || filtros.gravedad 
+                {filtros.busqueda || filtros.tipo_alerta || filtros.severidad
                   ? 'No se encontraron alertas con los filtros aplicados'
                   : '¡Excelente! Todos los productos tienen stock suficiente'
                 }
@@ -252,15 +348,12 @@ const AlertasStock = () => {
           ) : (
             <div className="row">
               {alertasOrdenadas.map((alerta) => {
-                const gravedadBadge = getGravedadBadge(alerta.estado_stock);
-                const diasStock = calcularDiasStock(alerta.stock, alerta.stock_minimo);
-                const IconoGravedad = gravedadBadge.icon;
+                const alertaInfo = getAlertaInfo(alerta);
+                const IconoAlerta = alertaInfo.icon;
                 
                 return (
                   <div key={alerta.id_producto} className="col-lg-6 col-xl-4 mb-4">
-                    <div className={`card h-100 border-start border-4 ${
-                      alerta.estado_stock === 'critico' ? 'border-danger' : 'border-warning'
-                    }`}>
+                    <div className={`card h-100 border-start border-4 ${alertaInfo.class}`}>
                       <div className="card-body">
                         <div className="d-flex justify-content-between align-items-start mb-3">
                           <div className="flex-grow-1">
@@ -272,17 +365,28 @@ const AlertasStock = () => {
                                 {alerta.nombre}
                               </Link>
                             </h6>
-                            <span className={`badge ${gravedadBadge.class} mb-2`}>
-                              <IconoGravedad className="me-1" />
-                              {gravedadBadge.text}
-                            </span>
+                            <div className="d-flex gap-2 mb-2">
+                              <span className={`badge ${alertaInfo.badgeClass}`}>
+                                <IconoAlerta className="me-1" />
+                                {alertaInfo.text}
+                              </span>
+                              {alerta.requiere_atencion_inmediata && (
+                                <span className="badge bg-danger">
+                                  <FaExclamationTriangle className="me-1" />
+                                  Urgente
+                                </span>
+                              )}
+                            </div>
+                            <small className="text-muted">{alerta.mensaje}</small>
                           </div>
                         </div>
                         
                         <div className="row text-center mb-3">
                           <div className="col-4">
                             <div className="border-end">
-                              <div className="fs-5 fw-bold text-danger">{alerta.stock}</div>
+                              <div className={`fs-5 fw-bold ${alerta.stock === 0 ? 'text-danger' : alertaInfo.color}`}>
+                                {alerta.stock}
+                              </div>
                               <small className="text-muted">Stock Actual</small>
                             </div>
                           </div>
@@ -298,33 +402,51 @@ const AlertasStock = () => {
                           </div>
                         </div>
 
-                        {diasStock !== null && (
-                          <div className="alert alert-danger py-2 mb-3">
+                        {alerta.stock_reservado > 0 && (
+                          <div className="alert alert-info py-2 mb-3">
                             <small>
-                              <FaExclamationTriangle className="me-1" />
-                              Estimado: {diasStock} días de stock restante
+                              <FaLock className="me-1" />
+                              {alerta.stock_reservado} unidades reservadas
+                            </small>
+                          </div>
+                        )}
+
+                        {alerta.proveedor_nombre && (
+                          <div className="mb-3">
+                            <small className="text-muted">
+                              <strong>Proveedor:</strong> {alerta.proveedor_nombre}
                             </small>
                           </div>
                         )}
 
                         <div className="d-flex gap-2">
-                          <button
-                            className="btn btn-success btn-sm flex-fill"
-                            onClick={() => handleRegistrarIngreso(alerta.id_producto, alerta.nombre)}
-                            disabled={procesandoAccion === alerta.id_producto}
-                          >
-                            {procesandoAccion === alerta.id_producto ? (
-                              <>
-                                <span className="spinner-border spinner-border-sm me-1"></span>
-                                Procesando...
-                              </>
-                            ) : (
-                              <>
-                                <FaBoxOpen className="me-1" />
-                                Registrar Ingreso
-                              </>
-                            )}
-                          </button>
+                          {alerta.tipo_alerta !== 'configuracion_faltante' ? (
+                            <button
+                              className="btn btn-success btn-sm flex-fill"
+                              onClick={() => handleRegistrarIngreso(alerta.id_producto, alerta.nombre)}
+                              disabled={procesandoAccion === alerta.id_producto}
+                            >
+                              {procesandoAccion === alerta.id_producto ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-1"></span>
+                                  Procesando...
+                                </>
+                              ) : (
+                                <>
+                                  <FaBoxOpen className="me-1" />
+                                  Registrar Ingreso
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-warning btn-sm flex-fill"
+                              onClick={() => alert('Funcionalidad para configurar stock mínimo en desarrollo')}
+                            >
+                              <FaCog className="me-1" />
+                              Configurar Mínimo
+                            </button>
+                          )}
                           <Link
                             to={`/stock/producto/${alerta.id_producto}`}
                             className="btn btn-outline-primary btn-sm"
