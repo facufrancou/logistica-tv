@@ -62,6 +62,8 @@ import ListasPreciosList from "./components/planesVacunales/ListasPreciosList";
 import CotizacionesList from "./components/planesVacunales/CotizacionesList";
 import CotizacionForm from "./components/planesVacunales/CotizacionForm";
 import CotizacionDetalle from "./components/planesVacunales/CotizacionDetalle";
+import CalendarioVacunacion from "./components/planesVacunales/CalendarioVacunacion";
+import CalendariosVacunalesList from "./components/planesVacunales/CalendariosVacunalesList";
 
 // Componentes de Liquidaciones
 import LiquidacionesDashboard from "./components/liquidaciones/LiquidacionesDashboard";
@@ -178,6 +180,7 @@ function Navbar() {
               <ul className="dropdown-menu" aria-labelledby="planesDropdown">
                 <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaStethoscope className="me-2" /> Gestión de Planes</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/calendarios-vacunales"><FaCalendarAlt className="me-2" /> Calendarios Vacunales</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
               </ul>
             </li>
@@ -436,6 +439,22 @@ function MainRoutes() {
           element={
             <RutaPrivada>
               <CotizacionDetalle />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/calendarios-vacunales"
+          element={
+            <RutaPrivada>
+              <CalendariosVacunalesList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/planes-vacunales/calendario/:cotizacionId"
+          element={
+            <RutaPrivada>
+              <CalendarioVacunacion />
             </RutaPrivada>
           }
         />

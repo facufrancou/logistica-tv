@@ -29,6 +29,7 @@ model Usuario {
   notificaciones             Notificacion[]
   pedidos                    Pedido[]
   retiros_campo_creados      RetiroCampo[]
+  control_entregas_creadas   ControlEntregaVacunas[]
   rol                        Rol               @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
 
   @@index([email], map: "idx_usuarios_email")
@@ -105,6 +106,7 @@ model Producto {
   productos_habilitados      ProductoHabilitado[]
   reservas_stock             ReservaStock[]
   retiros_campo              RetiroCampo[]
+  control_entregas_vacunas   ControlEntregaVacunas[]
 
   @@index([id_proveedor], map: "id_proveedor")
   @@index([nombre], map: "idx_productos_nombre")
@@ -398,6 +400,7 @@ model Cotizacion {
   retiros_campo              RetiroCampo[]
   seguimiento_cumplimiento   SeguimientoCumplimiento[]
   resumen_liquidacion        ResumenLiquidacion?
+  control_entregas_vacunas   ControlEntregaVacunas[]
 
   @@index([id_cliente], map: "idx_cotizaciones_cliente")
   @@index([id_plan], map: "idx_cotizaciones_plan")
@@ -448,19 +451,53 @@ model CalendarioVacunacion {
   estado_dosis               estado_dosis             @default(pendiente)
   fecha_aplicacion           DateTime?                @db.DateTime(0)
   observaciones              String?                  @db.Text
+  dosis_entregadas           Int                      @default(0)
+  fecha_entrega              DateTime?                @db.DateTime(0)
+  responsable_entrega        String?                  @db.VarChar(100)
+  observaciones_entrega      String?                  @db.Text
+  estado_entrega             estado_entrega           @default(pendiente)
   created_at                 DateTime?                @default(now()) @db.DateTime(0)
   updated_at                 DateTime?                @default(now()) @db.DateTime(0)
   aplicaciones_dosis         AplicacionDosis[]
   cotizacion                 Cotizacion               @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
   producto                   Producto                 @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   notificaciones_automaticas NotificacionAutomatica[]
+  control_entregas           ControlEntregaVacunas[]
 
   @@unique([id_cotizacion, id_producto, numero_semana], map: "unique_calendario_cotizacion_producto_semana")
   @@index([id_cotizacion], map: "idx_calendario_cotizacion")
   @@index([fecha_programada], map: "idx_calendario_fecha")
   @@index([estado_dosis], map: "idx_calendario_estado")
+  @@index([estado_entrega], map: "idx_calendario_estado_entrega")
   @@index([id_producto], map: "calendario_vacunacion_id_producto_fkey")
   @@map("calendario_vacunacion")
+}
+
+model ControlEntregaVacunas {
+  id_control_entrega   Int                  @id @default(autoincrement())
+  id_calendario        Int
+  id_cotizacion        Int
+  id_producto          Int
+  cantidad_entregada   Int
+  fecha_entrega        DateTime             @db.DateTime(0)
+  responsable_entrega  String?              @db.VarChar(100)
+  observaciones        String?              @db.Text
+  tipo_entrega         tipo_entrega         @default(completa)
+  stock_afectado       Int                  @default(0)
+  created_at           DateTime?            @default(now()) @db.DateTime(0)
+  created_by           Int?
+  calendario           CalendarioVacunacion @relation(fields: [id_calendario], references: [id_calendario], onDelete: Cascade, onUpdate: NoAction)
+  cotizacion           Cotizacion           @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto             Producto             @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  usuario_creador      Usuario?             @relation(fields: [created_by], references: [id_usuario], onUpdate: NoAction)
+
+  @@index([id_calendario], map: "idx_control_entrega_calendario")
+  @@index([id_cotizacion], map: "idx_control_entrega_cotizacion")
+  @@index([id_producto], map: "idx_control_entrega_producto")
+  @@index([fecha_entrega], map: "idx_control_entrega_fecha")
+  @@index([tipo_entrega], map: "idx_control_entrega_tipo")
+  @@index([created_by], map: "control_entregas_vacunas_created_by_fkey")
+  @@map("control_entregas_vacunas")
 }
 
 model MovimientoStock {
@@ -809,6 +846,20 @@ enum modalidad_facturacion {
   por_aplicacion
   porcentaje_custom
   mensual
+}
+
+enum estado_entrega {
+  pendiente
+  parcial
+  entregada
+  suspendida
+}
+
+enum tipo_entrega {
+  completa
+  parcial
+  urgente
+  programada
 }
 
 model ItemFacturacion {

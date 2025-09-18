@@ -198,6 +198,15 @@ const CotizacionDetalle = () => {
                   Editar
                 </button>
               )}
+              {cotizacion.estado === 'aceptada' && (
+                <button
+                  className="btn btn-success btn-sm"
+                  onClick={() => navigate(`/planes-vacunales/calendario/${id}`)}
+                >
+                  <FaCalendarAlt className="me-1" />
+                  Calendario de Vacunación
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -37,4 +37,21 @@ router.put('/calendario/:id_calendario/estado', validarSesion, cotizacionesContr
 // Regenerar calendario de vacunación
 router.post('/:id/regenerar-calendario', validarSesion, cotizacionesController.regenerarCalendario);
 
+// ===== RUTAS PARA CONTROL DE ENTREGAS =====
+
+// Marcar entrega de dosis
+router.post('/calendario/:id_calendario/entregar', validarSesion, cotizacionesController.marcarEntregaDosis);
+
+// Obtener control de entregas de una cotización
+router.get('/:id/control-entregas', validarSesion, cotizacionesController.getControlEntregas);
+
+// Ajustar stock de calendario por cambios externos
+router.put('/:id/calendario/:calendarioId/ajustar-stock', validarSesion, cotizacionesController.ajustarStockCalendario);
+
+// Finalizar plan vacunal (limpiar stock)
+router.post('/:id/finalizar-plan', validarSesion, cotizacionesController.finalizarPlan);
+
+// Obtener estado general del plan
+router.get('/:id/estado-plan', validarSesion, cotizacionesController.getEstadoPlan);
+
 module.exports = router;

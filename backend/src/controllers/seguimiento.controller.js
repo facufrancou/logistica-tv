@@ -4,7 +4,7 @@ const prisma = require('../lib/prisma');
 
 async function calcularCumplimiento(idCotizacion, fechaEvaluacion = new Date()) {
   // Obtener aplicaciones programadas hasta la fecha de evaluación
-  const aplicacionesProgramadas = await prisma.calendarioVacunacion.findMany({
+  const aplicacionesProgramadas = await prisma.CalendarioVacunacion.findMany({
     where: {
       id_cotizacion: idCotizacion,
       fecha_programada: {
@@ -14,7 +14,7 @@ async function calcularCumplimiento(idCotizacion, fechaEvaluacion = new Date()) 
   });
 
   // Obtener aplicaciones realizadas
-  const aplicacionesRealizadas = await prisma.aplicacionDosis.findMany({
+  const aplicacionesRealizadas = await prisma.AplicacionDosis.findMany({
     where: {
       id_cotizacion: idCotizacion,
       fecha_aplicacion: {
@@ -81,7 +81,7 @@ async function generarNotificacionesAutomaticas() {
     const dosDiasAdelante = new Date(ahora.getTime() + (2 * 24 * 60 * 60 * 1000));
     
     // 1. Recordatorios de aplicaciones próximas (2 días antes)
-    const aplicacionesProximas = await prisma.calendarioVacunacion.findMany({
+    const aplicacionesProximas = await prisma.CalendarioVacunacion.findMany({
       where: {
         fecha_programada: {
           gte: ahora,
@@ -131,7 +131,7 @@ async function generarNotificacionesAutomaticas() {
     }
 
     // 2. Alertas de aplicaciones vencidas
-    const aplicacionesVencidas = await prisma.calendarioVacunacion.findMany({
+    const aplicacionesVencidas = await prisma.CalendarioVacunacion.findMany({
       where: {
         fecha_programada: {
           lt: ahora
@@ -219,7 +219,7 @@ exports.registrarAplicacion = async (req, res) => {
     }
 
     // Verificar que existe el calendario programado
-    const calendarioItem = await prisma.calendarioVacunacion.findUnique({
+    const calendarioItem = await prisma.CalendarioVacunacion.findUnique({
       where: { id_calendario: parseInt(id_calendario) },
       include: {
         cotizacion: true,
@@ -239,7 +239,7 @@ exports.registrarAplicacion = async (req, res) => {
     }
 
     // Registrar la aplicación
-    const aplicacion = await prisma.aplicacionDosis.create({
+    const aplicacion = await prisma.AplicacionDosis.create({
       data: {
         id_calendario: parseInt(id_calendario),
         id_cotizacion: parseInt(id_cotizacion),
@@ -257,7 +257,7 @@ exports.registrarAplicacion = async (req, res) => {
 
     // Actualizar estado del calendario si se aplicó completamente
     if (cantidad_aplicada === calendarioItem.cantidad_dosis) {
-      await prisma.calendarioVacunacion.update({
+      await prisma.CalendarioVacunacion.update({
         where: { id_calendario: parseInt(id_calendario) },
         data: { estado_dosis: 'aplicada' }
       });
@@ -265,7 +265,7 @@ exports.registrarAplicacion = async (req, res) => {
 
     // Actualizar stock si el producto requiere control
     if (calendarioItem.producto.requiere_control_stock) {
-      await prisma.producto.update({
+      await prisma.Producto.update({
         where: { id_producto: parseInt(id_producto) },
         data: {
           stock: {
@@ -329,7 +329,7 @@ exports.getAplicacionesPorCotizacion = async (req, res) => {
       filtros.id_producto = parseInt(id_producto);
     }
 
-    const aplicaciones = await prisma.aplicacionDosis.findMany({
+    const aplicaciones = await prisma.AplicacionDosis.findMany({
       where: filtros,
       include: {
         calendario: {
@@ -420,7 +420,7 @@ exports.registrarRetiro = async (req, res) => {
     }
 
     // Verificar que existe la cotización y el producto
-    const cotizacion = await prisma.cotizacion.findUnique({
+    const cotizacion = await prisma.Cotizacion.findUnique({
       where: { id_cotizacion: parseInt(id_cotizacion) }
     });
 
@@ -428,7 +428,7 @@ exports.registrarRetiro = async (req, res) => {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
 
-    const producto = await prisma.producto.findUnique({
+    const producto = await prisma.Producto.findUnique({
       where: { id_producto: parseInt(id_producto) }
     });
 
@@ -454,7 +454,7 @@ exports.registrarRetiro = async (req, res) => {
 
     // Si afecta el calendario, marcar aplicaciones futuras como canceladas
     if (afecta_calendario) {
-      const aplicacionesFuturas = await prisma.calendarioVacunacion.findMany({
+      const aplicacionesFuturas = await prisma.CalendarioVacunacion.findMany({
         where: {
           id_cotizacion: parseInt(id_cotizacion),
           id_producto: parseInt(id_producto),
@@ -473,13 +473,13 @@ exports.registrarRetiro = async (req, res) => {
         
         if (cantidadACancelar === aplicacion.cantidad_dosis) {
           // Cancelar aplicación completa
-          await prisma.calendarioVacunacion.update({
+          await prisma.CalendarioVacunacion.update({
             where: { id_calendario: aplicacion.id_calendario },
             data: { estado_dosis: 'cancelada' }
           });
         } else {
           // Reducir cantidad de aplicación
-          await prisma.calendarioVacunacion.update({
+          await prisma.CalendarioVacunacion.update({
             where: { id_calendario: aplicacion.id_calendario },
             data: { cantidad_dosis: aplicacion.cantidad_dosis - cantidadACancelar }
           });
@@ -491,7 +491,7 @@ exports.registrarRetiro = async (req, res) => {
 
     // Liberar stock reservado si corresponde
     if (producto.requiere_control_stock) {
-      await prisma.producto.update({
+      await prisma.Producto.update({
         where: { id_producto: parseInt(id_producto) },
         data: {
           stock_reservado: {
@@ -539,7 +539,7 @@ exports.getReporteCumplimiento = async (req, res) => {
     const cumplimiento = await calcularCumplimiento(parseInt(idCotizacion), fechaEval);
 
     // Obtener detalle de aplicaciones pendientes
-    const aplicacionesPendientes = await prisma.calendarioVacunacion.findMany({
+    const aplicacionesPendientes = await prisma.CalendarioVacunacion.findMany({
       where: {
         id_cotizacion: parseInt(idCotizacion),
         estado_dosis: 'pendiente',
@@ -560,7 +560,7 @@ exports.getReporteCumplimiento = async (req, res) => {
     });
 
     // Obtener últimas aplicaciones realizadas
-    const ultimasAplicaciones = await prisma.aplicacionDosis.findMany({
+    const ultimasAplicaciones = await prisma.AplicacionDosis.findMany({
       where: {
         id_cotizacion: parseInt(idCotizacion)
       },
@@ -775,7 +775,7 @@ exports.getDashboardSeguimiento = async (req, res) => {
     const { idCotizacion } = req.params;
 
     // Obtener información general de la cotización
-    const cotizacion = await prisma.cotizacion.findUnique({
+    const cotizacion = await prisma.Cotizacion.findUnique({
       where: { id_cotizacion: parseInt(idCotizacion) },
       include: {
         cliente: true,
@@ -791,11 +791,11 @@ exports.getDashboardSeguimiento = async (req, res) => {
     const cumplimiento = await calcularCumplimiento(parseInt(idCotizacion));
 
     // Obtener estadísticas de aplicaciones
-    const totalAplicaciones = await prisma.aplicacionDosis.count({
+    const totalAplicaciones = await prisma.AplicacionDosis.count({
       where: { id_cotizacion: parseInt(idCotizacion) }
     });
 
-    const aplicacionesExitosas = await prisma.aplicacionDosis.count({
+    const aplicacionesExitosas = await prisma.AplicacionDosis.count({
       where: { 
         id_cotizacion: parseInt(idCotizacion),
         estado_aplicacion: 'exitosa'
@@ -826,7 +826,7 @@ exports.getDashboardSeguimiento = async (req, res) => {
     const ahora = new Date();
     const sieteDiasDespues = new Date(ahora.getTime() + (7 * 24 * 60 * 60 * 1000));
 
-    const proximasAplicaciones = await prisma.calendarioVacunacion.findMany({
+    const proximasAplicaciones = await prisma.CalendarioVacunacion.findMany({
       where: {
         id_cotizacion: parseInt(idCotizacion),
         fecha_programada: {
@@ -969,6 +969,527 @@ exports.getRetirosPorCotizacion = async (req, res) => {
 
   } catch (error) {
     console.error('Error al obtener retiros:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ===== MÉTODOS ADICIONALES PARA EL FRONTEND =====
+
+// GET /seguimiento/aplicaciones (con filtros query params)
+exports.getAplicaciones = async (req, res) => {
+  try {
+    const {
+      fechaDesde,
+      fechaHasta,
+      cliente,
+      producto,
+      estado,
+      veterinario,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const where = {};
+
+    // Construir filtros
+    if (fechaDesde || fechaHasta) {
+      where.fecha_aplicacion = {};
+      if (fechaDesde) where.fecha_aplicacion.gte = new Date(fechaDesde);
+      if (fechaHasta) where.fecha_aplicacion.lte = new Date(fechaHasta);
+    }
+
+    if (cliente) {
+      where.cotizacion = {
+        cliente: {
+          OR: [
+            { nombre: { contains: cliente, mode: 'insensitive' } },
+            { email: { contains: cliente, mode: 'insensitive' } }
+          ]
+        }
+      };
+    }
+
+    if (producto) {
+      where.producto = {
+        nombre: { contains: producto, mode: 'insensitive' }
+      };
+    }
+
+    if (estado) {
+      where.estado_aplicacion = estado;
+    }
+
+    if (veterinario) {
+      where.veterinario_responsable = { contains: veterinario, mode: 'insensitive' };
+    }
+
+    const aplicaciones = await prisma.AplicacionDosis.findMany({
+      where,
+      include: {
+        cotizacion: {
+          include: {
+            cliente: true
+          }
+        },
+        producto: true,
+        usuario_aplicacion: true
+      },
+      orderBy: {
+        fecha_aplicacion: 'desc'
+      },
+      skip: offset,
+      take: parseInt(limit)
+    });
+
+    const total = await prisma.AplicacionDosis.count({ where });
+
+    res.json({
+      aplicaciones: aplicaciones.map(app => ({
+        id_aplicacion: app.id_aplicacion,
+        cotizacion: {
+          id_cotizacion: app.cotizacion.id_cotizacion,
+          numero_cotizacion: app.cotizacion.numero_cotizacion,
+          cliente: app.cotizacion.cliente.nombre
+        },
+        producto: {
+          id_producto: app.producto.id_producto,
+          nombre: app.producto.nombre,
+          descripcion: app.producto.descripcion
+        },
+        cantidad_aplicada: app.cantidad_aplicada,
+        fecha_aplicacion: app.fecha_aplicacion,
+        fecha_programada: app.fecha_programada,
+        estado_aplicacion: app.estado_aplicacion,
+        veterinario_responsable: app.veterinario_responsable,
+        observaciones: app.observaciones,
+        efectos_adversos: app.efectos_adversos,
+        temperatura_almacenamiento: app.temperatura_almacenamiento,
+        lote_producto: app.lote_producto,
+        ubicacion_aplicacion: app.ubicacion_aplicacion,
+        usuario_aplicacion: app.usuario_aplicacion ? {
+          nombre: `${app.usuario_aplicacion.nombre} ${app.usuario_aplicacion.apellido}`,
+          email: app.usuario_aplicacion.email
+        } : null
+      })),
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener aplicaciones:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /seguimiento/dashboard (con filtros query params)
+exports.getDashboard = async (req, res) => {
+  try {
+    const { periodo = 30, cliente, producto } = req.query;
+    const fechaDesde = new Date();
+    fechaDesde.setDate(fechaDesde.getDate() - parseInt(periodo));
+
+    // Aplicaciones por día
+    const aplicacionesPorDia = await prisma.AplicacionDosis.groupBy({
+      by: ['fecha_aplicacion'],
+      _count: {
+        id_aplicacion: true
+      },
+      _sum: {
+        cantidad_aplicada: true
+      },
+      where: {
+        fecha_aplicacion: {
+          gte: fechaDesde
+        },
+        ...(cliente && {
+          cotizacion: {
+            cliente: {
+              nombre: { contains: cliente, mode: 'insensitive' }
+            }
+          }
+        }),
+        ...(producto && {
+          producto: {
+            nombre: { contains: producto, mode: 'insensitive' }
+          }
+        })
+      },
+      orderBy: {
+        fecha_aplicacion: 'asc'
+      }
+    });
+
+    // Estadísticas generales
+    const totalAplicaciones = await prisma.AplicacionDosis.count({
+      where: {
+        fecha_aplicacion: {
+          gte: fechaDesde
+        }
+      }
+    });
+
+    const aplicacionesExitosas = await prisma.AplicacionDosis.count({
+      where: {
+        fecha_aplicacion: {
+          gte: fechaDesde
+        },
+        estado_aplicacion: 'exitosa'
+      }
+    });
+
+    const aplicacionesPendientes = await prisma.CalendarioVacunacion.count({
+      where: {
+        fecha_programada: {
+          lte: new Date()
+        },
+        estado_dosis: 'pendiente'
+      }
+    });
+
+    // Top productos más aplicados
+    const topProductos = await prisma.AplicacionDosis.groupBy({
+      by: ['id_producto'],
+      _count: {
+        id_aplicacion: true
+      },
+      _sum: {
+        cantidad_aplicada: true
+      },
+      where: {
+        fecha_aplicacion: {
+          gte: fechaDesde
+        }
+      },
+      orderBy: {
+        _count: {
+          id_aplicacion: 'desc'
+        }
+      },
+      take: 5
+    });
+
+    // Obtener detalles de productos
+    const productosInfo = await prisma.Producto.findMany({
+      where: {
+        id_producto: {
+          in: topProductos.map(p => p.id_producto)
+        }
+      }
+    });
+
+    const topProductosConDetalles = topProductos.map(top => {
+      const producto = productosInfo.find(p => p.id_producto === top.id_producto);
+      return {
+        id_producto: top.id_producto,
+        nombre: producto?.nombre || 'Producto no encontrado',
+        total_aplicaciones: top._count.id_aplicacion,
+        total_dosis: top._sum.cantidad_aplicada
+      };
+    });
+
+    res.json({
+      periodo_analizado: parseInt(periodo),
+      fecha_desde: fechaDesde,
+      estadisticas: {
+        total_aplicaciones: totalAplicaciones,
+        aplicaciones_exitosas: aplicacionesExitosas,
+        aplicaciones_pendientes: aplicacionesPendientes,
+        porcentaje_exito: totalAplicaciones > 0 ? ((aplicacionesExitosas / totalAplicaciones) * 100).toFixed(2) : 0
+      },
+      aplicaciones_por_dia: aplicacionesPorDia.map(app => ({
+        fecha: app.fecha_aplicacion,
+        cantidad_aplicaciones: app._count.id_aplicacion,
+        total_dosis: app._sum.cantidad_aplicada
+      })),
+      top_productos: topProductosConDetalles
+    });
+
+  } catch (error) {
+    console.error('Error al obtener dashboard:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /seguimiento/aplicaciones/:id
+exports.getAplicacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const aplicacion = await prisma.AplicacionDosis.findUnique({
+      where: { id_aplicacion: parseInt(id) },
+      include: {
+        cotizacion: {
+          include: {
+            cliente: true
+          }
+        },
+        producto: true,
+        usuario_aplicacion: true,
+        calendario: true
+      }
+    });
+
+    if (!aplicacion) {
+      return res.status(404).json({ error: 'Aplicación no encontrada' });
+    }
+
+    res.json({
+      id_aplicacion: aplicacion.id_aplicacion,
+      cotizacion: {
+        id_cotizacion: aplicacion.cotizacion.id_cotizacion,
+        numero_cotizacion: aplicacion.cotizacion.numero_cotizacion,
+        cliente: aplicacion.cotizacion.cliente.nombre
+      },
+      producto: {
+        id_producto: aplicacion.producto.id_producto,
+        nombre: aplicacion.producto.nombre,
+        descripcion: aplicacion.producto.descripcion
+      },
+      cantidad_aplicada: aplicacion.cantidad_aplicada,
+      fecha_aplicacion: aplicacion.fecha_aplicacion,
+      fecha_programada: aplicacion.fecha_programada,
+      estado_aplicacion: aplicacion.estado_aplicacion,
+      veterinario_responsable: aplicacion.veterinario_responsable,
+      observaciones: aplicacion.observaciones,
+      efectos_adversos: aplicacion.efectos_adversos,
+      temperatura_almacenamiento: aplicacion.temperatura_almacenamiento,
+      lote_producto: aplicacion.lote_producto,
+      ubicacion_aplicacion: aplicacion.ubicacion_aplicacion,
+      usuario_aplicacion: aplicacion.usuario_aplicacion ? {
+        nombre: `${aplicacion.usuario_aplicacion.nombre} ${aplicacion.usuario_aplicacion.apellido}`,
+        email: aplicacion.usuario_aplicacion.email
+      } : null
+    });
+
+  } catch (error) {
+    console.error('Error al obtener aplicación:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// PUT /seguimiento/aplicaciones/:id
+exports.actualizarAplicacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const datosActualizacion = req.body;
+
+    const aplicacion = await prisma.AplicacionDosis.update({
+      where: { id_aplicacion: parseInt(id) },
+      data: datosActualizacion,
+      include: {
+        cotizacion: {
+          include: {
+            cliente: true
+          }
+        },
+        producto: true
+      }
+    });
+
+    res.json({
+      message: 'Aplicación actualizada exitosamente',
+      aplicacion
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar aplicación:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// DELETE /seguimiento/aplicaciones/:id
+exports.eliminarAplicacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.AplicacionDosis.delete({
+      where: { id_aplicacion: parseInt(id) }
+    });
+
+    res.json({ message: 'Aplicación eliminada exitosamente' });
+
+  } catch (error) {
+    console.error('Error al eliminar aplicación:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// POST /seguimiento/aplicaciones/:id/completar
+exports.completarAplicacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const aplicacion = await prisma.AplicacionDosis.update({
+      where: { id_aplicacion: parseInt(id) },
+      data: {
+        estado_aplicacion: 'exitosa',
+        fecha_aplicacion: new Date()
+      }
+    });
+
+    res.json({
+      message: 'Aplicación marcada como completada',
+      aplicacion
+    });
+
+  } catch (error) {
+    console.error('Error al completar aplicación:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /seguimiento/aplicaciones/proximas
+exports.getAplicacionesProximas = async (req, res) => {
+  try {
+    const { dias = 7 } = req.query;
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() + parseInt(dias));
+
+    const aplicaciones = await prisma.CalendarioVacunacion.findMany({
+      where: {
+        fecha_programada: {
+          gte: new Date(),
+          lte: fechaLimite
+        },
+        estado_dosis: 'pendiente'
+      },
+      include: {
+        cotizacion: {
+          include: {
+            cliente: true
+          }
+        },
+        producto: true
+      },
+      orderBy: {
+        fecha_programada: 'asc'
+      }
+    });
+
+    res.json({
+      aplicaciones_proximas: aplicaciones.map(app => ({
+        id_calendario: app.id_calendario,
+        cotizacion: {
+          id_cotizacion: app.cotizacion.id_cotizacion,
+          numero_cotizacion: app.cotizacion.numero_cotizacion,
+          cliente: app.cotizacion.cliente.nombre
+        },
+        producto: {
+          id_producto: app.producto.id_producto,
+          nombre: app.producto.nombre
+        },
+        fecha_programada: app.fecha_programada,
+        cantidad_dosis: app.cantidad_dosis,
+        numero_semana: app.numero_semana
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error al obtener aplicaciones próximas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /seguimiento/aplicaciones/vencidas
+exports.getAplicacionesVencidas = async (req, res) => {
+  try {
+    const aplicaciones = await prisma.CalendarioVacunacion.findMany({
+      where: {
+        fecha_programada: {
+          lt: new Date()
+        },
+        estado_dosis: 'pendiente'
+      },
+      include: {
+        cotizacion: {
+          include: {
+            cliente: true
+          }
+        },
+        producto: true
+      },
+      orderBy: {
+        fecha_programada: 'asc'
+      }
+    });
+
+    res.json({
+      aplicaciones_vencidas: aplicaciones.map(app => ({
+        id_calendario: app.id_calendario,
+        cotizacion: {
+          id_cotizacion: app.cotizacion.id_cotizacion,
+          numero_cotizacion: app.cotizacion.numero_cotizacion,
+          cliente: app.cotizacion.cliente.nombre
+        },
+        producto: {
+          id_producto: app.producto.id_producto,
+          nombre: app.producto.nombre
+        },
+        fecha_programada: app.fecha_programada,
+        cantidad_dosis: app.cantidad_dosis,
+        dias_vencida: Math.floor((new Date() - new Date(app.fecha_programada)) / (1000 * 60 * 60 * 24))
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error al obtener aplicaciones vencidas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// POST /seguimiento/aplicaciones/:aplicacionId/recordatorio
+exports.crearRecordatorio = async (req, res) => {
+  try {
+    const { aplicacionId } = req.params;
+    const { mensaje, fecha_recordatorio } = req.body;
+
+    // Crear notificación de recordatorio
+    const notificacion = await prisma.NotificacionAutomatica.create({
+      data: {
+        tipo_notificacion: 'recordatorio',
+        mensaje: mensaje || 'Recordatorio de aplicación pendiente',
+        fecha_programada: new Date(fecha_recordatorio),
+        prioridad: 'media',
+        estado_notificacion: 'pendiente',
+        referencia_id: parseInt(aplicacionId),
+        referencia_tipo: 'aplicacion'
+      }
+    });
+
+    res.json({
+      message: 'Recordatorio creado exitosamente',
+      notificacion
+    });
+
+  } catch (error) {
+    console.error('Error al crear recordatorio:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// DELETE /seguimiento/aplicaciones/:aplicacionId/recordatorio
+exports.eliminarRecordatorio = async (req, res) => {
+  try {
+    const { aplicacionId } = req.params;
+
+    await prisma.NotificacionAutomatica.deleteMany({
+      where: {
+        referencia_id: parseInt(aplicacionId),
+        referencia_tipo: 'aplicacion',
+        tipo_notificacion: 'recordatorio',
+        estado_notificacion: 'pendiente'
+      }
+    });
+
+    res.json({ message: 'Recordatorio eliminado exitosamente' });
+
+  } catch (error) {
+    console.error('Error al eliminar recordatorio:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

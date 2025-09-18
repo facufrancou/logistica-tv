@@ -301,6 +301,60 @@ export const PlanesVacunalesProvider = ({ children }) => {
     }
   };
 
+  // ===== NUEVAS FUNCIONES DE CONTROL DE ENTREGAS =====
+
+  const marcarEntregaDosis = async (id_calendario, entregaData) => {
+    try {
+      const response = await planesApi.marcarEntregaDosis(id_calendario, entregaData);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  const obtenerControlEntregas = async (id_cotizacion, filters = {}) => {
+    try {
+      const data = await planesApi.getControlEntregas(id_cotizacion, filters);
+      return data;
+    } catch (error) {
+      setError(error.message);
+      showError('Error', 'No se pudo cargar el control de entregas');
+      return [];
+    }
+  };
+
+  const ajustarStockCalendario = async (id_cotizacion, id_calendario, ajusteData) => {
+    try {
+      const response = await planesApi.ajustarStockCalendario(id_cotizacion, id_calendario, ajusteData);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  const finalizarPlan = async (id_cotizacion, observaciones = '') => {
+    try {
+      const response = await planesApi.finalizarPlan(id_cotizacion, observaciones);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  const obtenerEstadoPlan = async (id_cotizacion) => {
+    try {
+      const data = await planesApi.getEstadoPlan(id_cotizacion);
+      return data;
+    } catch (error) {
+      setError(error.message);
+      showError('Error', 'No se pudo cargar el estado del plan');
+      return null;
+    }
+  };
+
   // Limpiar error después de un tiempo
   useEffect(() => {
     if (error) {
@@ -341,6 +395,13 @@ export const PlanesVacunalesProvider = ({ children }) => {
     eliminarCotizacion,
     reactivarCotizacion,
     obtenerCalendarioVacunacion,
+
+    // Funciones de Control de Entregas
+    marcarEntregaDosis,
+    obtenerControlEntregas,
+    ajustarStockCalendario,
+    finalizarPlan,
+    obtenerEstadoPlan,
 
     // Funciones de utilidad
     setError,

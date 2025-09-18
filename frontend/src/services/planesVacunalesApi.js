@@ -31,7 +31,10 @@ const fetchConSesion = async (url, options = {}) => {
       throw new Error('No autorizado - Sesión expirada');
     } else if (res.status === 400) {
       const errorData = await res.json();
-      throw new Error(errorData.error || 'Datos inválidos');
+      // Crear un error que preserve toda la información del backend
+      const error = new Error(errorData.message || errorData.error || 'Datos inválidos');
+      error.response = { data: errorData };
+      throw error;
     } else if (res.status === 404) {
       throw new Error('Recurso no encontrado');
     } else {
@@ -276,6 +279,43 @@ export const regenerarCalendario = async (id, fechaData) => {
     method: 'POST',
     body: JSON.stringify(fechaData)
   });
+};
+
+// ===== CONTROL DE ENTREGAS =====
+
+export const marcarEntregaDosis = async (id_calendario, entregaData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/entregar`, {
+    method: 'POST',
+    body: JSON.stringify(entregaData)
+  });
+};
+
+export const getControlEntregas = async (id_cotizacion, filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.fecha_desde) params.append('fecha_desde', filters.fecha_desde);
+  if (filters.fecha_hasta) params.append('fecha_hasta', filters.fecha_hasta);
+  if (filters.id_producto) params.append('id_producto', filters.id_producto);
+  
+  const url = `${API_BASE_URL}/cotizaciones/${id_cotizacion}/control-entregas${params.toString() ? '?' + params.toString() : ''}`;
+  return await fetchConSesion(url);
+};
+
+export const ajustarStockCalendario = async (id_cotizacion, id_calendario, ajusteData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/ajustar-stock`, {
+    method: 'PUT',
+    body: JSON.stringify(ajusteData)
+  });
+};
+
+export const finalizarPlan = async (id_cotizacion, observaciones = '') => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/finalizar-plan`, {
+    method: 'POST',
+    body: JSON.stringify({ observaciones_finalizacion: observaciones })
+  });
+};
+
+export const getEstadoPlan = async (id_cotizacion) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/estado-plan`);
 };
 
 // ==========================================
@@ -587,6 +627,15 @@ export const planesVacunalesApi = {
   
   // Calendario
   getCalendarioVacunacion,
+  actualizarEstadoDosis,
+  regenerarCalendario,
+  
+  // Control de Entregas
+  marcarEntregaDosis,
+  getControlEntregas,
+  ajustarStockCalendario,
+  finalizarPlan,
+  getEstadoPlan,
   
   // Stock
   getMovimientosStock,

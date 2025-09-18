@@ -24,24 +24,19 @@ async function generarCalendarioVacunacion(cotizacionId, fechaInicio, productosD
   for (const planProducto of productosDelPlan) {
     const semanaInicio = planProducto.semana_inicio;
     const semanaFin = planProducto.semana_fin || semanaInicio;
-    const dosisTotal = planProducto.cantidad_total;
     const dosisPorSemana = planProducto.dosis_por_semana;
     
-    // Calcular cuántas semanas necesitamos para aplicar todas las dosis
-    const semanasNecesarias = Math.ceil(dosisTotal / dosisPorSemana);
-    const semanasFinal = Math.min(semanaFin, semanaInicio + semanasNecesarias - 1);
+    console.log(`Generando calendario - Producto: ${planProducto.producto?.nombre || 'N/A'}, Semana: ${semanaInicio}, Dosis: ${dosisPorSemana}`);
 
-    for (let semana = semanaInicio; semana <= semanasFinal; semana++) {
-      const dosisRestantes = dosisTotal - ((semana - semanaInicio) * dosisPorSemana);
-      const dosisEnEstaSemana = Math.min(dosisPorSemana, dosisRestantes);
-
-      if (dosisEnEstaSemana > 0) {
+    // Para cada semana en el rango, crear una entrada con las dosis correspondientes
+    for (let semana = semanaInicio; semana <= semanaFin; semana++) {
+      if (dosisPorSemana > 0) {
         calendarioItems.push({
           id_cotizacion: cotizacionId,
           id_producto: planProducto.id_producto,
           numero_semana: semana,
           fecha_programada: calcularFechaProgramada(fechaInicio, semana),
-          cantidad_dosis: dosisEnEstaSemana,
+          cantidad_dosis: dosisPorSemana, // Usar dosis_por_semana directamente
           estado_dosis: 'pendiente'
         });
       }
@@ -779,80 +774,158 @@ exports.updateEstadoCotizacion = async (req, res) => {
     if (estado === 'aceptada' && cotizacionExistente.estado !== 'aceptada') {
       console.log('Procesando aceptación de cotización...');
       
-      // Verificar si se debe forzar la aceptación (omitir verificación de stock)
-      const forzarAceptacion = req.body.forzar_aceptacion === true;
+      // Verificar si ya existen reservas para esta cotización
+      const reservasExistentes = await prisma.reservaStock.findMany({
+        where: { 
+          id_cotizacion: parseInt(id), // Asegurar que sea entero
+          estado_reserva: 'activa'
+        },
+        include: {
+          producto: { select: { nombre: true } }
+        }
+      });
       
-      if (!forzarAceptacion) {
-        // Verificar disponibilidad de stock antes de aceptar
-        const productosConStockInsuficiente = [];
+      console.log(`Buscando reservas para cotización ID: ${parseInt(id)}`);
+      console.log(`Reservas existentes encontradas: ${reservasExistentes.length}`);
+      
+      if (reservasExistentes.length > 0) {
+        // Ya existen reservas - simplemente validar que siguen siendo válidas
+        console.log('Validando reservas existentes...');
         
+        // Obtener el stock total reservado por esta cotización por producto
+        const reservasPorProducto = {};
+        reservasExistentes.forEach(reserva => {
+          if (!reservasPorProducto[reserva.id_producto]) {
+            reservasPorProducto[reserva.id_producto] = 0;
+          }
+          reservasPorProducto[reserva.id_producto] += reserva.cantidad_reservada;
+        });
+        
+        // Verificar que el stock sigue siendo válido (sin contar las reservas de esta misma cotización)
         for (const detalle of cotizacionExistente.detalle_cotizacion) {
           const producto = detalle.producto;
           if (producto.requiere_control_stock) {
-            // CORRECCIÓN: Usar la misma lógica de cálculo que en reservarStockParaCotizacion
             const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
-            const stockDisponible = (producto.stock || 0) - (producto.stock_reservado || 0);
-            console.log(`Stock check - Producto: ${producto.nombre}, Disponible: ${stockDisponible}, Requerido: ${totalDosisRequeridas}`);
+            const reservasEstaCotizacion = reservasPorProducto[producto.id_producto] || 0;
             
-            if (stockDisponible < totalDosisRequeridas) {
-              productosConStockInsuficiente.push({
-                id_producto: producto.id_producto,
-                nombre: producto.nombre,
-                descripcion: producto.descripcion,
-                stock_disponible: stockDisponible,
-                cantidad_requerida: totalDosisRequeridas,
-                deficit: totalDosisRequeridas - stockDisponible
+            console.log(`Validación - Producto: ${producto.nombre}`);
+            console.log(`  Stock total: ${producto.stock}`);
+            console.log(`  Stock reservado total: ${producto.stock_reservado}`);
+            console.log(`  Reservas de esta cotización: ${reservasEstaCotizacion}`);
+            console.log(`  Dosis requeridas: ${totalDosisRequeridas}`);
+            
+            // CORRECCIÓN: Si las reservas ya cubren exactamente lo que necesitamos, está bien
+            if (reservasEstaCotizacion >= totalDosisRequeridas) {
+              console.log(`  ✓ Las reservas existentes (${reservasEstaCotizacion}) cubren las dosis requeridas (${totalDosisRequeridas})`);
+              continue; // Esta línea del detalle está cubierta
+            }
+            
+            // Si necesitamos más dosis de las que ya tenemos reservadas, verificar disponibilidad
+            const dosisAdicionalesnecesarias = totalDosisRequeridas - reservasEstaCotizacion;
+            const stockDisponibleReal = (producto.stock || 0) - (producto.stock_reservado || 0);
+            
+            console.log(`  Dosis adicionales necesarias: ${dosisAdicionalesnecesarias}`);
+            console.log(`  Stock disponible real: ${stockDisponibleReal}`);
+            
+            if (stockDisponibleReal < dosisAdicionalesnecesarias) {
+              return res.status(400).json({
+                error: 'STOCK_INSUFICIENTE',
+                message: 'El stock ya no es suficiente para esta cotización',
+                productos_insuficientes: [{
+                  id_producto: producto.id_producto,
+                  nombre: producto.nombre,
+                  descripcion: producto.descripcion,
+                  stock_disponible: stockDisponibleReal,
+                  cantidad_requerida: dosisAdicionalesnecesarias,
+                  deficit: dosisAdicionalesnecesarias - stockDisponibleReal
+                }]
               });
             }
           }
         }
         
-        // Si hay productos con stock insuficiente, devolver error detallado
-        if (productosConStockInsuficiente.length > 0) {
-          return res.status(400).json({
-            error: 'STOCK_INSUFICIENTE',
-            message: 'No hay stock suficiente para uno o más productos de la cotización',
-            productos_insuficientes: productosConStockInsuficiente,
-            puede_forzar: true,
-            total_productos_afectados: productosConStockInsuficiente.length
-          });
-        }
+        console.log('Reservas existentes validadas correctamente. No se crean nuevas reservas.');
+        reservasCreadas = reservasExistentes; // Usar las reservas existentes
+        
       } else {
-        console.log('Aceptación forzada: omitiendo verificación de stock');
-      }
-
-      // Crear reservas automáticas de stock (siempre, incluso si stock es insuficiente)
-      try {
-        console.log('Creando reservas de stock...');
+        // No existen reservas - crear nuevas (flujo normal)
+        console.log('No hay reservas existentes. Creando nuevas reservas...');
         
-        // CORRECCIÓN: Obtener productos individuales del plan en lugar del detalle agrupado
-        const productosDelPlan = await prisma.planProducto.findMany({
-          where: { id_plan: cotizacionExistente.id_plan },
-          include: {
-            producto: true
-          }
-        });
+        // Verificar si se debe forzar la aceptación (omitir verificación de stock)
+        const forzarAceptacion = req.body.forzar_aceptacion === true;
         
-        console.log(`Productos del plan encontrados: ${productosDelPlan.length}`);
-        productosDelPlan.forEach(pp => {
-          const totalDosis = pp.cantidad_total * pp.dosis_por_semana;
-          console.log(`  - ${pp.producto.nombre}: ${pp.cantidad_total} × ${pp.dosis_por_semana} = ${totalDosis} dosis`);
-        });
-        
-        reservasCreadas = await reservarStockParaCotizacion(
-          cotizacionExistente.id_cotizacion, 
-          productosDelPlan, // Usar productos individuales del plan
-          idUsuario
-        );
-        console.log('Reservas creadas exitosamente:', reservasCreadas?.length || 0);
-      } catch (stockError) {
-        console.error('Error al crear reservas:', stockError.message);
-        // Si se está forzando la aceptación, permitir continuar incluso con errores de reserva
         if (!forzarAceptacion) {
-          return res.status(400).json({ error: stockError.message });
+          // Verificar disponibilidad de stock antes de aceptar
+          const productosConStockInsuficiente = [];
+          
+          for (const detalle of cotizacionExistente.detalle_cotizacion) {
+            const producto = detalle.producto;
+            if (producto.requiere_control_stock) {
+              // CORRECCIÓN: Usar la misma lógica de cálculo que en reservarStockParaCotizacion
+              const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
+              const stockDisponible = (producto.stock || 0) - (producto.stock_reservado || 0);
+              console.log(`Stock check - Producto: ${producto.nombre}, Disponible: ${stockDisponible}, Requerido: ${totalDosisRequeridas}`);
+              
+              if (stockDisponible < totalDosisRequeridas) {
+                productosConStockInsuficiente.push({
+                  id_producto: producto.id_producto,
+                  nombre: producto.nombre,
+                  descripcion: producto.descripcion,
+                  stock_disponible: stockDisponible,
+                  cantidad_requerida: totalDosisRequeridas,
+                  deficit: totalDosisRequeridas - stockDisponible
+                });
+              }
+            }
+          }
+          
+          // Si hay productos con stock insuficiente, devolver error detallado
+          if (productosConStockInsuficiente.length > 0) {
+            return res.status(400).json({
+              error: 'STOCK_INSUFICIENTE',
+              message: 'No hay stock suficiente para uno o más productos de la cotización',
+              productos_insuficientes: productosConStockInsuficiente,
+              puede_forzar: true,
+              total_productos_afectados: productosConStockInsuficiente.length
+            });
+          }
         } else {
-          console.log('Continuando a pesar del error de reserva (aceptación forzada)');
-          reservasCreadas = [];
+          console.log('Aceptación forzada: omitiendo verificación de stock');
+        }
+
+        // Crear reservas automáticas de stock (siempre, incluso si stock es insuficiente)
+        try {
+          console.log('Creando reservas de stock...');
+          
+          // CORRECCIÓN: Obtener productos individuales del plan en lugar del detalle agrupado
+          const productosDelPlan = await prisma.planProducto.findMany({
+            where: { id_plan: cotizacionExistente.id_plan },
+            include: {
+              producto: true
+            }
+          });
+          
+          console.log(`Productos del plan encontrados: ${productosDelPlan.length}`);
+          productosDelPlan.forEach(pp => {
+            const totalDosis = pp.cantidad_total * pp.dosis_por_semana;
+            console.log(`  - ${pp.producto.nombre}: ${pp.cantidad_total} × ${pp.dosis_por_semana} = ${totalDosis} dosis`);
+          });
+          
+          reservasCreadas = await reservarStockParaCotizacion(
+            cotizacionExistente.id_cotizacion, 
+            productosDelPlan, // Usar productos individuales del plan
+            idUsuario
+          );
+          console.log('Reservas creadas exitosamente:', reservasCreadas?.length || 0);
+        } catch (stockError) {
+          console.error('Error al crear reservas:', stockError.message);
+          // Si se está forzando la aceptación, permitir continuar incluso con errores de reserva
+          if (!forzarAceptacion) {
+            return res.status(400).json({ error: stockError.message });
+          } else {
+            console.log('Continuando a pesar del error de reserva (aceptación forzada)');
+            reservasCreadas = [];
+          }
         }
       }
     }
@@ -1446,6 +1519,524 @@ exports.reactivarCotizacion = async (req, res) => {
 
   } catch (error) {
     console.error('Error al reactivar cotización:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ===== NUEVOS ENDPOINTS PARA CONTROL DE ENTREGAS =====
+
+exports.marcarEntregaDosis = async (req, res) => {
+  try {
+    const { id_calendario } = req.params;
+    const { 
+      cantidad_entregada, 
+      responsable_entrega, 
+      observaciones_entrega,
+      tipo_entrega = 'completa' 
+    } = req.body;
+
+    if (!cantidad_entregada || cantidad_entregada <= 0) {
+      return res.status(400).json({ error: 'Cantidad entregada debe ser mayor a 0' });
+    }
+
+    // Verificar que el calendario existe
+    const calendarioExistente = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(id_calendario) },
+      include: {
+        producto: true,
+        cotizacion: {
+          select: {
+            numero_cotizacion: true,
+            estado: true
+          }
+        }
+      }
+    });
+
+    if (!calendarioExistente) {
+      return res.status(404).json({ error: 'Calendario de vacunación no encontrado' });
+    }
+
+    if (calendarioExistente.cotizacion.estado !== 'aceptada') {
+      return res.status(400).json({ error: 'Solo se pueden entregar dosis de cotizaciones aceptadas' });
+    }
+
+    // Verificar que no se entregue más de lo programado
+    const nuevasEntregadas = (calendarioExistente.dosis_entregadas || 0) + cantidad_entregada;
+    if (nuevasEntregadas > calendarioExistente.cantidad_dosis) {
+      return res.status(400).json({ 
+        error: 'No se puede entregar más dosis de las programadas',
+        programadas: calendarioExistente.cantidad_dosis,
+        ya_entregadas: calendarioExistente.dosis_entregadas || 0,
+        intentando_entregar: cantidad_entregada
+      });
+    }
+
+    // Verificar stock disponible (solo si requiere control)
+    if (calendarioExistente.producto.requiere_control_stock) {
+      const stockDisponible = (calendarioExistente.producto.stock || 0) - (calendarioExistente.producto.stock_reservado || 0);
+      if (stockDisponible < cantidad_entregada) {
+        return res.status(400).json({ 
+          error: 'Stock insuficiente para la entrega',
+          disponible: stockDisponible,
+          solicitado: cantidad_entregada
+        });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Actualizar calendario con la entrega
+      const nuevoEstadoEntrega = nuevasEntregadas >= calendarioExistente.cantidad_dosis ? 'entregada' : 'parcial';
+      
+      await tx.calendarioVacunacion.update({
+        where: { id_calendario: parseInt(id_calendario) },
+        data: {
+          dosis_entregadas: nuevasEntregadas,
+          fecha_entrega: new Date(),
+          responsable_entrega,
+          observaciones_entrega,
+          estado_entrega: nuevoEstadoEntrega,
+          updated_at: new Date()
+        }
+      });
+
+      // Registrar en control de entregas detallado
+      await tx.controlEntregaVacunas.create({
+        data: {
+          id_calendario: parseInt(id_calendario),
+          id_cotizacion: calendarioExistente.id_cotizacion,
+          id_producto: calendarioExistente.id_producto,
+          cantidad_entregada,
+          fecha_entrega: new Date(),
+          responsable_entrega,
+          observaciones: observaciones_entrega,
+          tipo_entrega,
+          stock_afectado: cantidad_entregada,
+          created_by: req.user?.id_usuario || null
+        }
+      });
+
+      // Actualizar stock si requiere control
+      if (calendarioExistente.producto.requiere_control_stock) {
+        // Reducir stock reservado
+        await tx.producto.update({
+          where: { id_producto: calendarioExistente.id_producto },
+          data: {
+            stock_reservado: {
+              decrement: cantidad_entregada
+            },
+            updated_at: new Date()
+          }
+        });
+
+        // Registrar movimiento de stock
+        await tx.movimientoStock.create({
+          data: {
+            id_producto: calendarioExistente.id_producto,
+            tipo_movimiento: 'liberacion_reserva',
+            cantidad: cantidad_entregada,
+            stock_anterior: calendarioExistente.producto.stock_reservado || 0,
+            stock_posterior: (calendarioExistente.producto.stock_reservado || 0) - cantidad_entregada,
+            motivo: 'Entrega de dosis según calendario de vacunación',
+            observaciones: `Cotización: ${calendarioExistente.cotizacion.numero_cotizacion} - Semana ${calendarioExistente.numero_semana}`,
+            id_cotizacion: calendarioExistente.id_cotizacion,
+            id_usuario: req.user?.id_usuario || null
+          }
+        });
+      }
+    });
+
+    res.json({
+      message: 'Entrega registrada correctamente',
+      dosis_entregadas: nuevasEntregadas,
+      dosis_programadas: calendarioExistente.cantidad_dosis,
+      estado_entrega: nuevasEntregadas >= calendarioExistente.cantidad_dosis ? 'entregada' : 'parcial'
+    });
+
+  } catch (error) {
+    console.error('Error al marcar entrega de dosis:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.getControlEntregas = async (req, res) => {
+  try {
+    const { id } = req.params; // id de cotización
+    const { fecha_desde, fecha_hasta, id_producto } = req.query;
+
+    let whereClause = {
+      id_cotizacion: parseInt(id)
+    };
+
+    if (fecha_desde && fecha_hasta) {
+      whereClause.fecha_entrega = {
+        gte: new Date(fecha_desde),
+        lte: new Date(fecha_hasta)
+      };
+    }
+
+    if (id_producto) {
+      whereClause.id_producto = parseInt(id_producto);
+    }
+
+    const controlEntregas = await prisma.controlEntregaVacunas.findMany({
+      where: whereClause,
+      include: {
+        calendario: {
+          select: {
+            numero_semana: true,
+            fecha_programada: true,
+            cantidad_dosis: true
+          }
+        },
+        producto: {
+          select: {
+            nombre: true,
+            descripcion: true
+          }
+        },
+        usuario_creador: {
+          select: {
+            nombre: true
+          }
+        }
+      },
+      orderBy: {
+        fecha_entrega: 'desc'
+      }
+    });
+
+    const controlFormatted = controlEntregas.map(control => ({
+      ...control,
+      id_control_entrega: Number(control.id_control_entrega),
+      id_calendario: Number(control.id_calendario),
+      id_cotizacion: Number(control.id_cotizacion),
+      id_producto: Number(control.id_producto),
+      nombre_producto: control.producto.nombre,
+      semana: control.calendario.numero_semana,
+      fecha_programada: control.calendario.fecha_programada,
+      dosis_programadas: control.calendario.cantidad_dosis,
+      usuario_nombre: control.usuario_creador?.nombre || 'Sistema'
+    }));
+
+    res.json(controlFormatted);
+  } catch (error) {
+    console.error('Error al obtener control de entregas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.ajustarStockCalendario = async (req, res) => {
+  try {
+    const { id, calendarioId } = req.params;
+    const { motivo, observaciones } = req.body;
+
+    // Obtener información del calendario
+    const calendario = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(calendarioId) },
+      include: {
+        producto: true,
+        cotizacion: {
+          select: {
+            numero_cotizacion: true,
+            estado: true
+          }
+        }
+      }
+    });
+
+    if (!calendario) {
+      return res.status(404).json({ error: 'Calendario de vacunación no encontrado' });
+    }
+
+    if (calendario.id_cotizacion !== parseInt(id)) {
+      return res.status(400).json({ error: 'El calendario no pertenece a esta cotización' });
+    }
+
+    // Verificar stock actual vs dosis pendientes
+    const dosisPendientes = calendario.cantidad_dosis - (calendario.dosis_entregadas || 0);
+    const stockDisponible = (calendario.producto.stock || 0) - (calendario.producto.stock_reservado || 0);
+
+    let nuevoEstado = calendario.estado_entrega;
+    if (dosisPendientes > 0 && stockDisponible < dosisPendientes) {
+      nuevoEstado = 'suspendida';
+    } else if (nuevoEstado === 'suspendida' && stockDisponible >= dosisPendientes) {
+      nuevoEstado = dosisPendientes === 0 ? 'entregada' : 'pendiente';
+    }
+
+    // Actualizar estado si cambió
+    if (nuevoEstado !== calendario.estado_entrega) {
+      await prisma.calendarioVacunacion.update({
+        where: { id_calendario: parseInt(calendarioId) },
+        data: {
+          estado_entrega: nuevoEstado,
+          observaciones: observaciones || `Ajuste automático por cambio de stock: ${motivo}`,
+          updated_at: new Date()
+        }
+      });
+    }
+
+    res.json({
+      message: 'Ajuste de stock procesado',
+      estado_anterior: calendario.estado_entrega,
+      estado_nuevo: nuevoEstado,
+      dosis_pendientes: dosisPendientes,
+      stock_disponible: stockDisponible
+    });
+
+  } catch (error) {
+    console.error('Error al ajustar stock del calendario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.finalizarPlan = async (req, res) => {
+  try {
+    const { id } = req.params; // id de cotización
+    const { observaciones_finalizacion } = req.body;
+
+    // Verificar que la cotización existe y está aceptada
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        calendario_vacunacion: {
+          include: {
+            producto: true
+          }
+        }
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
+    if (cotizacion.estado !== 'aceptada') {
+      return res.status(400).json({ error: 'Solo se pueden finalizar cotizaciones aceptadas' });
+    }
+
+    // Verificar que todas las dosis estén entregadas
+    const dosisIncompletas = cotizacion.calendario_vacunacion.filter(
+      cal => (cal.dosis_entregadas || 0) < cal.cantidad_dosis
+    );
+
+    if (dosisIncompletas.length > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede finalizar el plan. Hay dosis pendientes de entrega',
+        dosis_pendientes: dosisIncompletas.map(cal => ({
+          semana: cal.numero_semana,
+          producto: cal.producto.nombre,
+          pendientes: cal.cantidad_dosis - (cal.dosis_entregadas || 0)
+        }))
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Marcar todas las reservas de stock como utilizadas
+      await tx.reservaStock.updateMany({
+        where: { 
+          id_cotizacion: parseInt(id),
+          estado_reserva: 'activa'
+        },
+        data: {
+          estado_reserva: 'utilizada',
+          fecha_utilizacion: new Date(),
+          observaciones: observaciones_finalizacion || 'Plan vacunal finalizado - todas las dosis entregadas',
+          updated_at: new Date()
+        }
+      });
+
+      // Limpiar cualquier stock reservado residual y descontar del stock general
+      const productosConReservas = await tx.reservaStock.groupBy({
+        by: ['id_producto'],
+        where: { 
+          id_cotizacion: parseInt(id),
+          estado_reserva: 'utilizada'
+        },
+        _sum: {
+          cantidad_reservada: true
+        }
+      });
+
+      console.log('Finalizando plan - Productos con reservas:', productosConReservas);
+
+      for (const producto of productosConReservas) {
+        const cantidadConsumida = producto._sum.cantidad_reservada || 0;
+        
+        console.log(`Descontando ${cantidadConsumida} dosis del producto ${producto.id_producto}`);
+        
+        // Obtener stock actual antes de la operación
+        const productoActual = await tx.producto.findUnique({
+          where: { id_producto: producto.id_producto },
+          select: { stock: true }
+        });
+        
+        const stockAnterior = productoActual.stock;
+        const stockPosterior = stockAnterior - cantidadConsumida;
+
+        // Descontar del stock general Y del stock reservado
+        await tx.producto.update({
+          where: { id_producto: producto.id_producto },
+          data: {
+            stock: {
+              decrement: cantidadConsumida // Reducir stock general
+            },
+            stock_reservado: {
+              decrement: cantidadConsumida // Limpiar stock reservado
+            }
+          }
+        });
+
+        // Registrar movimiento de stock manualmente para auditoría (sin llamar función externa)
+        await tx.movimientoStock.create({
+          data: {
+            id_producto: producto.id_producto,
+            tipo_movimiento: 'egreso',
+            cantidad: cantidadConsumida,
+            stock_anterior: stockAnterior,
+            stock_posterior: stockPosterior,
+            motivo: `Plan vacunal finalizado - COT: ${cotizacion.numero_cotizacion}`,
+            observaciones: observaciones_finalizacion || 'Finalización automática de plan',
+            id_cotizacion: parseInt(id),
+            id_usuario: req.user?.id_usuario || 1
+          }
+        });
+      }
+
+      // Actualizar estado del calendario a finalizado
+      await tx.calendarioVacunacion.updateMany({
+        where: { id_cotizacion: parseInt(id) },
+        data: {
+          observaciones: observaciones_finalizacion || 'Plan finalizado - todas las dosis entregadas',
+          updated_at: new Date()
+        }
+      });
+    });
+
+    res.json({
+      message: 'Plan vacunal finalizado correctamente',
+      cotizacion_numero: cotizacion.numero_cotizacion,
+      total_dosis_entregadas: cotizacion.calendario_vacunacion.reduce(
+        (total, cal) => total + (cal.dosis_entregadas || 0), 0
+      )
+    });
+
+  } catch (error) {
+    console.error('Error al finalizar plan:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.getEstadoPlan = async (req, res) => {
+  try {
+    const { id } = req.params; // id de cotización
+
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        calendario_vacunacion: {
+          include: {
+            producto: {
+              select: {
+                nombre: true,
+                stock: true,
+                stock_reservado: true
+              }
+            }
+          },
+          orderBy: {
+            numero_semana: 'asc'
+          }
+        },
+        cliente: {
+          select: {
+            nombre: true
+          }
+        }
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
+    // Calcular estadísticas del plan
+    const totalDosisProgr = cotizacion.calendario_vacunacion.reduce(
+      (total, cal) => total + cal.cantidad_dosis, 0
+    );
+    
+    const totalDosisEntregadas = cotizacion.calendario_vacunacion.reduce(
+      (total, cal) => total + (cal.dosis_entregadas || 0), 0
+    );
+
+    const dosisPendientes = totalDosisProgr - totalDosisEntregadas;
+    const porcentajeCompletado = totalDosisProgr > 0 ? (totalDosisEntregadas / totalDosisProgr) * 100 : 0;
+
+    // Agrupar por producto
+    const resumenPorProducto = {};
+    cotizacion.calendario_vacunacion.forEach(cal => {
+      const nombreProducto = cal.producto.nombre;
+      if (!resumenPorProducto[nombreProducto]) {
+        resumenPorProducto[nombreProducto] = {
+          nombre: nombreProducto,
+          programadas: 0,
+          entregadas: 0,
+          pendientes: 0,
+          stock_actual: cal.producto.stock || 0,
+          stock_reservado: cal.producto.stock_reservado || 0
+        };
+      }
+      
+      resumenPorProducto[nombreProducto].programadas += cal.cantidad_dosis;
+      resumenPorProducto[nombreProducto].entregadas += (cal.dosis_entregadas || 0);
+      resumenPorProducto[nombreProducto].pendientes += (cal.cantidad_dosis - (cal.dosis_entregadas || 0));
+    });
+
+    // Determinar estado general del plan
+    let estadoGeneral = 'activo';
+    if (dosisPendientes === 0) {
+      estadoGeneral = 'completado';
+    } else if (cotizacion.estado !== 'aceptada') {
+      estadoGeneral = 'inactivo';
+    } else {
+      // Verificar si hay problemas de stock
+      const problemasStock = Object.values(resumenPorProducto).some(
+        prod => prod.pendientes > (prod.stock_actual - prod.stock_reservado)
+      );
+      if (problemasStock) {
+        estadoGeneral = 'con_problemas';
+      }
+    }
+
+    res.json({
+      cotizacion: {
+        id_cotizacion: cotizacion.id_cotizacion,
+        numero_cotizacion: cotizacion.numero_cotizacion,
+        cliente: cotizacion.cliente.nombre,
+        estado: cotizacion.estado
+      },
+      estadisticas: {
+        estado_general: estadoGeneral,
+        total_dosis_programadas: totalDosisProgr,
+        total_dosis_entregadas: totalDosisEntregadas,
+        dosis_pendientes: dosisPendientes,
+        porcentaje_completado: Math.round(porcentajeCompletado * 100) / 100
+      },
+      resumen_por_producto: Object.values(resumenPorProducto),
+      calendario_detallado: cotizacion.calendario_vacunacion.map(cal => ({
+        id_calendario: cal.id_calendario,
+        numero_semana: cal.numero_semana,
+        fecha_programada: cal.fecha_programada,
+        producto: cal.producto.nombre,
+        cantidad_dosis: cal.cantidad_dosis,
+        dosis_entregadas: cal.dosis_entregadas || 0,
+        estado_entrega: cal.estado_entrega,
+        responsable_entrega: cal.responsable_entrega
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error al obtener estado del plan:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
