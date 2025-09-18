@@ -224,18 +224,18 @@ function Dashboard() {
             inventario, facturación y logística de productos veterinarios.
           </p>
           <small className="text-muted">
-            <strong>Versión 2.0</strong> - Tierra Volga © 2025
+            <strong>Versión 2.4 Septiembre 2025</strong> - By Facundo Francou © 2025
           </small>
           
           {/* Botón de debug - remover en producción */}
-          <div className="mt-3">
+          {/* <div className="mt-3">
             <button 
               className="btn btn-sm btn-outline-secondary"
               onClick={showWelcomeModalForTesting}
             >
               Mostrar Modal de Bienvenida (Debug)
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 

@@ -14,8 +14,17 @@ router.get('/:id', validarSesion, cotizacionesController.getCotizacionById);
 // Crear una nueva cotización
 router.post('/', validarSesion, cotizacionesController.createCotizacion);
 
+// Actualizar una cotización existente
+router.put('/:id', validarSesion, cotizacionesController.updateCotizacion);
+
 // Actualizar estado de cotización
 router.put('/:id/estado', validarSesion, cotizacionesController.updateEstadoCotizacion);
+
+// Eliminar cotización (soft delete)
+router.delete('/:id', validarSesion, cotizacionesController.eliminarCotizacion);
+
+// Reactivar cotización eliminada
+router.put('/:id/reactivar', validarSesion, cotizacionesController.reactivarCotizacion);
 
 // ===== RUTAS PARA CALENDARIO DE VACUNACIÓN =====
 

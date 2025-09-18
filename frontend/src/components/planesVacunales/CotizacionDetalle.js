@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
+import { useNotification } from '../../context/NotificationContext';
 import { 
   FaFileInvoice, 
   FaEdit, 
@@ -32,6 +33,8 @@ const CotizacionDetalle = () => {
     eliminarCotizacion,
     loading 
   } = usePlanesVacunales();
+
+  const { showError } = useNotification();
 
   const [cotizacion, setCotizacion] = useState(null);
   const [modalConfirmacion, setModalConfirmacion] = useState({ show: false, accion: null });
@@ -115,7 +118,7 @@ const CotizacionDetalle = () => {
         setModalConfirmacion({ show: false, accion: null });
       } else {
         // Mostrar error general si no es problema de stock
-        alert('Error al cambiar estado: ' + (error.response?.data?.message || error.message));
+        showError('Error al cambiar estado', error.response?.data?.message || error.message);
       }
     }
   };

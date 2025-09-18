@@ -221,23 +221,43 @@ export const crearCotizacion = async (cotizacionData) => {
 };
 
 export const actualizarCotizacion = async (id, cotizacionData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`, {
+  const response = await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`, {
     method: 'PUT',
     body: JSON.stringify(cotizacionData)
   });
+  // El backend devuelve { message: "...", cotizacion: {...} }
+  // Extraemos solo la cotización para mantener consistencia
+  return response.cotizacion || response;
 };
 
 export const cambiarEstadoCotizacion = async (id, estadoData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/estado`, {
+  const response = await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/estado`, {
     method: 'PUT',
     body: JSON.stringify(estadoData)
   });
+  // El backend devuelve { message: "...", cotizacion: {...} }
+  // Extraemos solo la cotización para mantener consistencia
+  return response.cotizacion || response;
 };
 
-export const eliminarCotizacion = async (id) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`, {
-    method: 'DELETE'
+export const eliminarCotizacion = async (id, motivo = '') => {
+  const response = await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ motivo })
   });
+  // El backend devuelve { message: "...", cotizacion: {...} }
+  // Extraemos solo la cotización para mantener consistencia
+  return response.cotizacion || response;
+};
+
+export const reactivarCotizacion = async (id, estado_destino, motivo = '') => {
+  const response = await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/reactivar`, {
+    method: 'PUT',
+    body: JSON.stringify({ estado_destino, motivo })
+  });
+  // El backend devuelve { message: "...", cotizacion: {...} }
+  // Extraemos solo la cotización para mantener consistencia
+  return response.cotizacion || response;
 };
 
 export const getCalendarioVacunacion = async (id) => {
@@ -562,6 +582,7 @@ export const planesVacunalesApi = {
   crearCotizacion,
   actualizarCotizacion,
   eliminarCotizacion,
+  reactivarCotizacion,
   getCotizacionById,
   
   // Calendario

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
+import { useNotification } from '../../context/NotificationContext';
 import { getClientes } from '../../services/api';
 import { verificarDisponibilidad } from '../../services/planesVacunalesApi';
 import { FaSave, FaTimes, FaFileInvoice, FaInfoCircle, FaCalculator, FaExclamationTriangle } from 'react-icons/fa';
@@ -25,6 +26,8 @@ const CotizacionForm = () => {
     calcularPrecioPlan,
     loading 
   } = usePlanesVacunales();
+
+  const { showError, showWarning } = useNotification();
 
   const [formData, setFormData] = useState({
     id_cliente: '',
@@ -184,7 +187,7 @@ const CotizacionForm = () => {
 
   const verificarDisponibilidadStock = async () => {
     if (!formData.id_plan) {
-      alert('Primero seleccione un plan vacunal');
+      showWarning('Validación', 'Primero seleccione un plan vacunal');
       return;
     }
 
@@ -193,7 +196,7 @@ const CotizacionForm = () => {
       
       // Si estamos en modo edición, usar la cotización existente
       if (!modoEdicion) {
-        alert('Para verificar disponibilidad, primero debe guardar la cotización');
+        showWarning('Información', 'Para verificar disponibilidad, primero debe guardar la cotización');
         return;
       }
 
@@ -202,7 +205,7 @@ const CotizacionForm = () => {
       
     } catch (error) {
       console.error('Error verificando disponibilidad:', error);
-      alert('Error al verificar disponibilidad de stock');
+      showError('Error', 'Error al verificar disponibilidad de stock');
     } finally {
       setVerificandoStock(false);
     }

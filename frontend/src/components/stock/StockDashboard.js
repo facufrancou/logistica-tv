@@ -19,6 +19,12 @@ import {
 import { useNotification } from '../../context/NotificationContext';
 import './Stock.css';
 
+// Helper function para formatear números con separador de miles
+const formatNumber = (number) => {
+  if (number === null || number === undefined) return '0';
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
 const StockDashboard = () => {
   const [estadoStock, setEstadoStock] = useState([]);
   const [alertas, setAlertas] = useState([]);
@@ -334,10 +340,12 @@ const StockDashboard = () => {
                       <tr>
                         <th style={{ width: '20%', minWidth: '150px' }}>Producto</th>
                         <th style={{ width: '10%', minWidth: '80px' }}>Tipo</th>
-                        <th style={{ width: '8%', minWidth: '70px' }}>Stock Actual</th>
                         <th style={{ width: '8%', minWidth: '70px' }}>Stock Mínimo</th>
                         <th style={{ width: '8%', minWidth: '70px' }}>Reservado</th>
+                        <th style={{ width: '8%', minWidth: '70px' }}>Afectado</th>
+                        <th style={{ width: '8%', minWidth: '70px' }}>Faltante</th>
                         <th style={{ width: '10%', minWidth: '80px' }}>Disponible</th>
+                        <th style={{ width: '8%', minWidth: '70px' }}>Total</th>
                         <th style={{ width: '10%', minWidth: '80px' }}>Estado</th>
                         <th style={{ width: '15%', minWidth: '120px' }}>Acciones</th>
                       </tr>
@@ -368,19 +376,33 @@ const StockDashboard = () => {
                                 {tipoBadge.icon} {tipoBadge.text}
                               </span>
                             </td>
-                            <td>
-                              <span className="fw-bold">{item.stock}</span>
-                            </td>
-                            <td>{item.stock_minimo}</td>
+                            <td>{formatNumber(item.stock_minimo)}</td>
                             <td>
                               {item.stock_reservado > 0 ? (
-                                <span className="text-warning fw-bold">{item.stock_reservado}</span>
+                                <span className="text-warning fw-bold">{formatNumber(item.stock_reservado)}</span>
                               ) : (
                                 <span className="text-muted">0</span>
                               )}
                             </td>
                             <td>
-                              <span className="fw-bold text-success">{item.stock_disponible}</span>
+                              {item.stock_afectado > 0 ? (
+                                <span className="text-info fw-bold">{formatNumber(item.stock_afectado)}</span>
+                              ) : (
+                                <span className="text-muted">0</span>
+                              )}
+                            </td>
+                            <td>
+                              {item.stock_faltante > 0 ? (
+                                <span className="text-danger fw-bold">{formatNumber(item.stock_faltante)}</span>
+                              ) : (
+                                <span className="text-muted">0</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className="fw-bold text-success">{formatNumber(item.stock_disponible)}</span>
+                            </td>
+                            <td>
+                              <span className="fw-bold">{formatNumber(item.stock)}</span>
                             </td>
                             <td>
                               <span className={`badge ${estadoBadge.class}`}>

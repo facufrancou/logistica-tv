@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
+import { useNotification } from '../../context/NotificationContext';
 import { getClientes } from '../../services/api';
-import { FaPlus, FaEdit, FaEye, FaSearch, FaFilter, FaFileInvoice, FaCalendarAlt, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaEye, FaSearch, FaFilter, FaFileInvoice, FaCalendarAlt, FaCheck, FaTimes, FaTrash, FaUndo } from 'react-icons/fa';
 import './PlanesVacunales.css';
 
 const CotizacionesList = () => {
@@ -10,8 +11,12 @@ const CotizacionesList = () => {
     cotizaciones, 
     loading, 
     cargarCotizaciones, 
-    cambiarEstadoCotizacion 
+    cambiarEstadoCotizacion,
+    eliminarCotizacion,
+    reactivarCotizacion
   } = usePlanesVacunales();
+
+  const { showError, showWarning } = useNotification();
 
   const [filtros, setFiltros] = useState({
     estado: '',
@@ -25,6 +30,23 @@ const CotizacionesList = () => {
     productos: [], 
     cotizacionId: null,
     estadoDestino: null
+  });
+  const [modalEliminar, setModalEliminar] = useState({
+    show: false,
+    cotizacionId: null,
+    numeroCotizacion: ''
+  });
+  const [modalReactivar, setModalReactivar] = useState({
+    show: false,
+    cotizacionId: null,
+    numeroCotizacion: ''
+  });
+  const [modalConfirmarCambioEstado, setModalConfirmarCambioEstado] = useState({
+    show: false,
+    cotizacionId: null,
+    nuevoEstado: '',
+    observaciones: '',
+    forzarAceptacion: false
   });
   const [showFilters, setShowFilters] = useState(false);
   const [clientes, setClientes] = useState([]);
@@ -59,19 +81,27 @@ const CotizacionesList = () => {
 
   const handleCambiarEstado = async (id, nuevoEstado, observaciones = '', forzarAceptacion = false) => {
     try {
-      const confirmar = forzarAceptacion || window.confirm(`¿Está seguro que desea cambiar el estado a "${nuevoEstado}"?`);
-      
-      if (confirmar) {
-        const datos = { estado: nuevoEstado, observaciones };
-        
-        // Si se está forzando la aceptación, agregar el parámetro
-        if (forzarAceptacion) {
-          datos.forzar_aceptacion = true;
-        }
-        
-        await cambiarEstadoCotizacion(id, datos);
-        setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null });
+      if (!forzarAceptacion) {
+        // Mostrar modal de confirmación
+        setModalConfirmarCambioEstado({
+          show: true,
+          cotizacionId: id,
+          nuevoEstado: nuevoEstado,
+          observaciones: observaciones,
+          forzarAceptacion: false
+        });
+        return;
       }
+      
+      // Ejecutar el cambio de estado directamente si se está forzando
+      const datos = { estado: nuevoEstado, observaciones };
+      
+      if (forzarAceptacion) {
+        datos.forzar_aceptacion = true;
+      }
+      
+      await cambiarEstadoCotizacion(id, datos);
+      setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null });
     } catch (error) {
       console.error('Error actualizando estado:', error);
       
@@ -86,7 +116,84 @@ const CotizacionesList = () => {
         });
       } else {
         // Mostrar error general si no es problema de stock
-        alert('Error al cambiar estado: ' + (error.response?.data?.message || error.message));
+        showError('Error al cambiar estado', error.response?.data?.message || error.message);
+      }
+    }
+  };
+
+  const confirmarCambioEstado = async () => {
+    try {
+      const { cotizacionId, nuevoEstado, observaciones, forzarAceptacion } = modalConfirmarCambioEstado;
+      const datos = { estado: nuevoEstado, observaciones };
+      
+      if (forzarAceptacion) {
+        datos.forzar_aceptacion = true;
+      }
+      
+      await cambiarEstadoCotizacion(cotizacionId, datos);
+      setModalConfirmarCambioEstado({ show: false, cotizacionId: null, nuevoEstado: '', observaciones: '', forzarAceptacion: false });
+      setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null });
+    } catch (error) {
+      console.error('Error cambiando estado:', error);
+      if (error.response?.data?.error === 'STOCK_INSUFICIENTE') {
+        setModalStockInsuficiente({
+          show: true,
+          productos: error.response.data.productos_insuficientes,
+          cotizacionId: modalConfirmarCambioEstado.cotizacionId,
+          estadoDestino: modalConfirmarCambioEstado.nuevoEstado
+        });
+        setModalConfirmarCambioEstado({ show: false, cotizacionId: null, nuevoEstado: '', observaciones: '', forzarAceptacion: false });
+      } else {
+        showError('Error al cambiar estado', error.response?.data?.message || error.message);
+      }
+    }
+  };
+
+  const handleEliminar = (cotizacion) => {
+    setModalEliminar({
+      show: true,
+      cotizacionId: cotizacion.id_cotizacion,
+      numeroCotizacion: cotizacion.numero_cotizacion
+    });
+  };
+
+  const confirmarEliminacion = async () => {
+    const motivo = document.getElementById('motivoEliminacion').value;
+    
+    try {
+      await eliminarCotizacion(modalEliminar.cotizacionId, motivo);
+      setModalEliminar({ show: false, cotizacionId: null, numeroCotizacion: '' });
+      cargarCotizaciones(); // Recargar la lista
+    } catch (error) {
+      console.error('Error eliminando cotización:', error);
+    }
+  };
+
+  const handleReactivar = (cotizacion) => {
+    setModalReactivar({
+      show: true,
+      cotizacionId: cotizacion.id_cotizacion,
+      numeroCotizacion: cotizacion.numero_cotizacion
+    });
+  };
+
+  const confirmarReactivacion = async () => {
+    const estadoDestino = document.getElementById('estadoDestino').value;
+    const motivo = document.getElementById('motivoReactivacion').value;
+    
+    if (!estadoDestino) {
+      showWarning('Validación', 'Debe seleccionar un estado destino');
+      return;
+    }
+    
+    try {
+      await reactivarCotizacion(modalReactivar.cotizacionId, estadoDestino, motivo);
+      setModalReactivar({ show: false, cotizacionId: null, numeroCotizacion: '' });
+      cargarCotizaciones(); // Recargar la lista
+    } catch (error) {
+      console.error('Error reactivando cotización:', error);
+      if (error.response?.data?.error === 'STOCK_INSUFICIENTE') {
+        showError('Stock Insuficiente', 'No hay stock suficiente para reactivar esta cotización como aceptada.');
       }
     }
   };
@@ -104,7 +211,8 @@ const CotizacionesList = () => {
       'enviada': { class: 'badge bg-warning text-dark', text: 'Enviada' },
       'aceptada': { class: 'badge bg-success', text: 'Aceptada' },
       'rechazada': { class: 'badge bg-danger', text: 'Rechazada' },
-      'cancelada': { class: 'badge bg-secondary', text: 'Cancelada' }
+      'cancelada': { class: 'badge bg-secondary', text: 'Cancelada' },
+      'eliminada': { class: 'badge bg-dark', text: 'Eliminada' }
     };
     return badges[estado] || { class: 'badge bg-secondary', text: estado };
   };
@@ -115,9 +223,18 @@ const CotizacionesList = () => {
       'enviada': ['aceptada', 'rechazada', 'cancelada'],
       'aceptada': ['cancelada'],
       'rechazada': [],
-      'cancelada': []
+      'cancelada': [],
+      'eliminada': []
     };
     return transiciones[estado] || [];
+  };
+
+  const puedeEliminar = (estado) => {
+    return estado !== 'eliminada';
+  };
+
+  const puedeReactivar = (estado) => {
+    return estado === 'eliminada';
   };
 
   if (loading) {
@@ -187,6 +304,7 @@ const CotizacionesList = () => {
                   <option value="aceptada">Aceptada</option>
                   <option value="rechazada">Rechazada</option>
                   <option value="cancelada">Cancelada</option>
+                  <option value="eliminada">Eliminada</option>
                 </select>
               </div>
               <div className="col-md-3">
@@ -255,6 +373,7 @@ const CotizacionesList = () => {
                     <th>Número</th>
                     <th>Cliente</th>
                     <th>Plan</th>
+                    <th>Lista Precio</th>
                     <th>Estado</th>
                     <th>Precio Total</th>
                     <th>Fecha Inicio</th>
@@ -290,6 +409,18 @@ const CotizacionesList = () => {
                             <small className="d-block text-muted">
                               {cotizacion.plan.duracion_semanas} semanas
                             </small>
+                          )}
+                        </td>
+                        <td>
+                          {cotizacion.lista_precio ? (
+                            <>
+                              <strong>{cotizacion.lista_precio.nombre}</strong>
+                              <small className="d-block text-muted">
+                                {cotizacion.lista_precio.tipo} (+{cotizacion.lista_precio.porcentaje_recargo}%)
+                              </small>
+                            </>
+                          ) : (
+                            <span className="text-muted">Sin lista asignada</span>
                           )}
                         </td>
                         <td>
@@ -358,6 +489,28 @@ const CotizacionesList = () => {
                                 title="Rechazar cotización"
                               >
                                 <FaTimes />
+                              </button>
+                            )}
+                            
+                            {/* Botón eliminar */}
+                            {puedeEliminar(cotizacion.estado) && (
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleEliminar(cotizacion)}
+                                title="Eliminar cotización"
+                              >
+                                <FaTrash />
+                              </button>
+                            )}
+                            
+                            {/* Botón reactivar */}
+                            {puedeReactivar(cotizacion.estado) && (
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => handleReactivar(cotizacion)}
+                                title="Reactivar cotización"
+                              >
+                                <FaUndo />
                               </button>
                             )}
                           </div>
@@ -444,24 +597,157 @@ const CotizacionesList = () => {
         </div>
       )}
 
+      {/* Modal de confirmación para eliminar */}
+      {modalEliminar.show && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setModalEliminar({ show: false, cotizacionId: null, numeroCotizacion: '' })}></div>
+          <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-danger text-white">
+                  <h5 className="modal-title">
+                    <FaTrash className="me-2" />
+                    Confirmar Eliminación
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setModalEliminar({ show: false, cotizacionId: null, numeroCotizacion: '' })}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <div className="alert alert-warning">
+                    <strong>¿Está seguro que desea eliminar la cotización?</strong>
+                  </div>
+                  <p><strong>Número:</strong> {modalEliminar.numeroCotizacion}</p>
+                  <p className="text-muted">
+                    Esta acción marcará la cotización como eliminada. Si estaba aceptada, se liberarán las reservas de stock.
+                  </p>
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Motivo de eliminación:</label>
+                    <textarea
+                      id="motivoEliminacion"
+                      className="form-control"
+                      rows="3"
+                      placeholder="Opcional: indique el motivo de la eliminación"
+                    ></textarea>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setModalEliminar({ show: false, cotizacionId: null, numeroCotizacion: '' })}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={confirmarEliminacion}
+                  >
+                    <FaTrash className="me-2" />
+                    Eliminar Cotización
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Modal de confirmación para reactivar */}
+      {modalReactivar.show && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setModalReactivar({ show: false, cotizacionId: null, numeroCotizacion: '' })}></div>
+          <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-primary text-white">
+                  <h5 className="modal-title">
+                    <FaUndo className="me-2" />
+                    Reactivar Cotización
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setModalReactivar({ show: false, cotizacionId: null, numeroCotizacion: '' })}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <p><strong>Número:</strong> {modalReactivar.numeroCotizacion}</p>
+                  <p className="text-info">
+                    Seleccione el estado al que desea reactivar la cotización.
+                  </p>
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Estado destino: <span className="text-danger">*</span></label>
+                    <select id="estadoDestino" className="form-select" required>
+                      <option value="">Seleccione un estado</option>
+                      <option value="en_proceso">En Proceso</option>
+                      <option value="enviada">Enviada</option>
+                      <option value="aceptada">Aceptada</option>
+                      <option value="rechazada">Rechazada</option>
+                      <option value="cancelada">Cancelada</option>
+                    </select>
+                    <small className="text-muted">
+                      Si selecciona "Aceptada", se verificará la disponibilidad de stock.
+                    </small>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Motivo de reactivación:</label>
+                    <textarea
+                      id="motivoReactivacion"
+                      className="form-control"
+                      rows="3"
+                      placeholder="Opcional: indique el motivo de la reactivación"
+                    ></textarea>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setModalReactivar({ show: false, cotizacionId: null, numeroCotizacion: '' })}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={confirmarReactivacion}
+                  >
+                    <FaUndo className="me-2" />
+                    Reactivar Cotización
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Modal para productos con stock insuficiente */}
       {modalStockInsuficiente.show && (
-        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
-          <div className="modal-backdrop fade show"></div>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header bg-warning text-dark">
-                <h5 className="modal-title">
-                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                  Stock Insuficiente
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null })}
-                ></button>
-              </div>
-              <div className="modal-body">
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null })}></div>
+          <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-warning text-dark">
+                  <h5 className="modal-title">
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                    Stock Insuficiente
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setModalStockInsuficiente({ show: false, productos: [], cotizacionId: null, estadoDestino: null })}
+                  ></button>
+                </div>
+                <div className="modal-body">
                 <div className="alert alert-warning">
                   <strong>No hay stock suficiente para los siguientes productos:</strong>
                 </div>
@@ -510,8 +796,8 @@ const CotizacionesList = () => {
                     <li><strong>Aceptar de todas formas:</strong> Aceptar la cotización a pesar del stock insuficiente. Los productos quedarán en déficit en el sistema de stock</li>
                   </ul>
                 </div>
-              </div>
-              <div className="modal-footer">
+                </div>
+                <div className="modal-footer">
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -531,10 +817,66 @@ const CotizacionesList = () => {
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   Aceptar de todas formas
                 </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
+      )}
+
+      {/* Modal de confirmación para cambio de estado */}
+      {modalConfirmarCambioEstado.show && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setModalConfirmarCambioEstado({ show: false, cotizacionId: null, nuevoEstado: null, observaciones: '', forzarAceptacion: false })}></div>
+          <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-info text-white">
+                  <h5 className="modal-title">
+                    <i className="bi bi-question-circle-fill me-2"></i>
+                    Confirmar Cambio de Estado
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setModalConfirmarCambioEstado({ show: false, cotizacionId: null, nuevoEstado: null, observaciones: '', forzarAceptacion: false })}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <div className="text-center mb-3">
+                    <h6>¿Estás seguro de que deseas cambiar el estado de esta cotización?</h6>
+                    <p className="text-muted mb-0">
+                      Estado destino: <strong className="text-primary">{modalConfirmarCambioEstado.nuevoEstado}</strong>
+                    </p>
+                  </div>
+                  
+                  <div className="alert alert-info">
+                    <i className="bi bi-info-circle me-2"></i>
+                    <small>Esta acción cambiará el estado de la cotización y puede afectar el stock de productos.</small>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setModalConfirmarCambioEstado({ show: false, cotizacionId: null, nuevoEstado: null, observaciones: '', forzarAceptacion: false })}
+                  >
+                    <i className="bi bi-x-circle me-2"></i>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={confirmarCambioEstado}
+                  >
+                    <i className="bi bi-check-circle me-2"></i>
+                    Confirmar Cambio
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

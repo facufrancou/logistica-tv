@@ -252,17 +252,39 @@ export const PlanesVacunalesProvider = ({ children }) => {
     }
   };
 
-  const eliminarCotizacion = async (id) => {
+  const eliminarCotizacion = async (id, motivo = '') => {
     try {
       setLoading(true);
-      await planesApi.eliminarCotizacion(id);
-      setCotizaciones(prev => prev.filter(cotizacion => cotizacion.id_cotizacion !== id));
+      await planesApi.eliminarCotizacion(id, motivo);
+      setCotizaciones(prev => prev.map(cotizacion => 
+        cotizacion.id_cotizacion === id 
+          ? { ...cotizacion, estado: 'eliminada' }
+          : cotizacion
+      ));
       showSuccess('Éxito', 'Cotización eliminada correctamente');
       return true;
     } catch (error) {
       setError(error.message);
       showError('Error', 'No se pudo eliminar la cotización');
       return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reactivarCotizacion = async (id, estado_destino, motivo = '') => {
+    try {
+      setLoading(true);
+      const cotizacionReactivada = await planesApi.reactivarCotizacion(id, estado_destino, motivo);
+      setCotizaciones(prev => prev.map(cotizacion => 
+        cotizacion.id_cotizacion === id ? cotizacionReactivada.cotizacion : cotizacion
+      ));
+      showSuccess('Éxito', 'Cotización reactivada correctamente');
+      return cotizacionReactivada;
+    } catch (error) {
+      setError(error.message);
+      showError('Error', 'No se pudo reactivar la cotización');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -317,6 +339,7 @@ export const PlanesVacunalesProvider = ({ children }) => {
     actualizarCotizacion,
     cambiarEstadoCotizacion,
     eliminarCotizacion,
+    reactivarCotizacion,
     obtenerCalendarioVacunacion,
 
     // Funciones de utilidad

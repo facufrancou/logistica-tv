@@ -130,8 +130,13 @@ async function reservarStockParaCotizacion(cotizacionId, detalleProductos, idUsu
   const reservasCreadas = [];
 
   for (const detalle of detalleProductos) {
+    // Manejar tanto detalle_cotizacion como planProducto
+    const idProducto = detalle.id_producto || detalle.producto?.id_producto;
+    const cantidadTotal = detalle.cantidad_total;
+    const dosisPorSemana = detalle.dosis_por_semana;
+    
     const producto = await prisma.producto.findUnique({
-      where: { id_producto: detalle.id_producto }
+      where: { id_producto: idProducto }
     });
 
     // Solo reservar si el producto requiere control de stock
@@ -140,7 +145,7 @@ async function reservarStockParaCotizacion(cotizacionId, detalleProductos, idUsu
       // cantidad_total = semanas de tratamiento
       // dosis_por_semana = dosis necesarias por semana
       // Total de dosis = cantidad_total × dosis_por_semana
-      const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
+      const totalDosisRequeridas = cantidadTotal * dosisPorSemana;
       
       const stockDisponible = (producto.stock || 0) - (producto.stock_reservado || 0);
       
@@ -148,22 +153,22 @@ async function reservarStockParaCotizacion(cotizacionId, detalleProductos, idUsu
         // Crear reserva
         const reserva = await prisma.reservaStock.create({
           data: {
-            id_producto: detalle.id_producto,
+            id_producto: idProducto,
             id_cotizacion: cotizacionId,
             cantidad_reservada: totalDosisRequeridas,
             motivo: 'Reserva automática por cotización aceptada',
-            observaciones: `Reserva automática para ${totalDosisRequeridas} dosis (${detalle.cantidad_total} semanas × ${detalle.dosis_por_semana} dosis/semana)`,
+            observaciones: `Reserva automática para ${totalDosisRequeridas} dosis (${cantidadTotal} semanas × ${dosisPorSemana} dosis/semana)`,
             created_by: idUsuario
           }
         });
 
         // Registrar movimiento de stock
         await registrarMovimientoStock(
-          detalle.id_producto,
+          idProducto,
           'reserva',
           totalDosisRequeridas,
           'Reserva automática por cotización aceptada',
-          `Cotización: ${cotizacionId} - ${totalDosisRequeridas} dosis (${detalle.cantidad_total} semanas × ${detalle.dosis_por_semana} dosis/semana)`,
+          `Cotización: ${cotizacionId} - ${totalDosisRequeridas} dosis (${cantidadTotal} semanas × ${dosisPorSemana} dosis/semana)`,
           cotizacionId,
           idUsuario
         );
@@ -232,7 +237,8 @@ exports.getCotizaciones = async (req, res) => {
         lista_precio: {
           select: {
             tipo: true,
-            nombre: true
+            nombre: true,
+            porcentaje_recargo: true
           }
         },
         detalle_cotizacion: {
@@ -366,6 +372,142 @@ exports.getCotizacionById = async (req, res) => {
     res.json(cotizacionFormatted);
   } catch (error) {
     console.error('Error al obtener cotización:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.updateCotizacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cotizacionData = req.body;
+    const idUsuario = req.user?.id_usuario;
+
+    console.log('=== UPDATE COTIZACIÓN ===');
+    console.log('ID:', id);
+    console.log('Data recibida:', cotizacionData);
+    console.log('Usuario:', idUsuario);
+
+    // Validar que el ID existe y es un número válido
+    if (!id) {
+      return res.status(400).json({ error: 'ID de cotización requerido' });
+    }
+
+    const idCotizacion = parseInt(id);
+    if (isNaN(idCotizacion)) {
+      return res.status(400).json({ error: 'ID de cotización debe ser un número válido' });
+    }
+
+    // Verificar que la cotización existe
+    const cotizacionExistente = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: idCotizacion },
+      include: {
+        detalle_cotizacion: {
+          include: {
+            producto: true
+          }
+        }
+      }
+    });
+
+    if (!cotizacionExistente) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
+    // Verificar que la cotización no esté eliminada
+    if (cotizacionExistente.estado === 'eliminada') {
+      return res.status(400).json({ 
+        error: 'No se puede editar una cotización eliminada. Primero debe reactivarla.' 
+      });
+    }
+
+    // Preparar datos para actualizar
+    const updateData = {
+      updated_at: new Date(),
+      updated_by: idUsuario
+    };
+
+    // Campos que se pueden actualizar
+    const camposActualizables = [
+      'id_cliente',
+      'id_plan', 
+      'fecha_inicio_plan',
+      'id_lista_precio',
+      'observaciones',
+      'modalidad_facturacion',
+      'porcentaje_aplicado'
+    ];
+
+    // Solo agregar campos que están presentes en la request
+    camposActualizables.forEach(campo => {
+      if (cotizacionData.hasOwnProperty(campo) && cotizacionData[campo] !== undefined) {
+        updateData[campo] = cotizacionData[campo];
+      }
+    });
+
+    // Convertir IDs de string a número si es necesario
+    if (updateData.id_cliente && typeof updateData.id_cliente === 'string') {
+      updateData.id_cliente = parseInt(updateData.id_cliente);
+    }
+    if (updateData.id_plan && typeof updateData.id_plan === 'string') {
+      updateData.id_plan = parseInt(updateData.id_plan);
+    }
+    if (updateData.id_lista_precio !== undefined) {
+      if (updateData.id_lista_precio === null || updateData.id_lista_precio === '') {
+        updateData.id_lista_precio = null;
+      } else if (typeof updateData.id_lista_precio === 'string') {
+        updateData.id_lista_precio = parseInt(updateData.id_lista_precio);
+      }
+    }
+
+    // Validar fecha si se proporciona
+    if (updateData.fecha_inicio_plan) {
+      updateData.fecha_inicio_plan = new Date(updateData.fecha_inicio_plan);
+    }
+
+    console.log('Datos a actualizar:', updateData);
+
+    // Actualizar la cotización
+    const cotizacionActualizada = await prisma.cotizacion.update({
+      where: { id_cotizacion: idCotizacion },
+      data: updateData,
+      include: {
+        cliente: true,
+        plan: {
+          include: {
+            productos_plan: {
+              include: {
+                producto: true
+              }
+            }
+          }
+        },
+        lista_precio: true,
+        detalle_cotizacion: {
+          include: {
+            producto: true
+          }
+        }
+      }
+    });
+
+    console.log('Cotización actualizada exitosamente:', cotizacionActualizada.numero_cotizacion);
+
+    res.json({
+      message: 'Cotización actualizada correctamente',
+      cotizacion: cotizacionActualizada
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar cotización:', error);
+    
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Error de datos duplicados' });
+    }
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -521,6 +663,31 @@ exports.createCotizacion = async (req, res) => {
       return cotizacion;
     });
 
+    // NUEVA FUNCIONALIDAD: Crear reservas automáticamente al crear la cotización
+    // Esto asegura que el stock se reserve desde el momento de creación
+    try {
+      console.log('Creando reservas automáticas para nueva cotización...');
+      
+      const productosDelPlan = await prisma.planProducto.findMany({
+        where: { id_plan: parseInt(id_plan) },
+        include: {
+          producto: true
+        }
+      });
+      
+      const reservasCreadas = await reservarStockParaCotizacion(
+        nuevaCotizacion.id_cotizacion, 
+        productosDelPlan, 
+        req.user?.id_usuario || null
+      );
+      
+      console.log(`Reservas creadas exitosamente: ${reservasCreadas?.length || 0} productos`);
+    } catch (stockError) {
+      console.warn('Advertencia al crear reservas automáticas:', stockError.message);
+      // No fallar la creación de la cotización por falta de stock
+      // Solo registrar la advertencia
+    }
+
     res.status(201).json({
       message: 'Cotización creada exitosamente',
       cotizacion: {
@@ -551,7 +718,7 @@ exports.updateEstadoCotizacion = async (req, res) => {
       return res.status(400).json({ error: 'Estado es obligatorio' });
     }
 
-    const estadosValidos = ['en_proceso', 'enviada', 'aceptada', 'rechazada', 'cancelada'];
+    const estadosValidos = ['en_proceso', 'enviada', 'aceptada', 'rechazada', 'cancelada', 'eliminada'];
     if (!estadosValidos.includes(estado)) {
       console.log('Estado no válido:', estado, 'válidos:', estadosValidos);
       return res.status(400).json({ error: 'Estado no válido' });
@@ -582,12 +749,13 @@ exports.updateEstadoCotizacion = async (req, res) => {
 
     // Validar transiciones de estado válidas
     const transicionesValidas = {
-      'borrador': ['en_proceso', 'enviada', 'cancelada'],
-      'en_proceso': ['enviada', 'aceptada', 'cancelada'],
-      'enviada': ['aceptada', 'rechazada', 'cancelada'],
-      'aceptada': ['cancelada'],
-      'rechazada': ['en_proceso', 'enviada'],
-      'cancelada': []
+      'borrador': ['en_proceso', 'enviada', 'cancelada', 'eliminada'],
+      'en_proceso': ['enviada', 'aceptada', 'cancelada', 'eliminada'],
+      'enviada': ['aceptada', 'rechazada', 'cancelada', 'eliminada'],
+      'aceptada': ['cancelada', 'eliminada'],
+      'rechazada': ['en_proceso', 'enviada', 'eliminada'],
+      'cancelada': ['eliminada'],
+      'eliminada': ['en_proceso', 'enviada', 'aceptada', 'rechazada', 'cancelada']
     };
 
     if (!transicionesValidas[cotizacionExistente.estado]?.includes(estado)) {
@@ -656,9 +824,24 @@ exports.updateEstadoCotizacion = async (req, res) => {
       // Crear reservas automáticas de stock (siempre, incluso si stock es insuficiente)
       try {
         console.log('Creando reservas de stock...');
+        
+        // CORRECCIÓN: Obtener productos individuales del plan en lugar del detalle agrupado
+        const productosDelPlan = await prisma.planProducto.findMany({
+          where: { id_plan: cotizacionExistente.id_plan },
+          include: {
+            producto: true
+          }
+        });
+        
+        console.log(`Productos del plan encontrados: ${productosDelPlan.length}`);
+        productosDelPlan.forEach(pp => {
+          const totalDosis = pp.cantidad_total * pp.dosis_por_semana;
+          console.log(`  - ${pp.producto.nombre}: ${pp.cantidad_total} × ${pp.dosis_por_semana} = ${totalDosis} dosis`);
+        });
+        
         reservasCreadas = await reservarStockParaCotizacion(
           cotizacionExistente.id_cotizacion, 
-          cotizacionExistente.detalle_cotizacion,
+          productosDelPlan, // Usar productos individuales del plan
           idUsuario
         );
         console.log('Reservas creadas exitosamente:', reservasCreadas?.length || 0);
@@ -674,8 +857,8 @@ exports.updateEstadoCotizacion = async (req, res) => {
       }
     }
 
-    if (estado === 'cancelada' && cotizacionExistente.estado === 'aceptada') {
-      // Liberar reservas de stock existentes
+    if (estado === 'cancelada' || estado === 'rechazada' || estado === 'eliminada') {
+      // Liberar reservas de stock existentes para cualquier estado de finalización
       const reservasExistentes = await prisma.reservaStock.findMany({
         where: { 
           id_cotizacion: cotizacionExistente.id_cotizacion,
@@ -689,7 +872,7 @@ exports.updateEstadoCotizacion = async (req, res) => {
           data: { 
             estado_reserva: 'liberada',
             fecha_liberacion: new Date(),
-            observaciones: 'Liberada por cancelación de cotización'
+            observaciones: `Liberada por cambio de estado a ${estado}`
           }
         });
 
@@ -697,12 +880,14 @@ exports.updateEstadoCotizacion = async (req, res) => {
           reserva.id_producto,
           'liberacion_reserva',
           reserva.cantidad_reservada,
-          'Liberación por cancelación de cotización',
+          `Liberación por cambio de estado a ${estado}`,
           `Cotización: ${cotizacionExistente.id_cotizacion}`,
           cotizacionExistente.id_cotizacion,
           idUsuario
         );
       }
+      
+      console.log(`Liberadas ${reservasExistentes.length} reservas por cambio a estado ${estado}`);
     }
 
     // Actualizar estado con fechas automáticas
@@ -734,11 +919,34 @@ exports.updateEstadoCotizacion = async (req, res) => {
         where: { id_cotizacion: parseInt(id) },
         data: updateData,
         include: {
-          cliente: true,
-          plan: true,
+          cliente: {
+            select: {
+              nombre: true,
+              cuit: true,
+              email: true
+            }
+          },
+          plan: {
+            select: {
+              nombre: true,
+              duracion_semanas: true
+            }
+          },
+          lista_precio: {
+            select: {
+              tipo: true,
+              nombre: true,
+              porcentaje_recargo: true
+            }
+          },
           detalle_cotizacion: {
             include: {
-              producto: true
+              producto: {
+                select: {
+                  nombre: true,
+                  descripcion: true
+                }
+              }
             }
           }
         }
@@ -966,6 +1174,278 @@ exports.regenerarCalendario = async (req, res) => {
     });
   } catch (error) {
     console.error('Error al regenerar calendario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ===== FUNCIONES DE ELIMINACIÓN Y REACTIVACIÓN =====
+
+exports.eliminarCotizacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
+    const idUsuario = req.user?.id_usuario;
+
+    console.log('=== ELIMINAR COTIZACIÓN ===');
+    console.log('ID:', id);
+    console.log('Motivo:', motivo);
+    console.log('Usuario:', idUsuario);
+
+    // Verificar que la cotización existe
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        cliente: true,
+        plan: true
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
+    // Verificar que no esté ya eliminada
+    if (cotizacion.estado === 'eliminada') {
+      return res.status(400).json({ error: 'La cotización ya está eliminada' });
+    }
+
+    // Soft delete: cambiar estado a eliminada
+    const cotizacionEliminada = await prisma.cotizacion.update({
+      where: { id_cotizacion: parseInt(id) },
+      data: {
+        estado: 'eliminada',
+        observaciones: `${cotizacion.observaciones || ''}\n[ELIMINADA] ${new Date().toLocaleString()}: ${motivo || 'Sin motivo especificado'}`.trim(),
+        updated_at: new Date(),
+        updated_by: idUsuario
+      },
+      include: {
+        cliente: {
+          select: {
+            nombre: true,
+            cuit: true,
+            email: true
+          }
+        },
+        plan: {
+          select: {
+            nombre: true,
+            duracion_semanas: true
+          }
+        },
+        lista_precio: {
+          select: {
+            tipo: true,
+            nombre: true,
+            porcentaje_recargo: true
+          }
+        },
+        detalle_cotizacion: {
+          include: {
+            producto: {
+              select: {
+                nombre: true,
+                descripcion: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Liberar reservas de stock activas (independientemente del estado)
+    console.log('Verificando reservas de stock para liberar...');
+    
+    const reservasActivas = await prisma.reservaStock.findMany({
+      where: { 
+        id_cotizacion: parseInt(id),
+        estado_reserva: 'activa'
+      }
+    });
+
+    if (reservasActivas.length > 0) {
+      console.log(`Liberando ${reservasActivas.length} reservas de stock por eliminación...`);
+      
+      for (const reserva of reservasActivas) {
+        // Actualizar estado de la reserva
+        await prisma.reservaStock.update({
+          where: { id_reserva: reserva.id_reserva },
+          data: { 
+            estado_reserva: 'liberada',
+            fecha_liberacion: new Date(),
+            observaciones: 'Liberada por eliminación de cotización'
+          }
+        });
+
+        // Registrar movimiento de liberación
+        await registrarMovimientoStock(
+          reserva.id_producto,
+          'liberacion_reserva',
+          reserva.cantidad_reservada,
+          'Liberación por eliminación de cotización',
+          `Cotización eliminada: ${cotizacion.numero_cotizacion}`,
+          parseInt(id),
+          idUsuario
+        );
+      }
+      
+      console.log(`Liberadas ${reservasActivas.length} reservas de stock`);
+    } else {
+      console.log('No se encontraron reservas activas para liberar');
+    }
+
+    console.log('Cotización eliminada exitosamente:', cotizacionEliminada.numero_cotizacion);
+
+    res.json({
+      message: 'Cotización eliminada correctamente',
+      cotizacion: cotizacionEliminada
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar cotización:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+exports.reactivarCotizacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado_destino, motivo } = req.body;
+    const idUsuario = req.user?.id_usuario;
+
+    console.log('=== REACTIVAR COTIZACIÓN ===');
+    console.log('ID:', id);
+    console.log('Estado destino:', estado_destino);
+    console.log('Motivo:', motivo);
+    console.log('Usuario:', idUsuario);
+
+    // Verificar que la cotización existe y está eliminada
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        cliente: true,
+        plan: true,
+        detalle_cotizacion: {
+          include: {
+            producto: true
+          }
+        }
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
+    if (cotizacion.estado !== 'eliminada') {
+      return res.status(400).json({ error: 'La cotización no está eliminada' });
+    }
+
+    // Validar estado destino
+    const estadosValidos = ['en_proceso', 'enviada', 'aceptada', 'rechazada', 'cancelada'];
+    if (!estadosValidos.includes(estado_destino)) {
+      return res.status(400).json({ error: 'Estado destino no válido' });
+    }
+
+    // Si se reactiva a estado aceptada, verificar stock
+    if (estado_destino === 'aceptada') {
+      for (const detalle of cotizacion.detalle_cotizacion) {
+        if (detalle.producto.requiere_control_stock) {
+          const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
+          const stockDisponible = (detalle.producto.stock || 0) - (detalle.producto.stock_reservado || 0);
+          
+          if (stockDisponible < totalDosisRequeridas) {
+            return res.status(400).json({
+              error: 'STOCK_INSUFICIENTE',
+              message: `No hay stock suficiente para ${detalle.producto.nombre}`,
+              productos_insuficientes: [{
+                id_producto: detalle.producto.id_producto,
+                nombre: detalle.producto.nombre,
+                stock_disponible: stockDisponible,
+                cantidad_requerida: totalDosisRequeridas,
+                deficit: totalDosisRequeridas - stockDisponible
+              }]
+            });
+          }
+        }
+      }
+    }
+
+    // Reactivar cotización
+    const cotizacionReactivada = await prisma.cotizacion.update({
+      where: { id_cotizacion: parseInt(id) },
+      data: {
+        estado: estado_destino,
+        observaciones: `${cotizacion.observaciones || ''}\n[REACTIVADA] ${new Date().toLocaleString()}: ${motivo || 'Sin motivo especificado'} - Estado: ${estado_destino}`.trim(),
+        updated_at: new Date(),
+        updated_by: idUsuario,
+        // Si se reactiva a aceptada, actualizar fecha de aceptación
+        ...(estado_destino === 'aceptada' ? { fecha_aceptacion: new Date() } : {})
+      },
+      include: {
+        cliente: {
+          select: {
+            nombre: true,
+            cuit: true,
+            email: true
+          }
+        },
+        plan: {
+          select: {
+            nombre: true,
+            duracion_semanas: true
+          }
+        },
+        lista_precio: {
+          select: {
+            tipo: true,
+            nombre: true,
+            porcentaje_recargo: true
+          }
+        },
+        detalle_cotizacion: {
+          include: {
+            producto: {
+              select: {
+                nombre: true,
+                descripcion: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Si se reactiva a aceptada, reservar stock nuevamente
+    if (estado_destino === 'aceptada') {
+      console.log('Reservando stock por reactivación...');
+      
+      for (const detalle of cotizacionReactivada.detalle_cotizacion) {
+        if (detalle.producto.requiere_control_stock) {
+          const totalDosisRequeridas = detalle.cantidad_total * detalle.dosis_por_semana;
+          
+          // Reservar stock
+          await registrarMovimientoStock(
+            detalle.id_producto,
+            'reserva',
+            totalDosisRequeridas,
+            'Reserva por reactivación de cotización',
+            `Cotización reactivada: ${cotizacion.numero_cotizacion}`,
+            parseInt(id),
+            idUsuario
+          );
+        }
+      }
+    }
+
+    console.log('Cotización reactivada exitosamente:', cotizacionReactivada.numero_cotizacion);
+
+    res.json({
+      message: 'Cotización reactivada correctamente',
+      cotizacion: cotizacionReactivada
+    });
+
+  } catch (error) {
+    console.error('Error al reactivar cotización:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

@@ -20,29 +20,47 @@ async function registrarMovimientoStock(
   }
 
   const stockAnterior = producto.stock || 0;
+  const stockReservadoAnterior = producto.stock_reservado || 0;
   let stockPosterior = stockAnterior;
+  let stockReservadoPosterior = stockReservadoAnterior;
 
   // Calcular nuevo stock según tipo de movimiento
   switch (tipoMovimiento) {
     case 'ingreso':
     case 'ajuste_positivo':
       stockPosterior = stockAnterior + cantidad;
+      // stock_reservado no cambia
       break;
     case 'egreso':
     case 'ajuste_negativo':
-    case 'reserva':
       stockPosterior = stockAnterior - cantidad;
+      // stock_reservado no cambia
+      break;
+    case 'reserva':
+      // Para reservas: stock total NO cambia, solo aumenta stock_reservado
+      stockPosterior = stockAnterior; // El stock total permanece igual
+      stockReservadoPosterior = stockReservadoAnterior + cantidad;
       break;
     case 'liberacion_reserva':
-      stockPosterior = stockAnterior + cantidad;
+      // Para liberación de reservas: stock total NO cambia, solo disminuye stock_reservado
+      stockPosterior = stockAnterior; // El stock total permanece igual
+      stockReservadoPosterior = Math.max(0, stockReservadoAnterior - cantidad);
       break;
     default:
       throw new Error('Tipo de movimiento no válido');
   }
 
-  // Validar que el stock no quede negativo (excepto para ajustes)
-  if (stockPosterior < 0 && !tipoMovimiento.includes('ajuste')) {
+  // Validar que el stock no quede negativo (excepto para ajustes y reservas)
+  if (stockPosterior < 0 && !tipoMovimiento.includes('ajuste') && tipoMovimiento !== 'reserva' && tipoMovimiento !== 'liberacion_reserva') {
     throw new Error('Stock insuficiente para realizar el movimiento');
+  }
+
+  // Validar que hay suficiente stock disponible para reservar
+  if (tipoMovimiento === 'reserva') {
+    const stockDisponible = stockAnterior - stockReservadoAnterior;
+    if (stockDisponible < cantidad) {
+      throw new Error(`Stock insuficiente para reservar. Disponible: ${stockDisponible}, requerido: ${cantidad}`);
+    }
   }
 
   // Crear movimiento y actualizar stock en transacción
@@ -67,6 +85,7 @@ async function registrarMovimientoStock(
       where: { id_producto: idProducto },
       data: {
         stock: Math.max(0, stockPosterior),
+        stock_reservado: Math.max(0, stockReservadoPosterior),
         updated_at: new Date()
       }
     });
@@ -259,6 +278,7 @@ exports.getEstadoStock = async (req, res) => {
       whereClause.tipo_producto = tipo_producto;
     }
 
+    // Obtener productos
     const productos = await prisma.producto.findMany({
       where: whereClause,
       select: {
@@ -267,7 +287,6 @@ exports.getEstadoStock = async (req, res) => {
         descripcion: true,
         stock: true,
         stock_minimo: true,
-        stock_reservado: true,
         requiere_control_stock: true,
         tipo_producto: true,
         proveedores: {
@@ -281,19 +300,90 @@ exports.getEstadoStock = async (req, res) => {
       }
     });
 
-    // Calcular stock disponible y estado para cada producto
+    // Obtener todas las cotizaciones activas con sus detalles del PLAN ORIGINAL
+    const cotizacionesActivas = await prisma.cotizacion.findMany({
+      where: {
+        estado: {
+          in: ['en_proceso', 'enviada', 'aceptada']
+        }
+      },
+      include: {
+        plan: {
+          include: {
+            productos_plan: {
+              include: {
+                producto: {
+                  select: {
+                    id_producto: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Calcular stock afectado por producto y estado usando datos del PLAN ORIGINAL
+    const stockAfectadoPorProducto = {};
+    
+    cotizacionesActivas.forEach(cotizacion => {
+      // Usar productos del plan original en lugar del detalle de cotización
+      cotizacion.plan.productos_plan.forEach(planProducto => {
+        const idProducto = planProducto.id_producto;
+        const dosisNecesarias = planProducto.cantidad_total * planProducto.dosis_por_semana;
+        
+        if (!stockAfectadoPorProducto[idProducto]) {
+          stockAfectadoPorProducto[idProducto] = {
+            reservado: 0,    // en_proceso + enviada
+            afectado: 0,     // aceptada
+            faltante: 0      // cantidad que excede el stock disponible
+          };
+        }
+        
+        if (cotizacion.estado === 'en_proceso' || cotizacion.estado === 'enviada') {
+          stockAfectadoPorProducto[idProducto].reservado += dosisNecesarias;
+        } else if (cotizacion.estado === 'aceptada') {
+          stockAfectadoPorProducto[idProducto].afectado += dosisNecesarias;
+        }
+      });
+    });
+
+    // Calcular stock disponible y faltante para cada producto
     const estadoStock = productos.map(producto => {
       const stock = producto.stock || 0;
-      const stockReservado = producto.stock_reservado || 0;
       const stockMinimo = producto.stock_minimo || 0;
-      const stockDisponible = stock - stockReservado;
-
+      const idProducto = producto.id_producto;
+      
+      const afectacion = stockAfectadoPorProducto[idProducto] || {
+        reservado: 0,
+        afectado: 0,
+        faltante: 0
+      };
+      
+      // Calcular totales
+      const totalReservado = afectacion.reservado;
+      const totalAfectado = afectacion.afectado;
+      const totalComprometido = totalReservado + totalAfectado;
+      
+      // Calcular stock disponible
+      const stockDisponible = Math.max(0, stock - totalComprometido);
+      
+      // Calcular faltante (solo si el stock total es insuficiente)
+      let faltante = 0;
+      if (totalComprometido > stock) {
+        faltante = totalComprometido - stock;
+      }
+      
+      // Determinar estado del stock
       let estado = 'normal';
       if (stock <= 0) {
         estado = 'critico';
+      } else if (faltante > 0) {
+        estado = 'critico';
       } else if (stock <= stockMinimo) {
         estado = stockDisponible <= 0 ? 'critico' : 'bajo';
-      } else if (stockDisponible <= 0) {
+      } else if (stockDisponible <= stockMinimo) {
         estado = 'bajo';
       }
 
@@ -302,9 +392,11 @@ exports.getEstadoStock = async (req, res) => {
         nombre: producto.nombre,
         descripcion: producto.descripcion,
         stock: stock,
-        stock_reservado: stockReservado,
-        stock_disponible: stockDisponible,
         stock_minimo: stockMinimo,
+        stock_reservado: totalReservado,     // Para cotizaciones en proceso/enviadas
+        stock_afectado: totalAfectado,       // Para cotizaciones aceptadas
+        stock_disponible: stockDisponible,
+        stock_faltante: faltante,            // Cantidad que excede el stock disponible
         estado_stock: estado,
         requiere_control_stock: producto.requiere_control_stock,
         tipo_producto: producto.tipo_producto,
