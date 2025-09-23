@@ -17,15 +17,25 @@ import {
   FaTimesCircle,
   FaBan,
   FaEye,
-  FaPrint
+  FaPrint,
+  FaEdit,
+  FaPlus,
+  FaSave,
+  FaTimes,
+  FaInfoCircle,
+  FaCut
 } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import * as planesApi from '../../services/planesVacunalesApi';
+import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import './PlanesVacunales.css';
 
 const CalendarioVacunacion = () => {
   const { cotizacionId } = useParams();
   const navigate = useNavigate();
+  const { showSuccess, showError, showWarning } = useNotification();
   
   const [loading, setLoading] = useState(true);
   const [generandoRemito, setGenerandoRemito] = useState(false);
@@ -33,12 +43,23 @@ const CalendarioVacunacion = () => {
   const [calendario, setCalendario] = useState([]);
   const [estadoPlan, setEstadoPlan] = useState(null);
   const [controlEntregas, setControlEntregas] = useState([]);
-  const [vistaActual, setVistaActual] = useState('calendario'); // 'calendario', 'entregas', 'resumen'
+  const [vistaActual, setVistaActual] = useState('calendario'); // 'calendario', 'entregas', 'resumen', 'edicion'
   
   // Estados para modales
   const [showEntregaModal, setShowEntregaModal] = useState(false);
   const [calendarioSeleccionado, setCalendarioSeleccionado] = useState(null);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  
+  // Estados para edición del calendario
+  const [editandoFecha, setEditandoFecha] = useState(null);
+  const [fechaEditForm, setFechaEditForm] = useState('');
+  const [showDesdoblamientoModal, setShowDesdoblamientoModal] = useState(false);
+  const [calendarioParaDesdoblamiento, setCalendarioParaDesdoblamiento] = useState(null);
+  const [desdoblamientoForm, setDesdoblamientoForm] = useState({
+    fecha_aplicacion: '',
+    observaciones: '',
+    numero_desdoblamiento: 1
+  });
   
   // Estados para formularios
   const [entregaForm, setEntregaForm] = useState({
@@ -49,6 +70,9 @@ const CalendarioVacunacion = () => {
     tipo_entrega: 'completa',
     imprimir_remito: true
   });
+
+  // Estados para exportar PDF
+  const [generandoPDF, setGenerandoPDF] = useState(false);
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -120,7 +144,7 @@ const CalendarioVacunacion = () => {
           const url = window.URL.createObjectURL(pdfBlob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `remito-entrega-semana-${calendarioSeleccionado.numero_semana}-${new Date().toISOString().split('T')[0]}.pdf`;
+          link.download = `remito-entrega-semana-${calendarioSeleccionado.semana_aplicacion}-${new Date().toISOString().split('T')[0]}.pdf`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -192,7 +216,7 @@ const CalendarioVacunacion = () => {
       console.log('Generando remito para calendario:', calendarioItem.id_calendario);
       console.log('Datos del calendario:', {
         id: calendarioItem.id_calendario,
-        semana: calendarioItem.numero_semana,
+        semana: calendarioItem.semana_aplicacion,
         estado: calendarioItem.estado_entrega,
         dosis_entregadas: calendarioItem.dosis_entregadas
       });
@@ -233,7 +257,7 @@ const CalendarioVacunacion = () => {
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `remito-entrega-semana-${calendarioItem.numero_semana}-${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `remito-entrega-semana-${calendarioItem.semana_aplicacion}-${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -255,7 +279,7 @@ const CalendarioVacunacion = () => {
       
       // Buscar el item del calendario para obtener el número de semana
       const calendarioItem = calendario.find(item => item.id_calendario === id_calendario);
-      const numeroSemana = calendarioItem ? calendarioItem.numero_semana : 'X';
+      const numeroSemana = calendarioItem ? calendarioItem.semana_aplicacion : 'X';
       
       console.log('Datos encontrados:', {
         id: id_calendario,
@@ -329,6 +353,186 @@ const CalendarioVacunacion = () => {
     return badges[estado] || badges['inactivo'];
   };
 
+  // ===== FUNCIONES DE EDICIÓN =====
+  
+  const handleEditarFecha = (calendarioItem) => {
+    setEditandoFecha(calendarioItem.id_calendario);
+    setFechaEditForm(calendarioItem.fecha_aplicacion_programada || '');
+  };
+
+  const handleGuardarFecha = async (calendarioId) => {
+    try {
+      await planesApi.editarFechaCalendario(cotizacionId, calendarioId, {
+        fecha_aplicacion_programada: fechaEditForm
+      });
+      
+      showSuccess('Éxito', 'Fecha actualizada correctamente');
+      setEditandoFecha(null);
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error actualizando fecha:', error);
+      showError('Error', 'No se pudo actualizar la fecha');
+    }
+  };
+
+  const handleCancelarEdicion = () => {
+    setEditandoFecha(null);
+    setFechaEditForm('');
+  };
+
+  const handleDesdoblarDosis = (calendarioItem) => {
+    setCalendarioParaDesdoblamiento(calendarioItem);
+    setDesdoblamientoForm({
+      fecha_aplicacion: '',
+      observaciones: `Desdoblamiento de ${calendarioItem.vacuna_nombre} - Semana ${calendarioItem.semana_aplicacion}`,
+      numero_desdoblamiento: 1
+    });
+    setShowDesdoblamientoModal(true);
+  };
+
+  const handleCrearDesdoblamiento = async () => {
+    try {
+      const desdoblamientoData = {
+        ...desdoblamientoForm,
+        dosis_original_id: calendarioParaDesdoblamiento.id_calendario
+      };
+
+      await planesApi.crearDesdoblamientoDosis(
+        cotizacionId, 
+        calendarioParaDesdoblamiento.id_calendario,
+        desdoblamientoData
+      );
+      
+      showSuccess('Éxito', 'Desdoblamiento creado correctamente');
+      setShowDesdoblamientoModal(false);
+      setCalendarioParaDesdoblamiento(null);
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error creando desdoblamiento:', error);
+      showError('Error', 'No se pudo crear el desdoblamiento');
+    }
+  };
+
+  const handleExportarPDF = async () => {
+    try {
+      setGenerandoPDF(true);
+      
+      // Crear instancia del documento
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Configuración del documento
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+
+      // Título principal
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`PLAN VACUNAL ${cotizacion?.cliente?.nombre_empresa || 'CLIENTE'}`, pageWidth / 2, 20, { align: 'center' });
+
+      // Información del cliente
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      let yPos = 35;
+      
+      doc.text(`FECHA NACIMIENTO: ${cotizacion?.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'N/A'}`, margin, yPos);
+      doc.text(`CANTIDAD: ${cotizacion?.cantidad_animales || 'N/A'}`, margin + 80, yPos);
+      doc.text(`GENÉTICA: ${cotizacion?.genetica || 'N/A'}`, margin + 150, yPos);
+
+      // Preparar datos para la tabla
+      const tableHeaders = ['FECHA', 'DÍA', 'SEMANA', 'VACUNAS', 'PATOLOGÍA', 'VÍA', 'LAB.', 'FRASCOS'];
+      
+      const tableData = calendario.map(item => {
+        const fecha = new Date(item.fecha_aplicacion_programada);
+        const fechaStr = fecha.toLocaleDateString('es-ES');
+        const diaStr = String(fecha.getDate()).padStart(3, '0');
+        
+        return [
+          fechaStr,
+          diaStr,
+          item.semana_aplicacion,
+          item.vacuna_nombre || '',
+          item.vacuna_descripcion || '',
+          'IM', // Vía por defecto
+          'MSD', // Laboratorio por defecto  
+          Math.ceil(item.cantidad_dosis / 1000) // Calcular frascos
+        ];
+      });
+
+      // Crear tabla
+      autoTable(doc, {
+        head: [tableHeaders],
+        body: tableData,
+        startY: yPos + 15,
+        margin: { left: margin, right: margin },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          halign: 'center'
+        },
+        headStyles: {
+          fillColor: [220, 220, 220],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          0: { cellWidth: 25 }, // FECHA
+          1: { cellWidth: 15 }, // DÍA
+          2: { cellWidth: 20 }, // SEMANA
+          3: { cellWidth: 60 }, // VACUNAS
+          4: { cellWidth: 80 }, // PATOLOGÍA
+          5: { cellWidth: 15 }, // VÍA
+          6: { cellWidth: 20 }, // LAB
+          7: { cellWidth: 25 }  // FRASCOS
+        }
+      });
+
+      // Pie de página con información adicional
+      const finalY = yPos + 15 + (tableData.length * 8) + 20; // Estimar posición
+      doc.setFontSize(8);
+      doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} - Sistema de Gestión de Planes Vacunales`, margin, finalY);
+
+      // Descargar el PDF
+      const fileName = `plan-vacunal-${cotizacion?.numero_cotizacion || 'calendario'}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      showSuccess('Éxito', 'PDF generado correctamente');
+      
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      showError('Error', 'No se pudo generar el PDF');
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'No programada';
+    
+    try {
+      const dateObj = new Date(fecha);
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Fecha inválida para formatear:', fecha);
+        return 'Fecha inválida';
+      }
+      
+      return dateObj.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
@@ -347,7 +551,7 @@ const CalendarioVacunacion = () => {
           <p>No se pudo cargar la información del calendario de vacunación.</p>
           <button 
             className="btn btn-outline-danger"
-            onClick={() => navigate('/planes-vacunales/cotizaciones')}
+            onClick={() => navigate('/cotizaciones')}
           >
             <FaArrowLeft className="me-2" />
             Volver a Cotizaciones
@@ -365,7 +569,7 @@ const CalendarioVacunacion = () => {
           <div className="d-flex align-items-center">
             <button 
               className="btn btn-outline-secondary me-3"
-              onClick={() => navigate('/planes-vacunales/cotizaciones')}
+              onClick={() => navigate('/cotizaciones')}
             >
               <FaArrowLeft />
             </button>
@@ -444,35 +648,70 @@ const CalendarioVacunacion = () => {
       {/* Tabs de Navegación */}
       <div className="card">
         <div className="card-header">
-          <ul className="nav nav-tabs card-header-tabs">
-            <li className="nav-item">
+          <div className="d-flex justify-content-between align-items-center">
+            <ul className="nav nav-tabs card-header-tabs">
+              <li className="nav-item">
+                <button 
+                  className={`nav-link text-dark fw-medium ${vistaActual === 'calendario' ? 'active text-primary' : 'text-secondary'}`}
+                  onClick={() => setVistaActual('calendario')}
+                >
+                  <FaCalendarAlt className="me-2" />
+                  Calendario
+                </button>
+              </li>
+              <li className="nav-item">
+                <button 
+                  className={`nav-link text-dark fw-medium ${vistaActual === 'edicion' ? 'active text-primary' : 'text-secondary'}`}
+                  onClick={() => setVistaActual('edicion')}
+                >
+                  <FaEdit className="me-2" />
+                  Editar Calendario
+                </button>
+              </li>
+              <li className="nav-item">
+                <button 
+                  className={`nav-link text-dark fw-medium ${vistaActual === 'entregas' ? 'active text-primary' : 'text-secondary'}`}
+                  onClick={() => setVistaActual('entregas')}
+                >
+                  <FaHistory className="me-2" />
+                  Control de Entregas
+                </button>
+              </li>
+              <li className="nav-item">
+                <button 
+                  className={`nav-link text-dark fw-medium ${vistaActual === 'resumen' ? 'active text-primary' : 'text-secondary'}`}
+                  onClick={() => setVistaActual('resumen')}
+                >
+                  <FaChartPie className="me-2" />
+                  Resumen por Producto
+                </button>
+              </li>
+            </ul>
+            
+            {/* Botones de Acción */}
+            <div className="ms-auto">
               <button 
-                className={`nav-link ${vistaActual === 'calendario' ? 'active' : ''}`}
-                onClick={() => setVistaActual('calendario')}
+                className="btn btn-outline-primary btn-sm"
+                onClick={handleExportarPDF}
+                disabled={generandoPDF}
+                title="Exportar calendario a PDF"
               >
-                <FaCalendarAlt className="me-2" />
-                Calendario
+                {generandoPDF ? (
+                  <>
+                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                      <span className="visually-hidden">Generando...</span>
+                    </div>
+                    Generando PDF...
+                  </>
+                ) : (
+                  <>
+                    <FaPrint className="me-2" />
+                    Exportar PDF
+                  </>
+                )}
               </button>
-            </li>
-            <li className="nav-item">
-              <button 
-                className={`nav-link ${vistaActual === 'entregas' ? 'active' : ''}`}
-                onClick={() => setVistaActual('entregas')}
-              >
-                <FaHistory className="me-2" />
-                Control de Entregas
-              </button>
-            </li>
-            <li className="nav-item">
-              <button 
-                className={`nav-link ${vistaActual === 'resumen' ? 'active' : ''}`}
-                onClick={() => setVistaActual('resumen')}
-              >
-                <FaChartPie className="me-2" />
-                Resumen por Producto
-              </button>
-            </li>
-          </ul>
+            </div>
+          </div>
         </div>
         
         <div className="card-body">
@@ -501,17 +740,17 @@ const CalendarioVacunacion = () => {
                     return (
                       <tr key={item.id_calendario}>
                         <td>
-                          <strong>Semana {item.numero_semana}</strong>
+                          <strong>Semana {item.semana_aplicacion}</strong>
                         </td>
                         <td>
-                          {new Date(item.fecha_programada).toLocaleDateString('es-ES')}
+                          {new Date(item.fecha_aplicacion_programada).toLocaleDateString('es-ES')}
                         </td>
                         <td>
                           <div>
-                            <strong>{item.nombre_producto}</strong>
-                            {item.descripcion_producto && (
+                            <strong>{item.vacuna_nombre}</strong>
+                            {item.vacuna_descripcion && (
                               <small className="d-block text-muted">
-                                {item.descripcion_producto}
+                                {item.vacuna_descripcion}
                               </small>
                             )}
                           </div>
@@ -577,6 +816,124 @@ const CalendarioVacunacion = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Vista Edición del Calendario */}
+          {vistaActual === 'edicion' && (
+            <div>
+              <div className="alert alert-info">
+                <FaInfoCircle className="me-2" />
+                <strong>Editor de Calendario:</strong> Aquí puede editar las fechas de aplicación programadas y crear 
+                desdoblamientos de dosis cuando sea necesario.
+              </div>
+              
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Semana</th>
+                      <th>Fecha Programada</th>
+                      <th>Producto</th>
+                      <th>Dosis</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calendario.map((item) => {
+                      const badge = getEstadoBadge(item.estado_entrega);
+                      const IconComponent = badge.icon;
+                      
+                      return (
+                        <tr key={item.id_calendario}>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <span className="badge bg-secondary me-2">
+                                {item.semana_aplicacion}
+                              </span>
+                              {item.es_desdoblamiento && (
+                                <span className="badge bg-warning text-dark">
+                                  <FaCut className="me-1" />
+                                  Desdoblamiento #{item.numero_desdoblamiento}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            {editandoFecha === item.id_calendario ? (
+                              <div className="d-flex align-items-center">
+                                <input
+                                  type="date"
+                                  className="form-control form-control-sm me-2"
+                                  value={fechaEditForm}
+                                  onChange={(e) => setFechaEditForm(e.target.value)}
+                                  style={{ width: '150px' }}
+                                />
+                                <button
+                                  className="btn btn-success btn-sm me-1"
+                                  onClick={() => handleGuardarFecha(item.id_calendario)}
+                                >
+                                  <FaSave />
+                                </button>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={handleCancelarEdicion}
+                                >
+                                  <FaTimes />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="d-flex align-items-center">
+                                <span className="me-2">
+                                  {formatearFecha(item.fecha_aplicacion_programada)}
+                                </span>
+                                <button
+                                  className="btn btn-outline-primary btn-sm"
+                                  onClick={() => handleEditarFecha(item)}
+                                >
+                                  <FaEdit />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div>
+                              <strong>{item.vacuna_nombre}</strong><br />
+                              <small className="text-muted">{item.vacuna_tipo}</small>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="badge bg-info">
+                              {item.cantidad_dosis} dosis
+                            </span>
+                          </td>
+                          <td>
+                            <span className={badge.class}>
+                              <IconComponent className="me-1" />
+                              {badge.text}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="btn-group">
+                              {!item.es_desdoblamiento && (
+                                <button
+                                  className="btn btn-outline-warning btn-sm"
+                                  onClick={() => handleDesdoblarDosis(item)}
+                                  title="Crear desdoblamiento"
+                                >
+                                  <FaCut className="me-1" />
+                                  Desdoblar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -716,7 +1073,7 @@ const CalendarioVacunacion = () => {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <FaCheck className="me-2" />
-                  Marcar Entrega de Dosis - Semana {calendarioSeleccionado?.numero_semana} - {calendarioSeleccionado?.nombre_producto}
+                  Marcar Entrega de Dosis - Semana {calendarioSeleccionado?.semana_aplicacion} - {calendarioSeleccionado?.vacuna_nombre}
                 </h5>
                 <button 
                   className="btn-close"
@@ -921,6 +1278,97 @@ const CalendarioVacunacion = () => {
                     Por favor no cierre esta ventana mientras se genera el documento
                   </small>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Crear Desdoblamiento */}
+      {showDesdoblamientoModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <FaCut className="me-2" />
+                  Crear Desdoblamiento de Dosis
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowDesdoblamientoModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-info">
+                  <FaInfoCircle className="me-2" />
+                  <strong>Desdoblamiento:</strong> Esta función permite dividir una dosis programada en múltiples aplicaciones.
+                </div>
+                
+                {calendarioParaDesdoblamiento && (
+                  <div className="mb-3">
+                    <strong>Dosis Original:</strong><br />
+                    <span className="text-muted">
+                      Semana {calendarioParaDesdoblamiento.semana_aplicacion} - {calendarioParaDesdoblamiento.vacuna_nombre}
+                    </span>
+                  </div>
+                )}
+
+                <form>
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <FaCalendarAlt className="me-2" />
+                      Fecha de Aplicación del Desdoblamiento
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={desdoblamientoForm.fecha_aplicacion}
+                      onChange={(e) => setDesdoblamientoForm({
+                        ...desdoblamientoForm,
+                        fecha_aplicacion: e.target.value
+                      })}
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <FaInfoCircle className="me-2" />
+                      Observaciones
+                    </label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      value={desdoblamientoForm.observaciones}
+                      onChange={(e) => setDesdoblamientoForm({
+                        ...desdoblamientoForm,
+                        observaciones: e.target.value
+                      })}
+                      placeholder="Motivo del desdoblamiento, instrucciones especiales, etc."
+                    />
+                  </div>
+                </form>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowDesdoblamientoModal(false)}
+                >
+                  <FaTimes className="me-2" />
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-warning" 
+                  onClick={handleCrearDesdoblamiento}
+                  disabled={!desdoblamientoForm.fecha_aplicacion}
+                >
+                  <FaCut className="me-2" />
+                  Crear Desdoblamiento
+                </button>
               </div>
             </div>
           </div>

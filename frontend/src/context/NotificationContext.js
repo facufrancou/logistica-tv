@@ -70,7 +70,17 @@ export const NotificationProvider = ({ children }) => {
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      <div className="notification-container">
+      <div className="notification-container" style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        maxWidth: '350px',
+        width: '100%'
+      }}>
         {notifications.map(notification => (
           <Notification
             key={notification.id}

@@ -44,16 +44,54 @@ const Notification = ({ type = 'info', title, message, duration = 5000, onClose 
     };
   }, [duration, closeNotification]);
   
+  const getColor = () => {
+    switch (type) {
+      case 'success':
+        return '#28a745';
+      case 'error':
+        return '#dc3545';
+      case 'warning':
+        return '#ffc107';
+      case 'info':
+      default:
+        return '#17a2b8';
+    }
+  };
+
   if (!visible) return null;
   
   return (
-    <div className={`notification notification-${type}`}>
-      <div className="notification-icon">{getIcon()}</div>
-      <div className="notification-content">
-        {title && <div className="notification-title">{title}</div>}
-        {message && <div className="notification-message">{message}</div>}
+    <div style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      padding: '16px',
+      borderRadius: '10px',
+      background: 'white',
+      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.15)',
+      borderLeft: `4px solid ${getColor()}`,
+      marginBottom: '10px',
+      position: 'relative',
+      minWidth: '300px'
+    }}>
+      <div style={{ marginRight: '12px', fontSize: '1.5rem', color: getColor() }}>
+        {getIcon()}
       </div>
-      <button className="notification-close" onClick={closeNotification}>
+      <div style={{ flex: 1 }}>
+        {title && <div style={{ fontWeight: 600, marginBottom: '4px' }}>{title}</div>}
+        {message && <div style={{ fontSize: '0.875rem', color: '#333' }}>{message}</div>}
+      </div>
+      <button 
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '1.2rem',
+          cursor: 'pointer',
+          color: '#777',
+          padding: 0,
+          marginLeft: '8px'
+        }}
+        onClick={closeNotification}
+      >
         <FaTimes />
       </button>
     </div>

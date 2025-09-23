@@ -51,11 +51,6 @@ function Dashboard() {
     setShowWelcomeModal(false);
   };
 
-  // Función de debug para mostrar el modal manualmente
-  const showWelcomeModalForTesting = () => {
-    setShowWelcomeModal(true);
-  };
-
   const quickActions = [
     {
       title: "Nuevo Pedido",
@@ -226,16 +221,6 @@ function Dashboard() {
           <small className="text-muted">
             <strong>Versión 2.4 Septiembre 2025</strong> - By Facundo Francou © 2025
           </small>
-          
-          {/* Botón de debug - remover en producción */}
-          {/* <div className="mt-3">
-            <button 
-              className="btn btn-sm btn-outline-secondary"
-              onClick={showWelcomeModalForTesting}
-            >
-              Mostrar Modal de Bienvenida (Debug)
-            </button>
-          </div> */}
         </div>
       </div>
 

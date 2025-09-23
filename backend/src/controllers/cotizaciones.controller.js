@@ -1073,71 +1073,6 @@ exports.updateEstadoCotizacion = async (req, res) => {
   }
 };
 
-exports.getCalendarioVacunacion = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fecha_desde, fecha_hasta, estado_dosis } = req.query;
-
-    let whereClause = {
-      id_cotizacion: parseInt(id)
-    };
-
-    if (fecha_desde && fecha_hasta) {
-      whereClause.fecha_programada = {
-        gte: new Date(fecha_desde),
-        lte: new Date(fecha_hasta)
-      };
-    }
-
-    if (estado_dosis) {
-      whereClause.estado_dosis = estado_dosis;
-    }
-
-    const calendario = await prisma.calendarioVacunacion.findMany({
-      where: whereClause,
-      include: {
-        producto: {
-          select: {
-            nombre: true,
-            descripcion: true
-          }
-        },
-        cotizacion: {
-          select: {
-            numero_cotizacion: true,
-            cliente: {
-              select: {
-                nombre: true
-              }
-            }
-          }
-        }
-      },
-      orderBy: [
-        { numero_semana: 'asc' },
-        { fecha_programada: 'asc' }
-      ]
-    });
-
-    const calendarioFormatted = calendario.map(item => ({
-      ...item,
-      id_calendario: Number(item.id_calendario),
-      id_cotizacion: Number(item.id_cotizacion),
-      id_producto: Number(item.id_producto),
-      numero_semana: Number(item.numero_semana),
-      nombre_producto: item.producto.nombre,
-      descripcion_producto: item.producto.descripcion,
-      numero_cotizacion: item.cotizacion.numero_cotizacion,
-      cliente_nombre: item.cotizacion.cliente.nombre
-    }));
-
-    res.json(calendarioFormatted);
-  } catch (error) {
-    console.error('Error al obtener calendario de vacunación:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
 exports.actualizarEstadoDosis = async (req, res) => {
   try {
     const { id_calendario } = req.params;
@@ -2634,3 +2569,184 @@ exports.generarRemitoPDF = async (req, res) => {
     });
   }
 };
+
+// ===== FUNCIONES DE CALENDARIO =====
+
+const getCalendarioVacunacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const calendario = await prisma.calendarioVacunacion.findMany({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        producto: {
+          select: {
+            id_producto: true,
+            nombre: true,
+            descripcion: true,
+            tipo_producto: true
+          }
+        }
+      },
+      orderBy: [
+        { numero_semana: 'asc' },
+        { id_calendario: 'asc' }
+      ]
+    });
+
+    // Transformar los datos para que coincidan con lo que espera el frontend
+    const calendarioFormateado = calendario.map(item => ({
+      id_calendario: item.id_calendario,
+      semana_aplicacion: item.numero_semana,
+      fecha_aplicacion_programada: item.fecha_programada ? item.fecha_programada.toISOString().split('T')[0] : null,
+      vacuna_nombre: item.producto?.nombre || 'Producto no encontrado',
+      vacuna_tipo: item.producto?.tipo_producto || 'N/A',
+      vacuna_descripcion: item.producto?.descripcion || '',
+      cantidad_dosis: item.cantidad_dosis,
+      estado_dosis: item.estado_dosis,
+      dosis_por_animal: item.cantidad_dosis || 1,
+      total_dosis: item.cantidad_dosis || 1
+    }));
+
+    res.json(calendarioFormateado);
+  } catch (error) {
+    console.error('Error obteniendo calendario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener el calendario de vacunación: ' + error.message
+    });
+  }
+};
+
+const editarFechaCalendario = async (req, res) => {
+  try {
+    const { id_cotizacion, id_calendario } = req.params;
+    const { fecha_aplicacion_programada } = req.body;
+
+    // Validar que la fecha sea válida
+    if (!fecha_aplicacion_programada) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha de aplicación es requerida'
+      });
+    }
+
+    // Actualizar la fecha en el calendario
+    const calendarioActualizado = await prisma.calendarioVacunacion.update({
+      where: { id_calendario: parseInt(id_calendario) },
+      data: {
+        fecha_programada: new Date(fecha_aplicacion_programada)
+      },
+      include: {
+        producto: {
+          select: {
+            nombre: true,
+            tipo_producto: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Fecha actualizada correctamente',
+      calendario: {
+        id_calendario: calendarioActualizado.id_calendario,
+        semana_aplicacion: calendarioActualizado.numero_semana,
+        fecha_aplicacion_programada: calendarioActualizado.fecha_programada.toISOString().split('T')[0],
+        vacuna_nombre: calendarioActualizado.producto?.nombre || 'Producto no encontrado',
+        vacuna_tipo: calendarioActualizado.producto?.tipo_producto || 'N/A'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error editando fecha del calendario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al editar la fecha del calendario: ' + error.message
+    });
+  }
+};
+
+const desdoblarDosis = async (req, res) => {
+  try {
+    const { id_cotizacion, id_calendario } = req.params;
+    const { fecha_aplicacion, observaciones, numero_desdoblamiento } = req.body;
+
+    // Obtener el calendario original
+    const calendarioOriginal = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(id_calendario) },
+      include: { producto: true }
+    });
+
+    if (!calendarioOriginal) {
+      return res.status(404).json({
+        success: false,
+        message: 'Calendario no encontrado'
+      });
+    }
+
+    // Contar desdoblamientos existentes para determinar el número de desdoblamiento
+    const desdoblamentosExistentes = await prisma.calendarioVacunacion.count({
+      where: {
+        dosis_original_id: parseInt(id_calendario)
+      }
+    });
+
+    const numeroDesdoblamientoCalculado = desdoblamentosExistentes + 1;
+
+    // Crear el desdoblamiento con un numero_semana único
+    // Usamos decimales para mantener la semana original pero hacer el registro único
+    const numeroSemanaUnico = calendarioOriginal.numero_semana + (numeroDesdoblamientoCalculado * 0.01);
+
+    // Crear el desdoblamiento
+    const desdoblamiento = await prisma.calendarioVacunacion.create({
+      data: {
+        id_cotizacion: parseInt(id_cotizacion),
+        id_producto: calendarioOriginal.id_producto,
+        numero_semana: Math.round(numeroSemanaUnico * 100), // Convertir a entero manteniendo la diferencia
+        fecha_programada: new Date(fecha_aplicacion),
+        cantidad_dosis: calendarioOriginal.cantidad_dosis,
+        estado_dosis: 'pendiente',
+        es_desdoblamiento: true,
+        dosis_original_id: parseInt(id_calendario),
+        numero_desdoblamiento: numeroDesdoblamientoCalculado,
+        observaciones: observaciones || `Desdoblamiento #${numeroDesdoblamientoCalculado}`
+      },
+      include: {
+        producto: {
+          select: {
+            nombre: true,
+            tipo_producto: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Desdoblamiento creado correctamente',
+      desdoblamiento: {
+        id_calendario: desdoblamiento.id_calendario,
+        semana_aplicacion: desdoblamiento.numero_semana,
+        fecha_aplicacion_programada: desdoblamiento.fecha_programada.toISOString().split('T')[0],
+        vacuna_nombre: desdoblamiento.producto?.nombre || 'Producto no encontrado',
+        vacuna_tipo: desdoblamiento.producto?.tipo_producto || 'N/A',
+        es_desdoblamiento: true,
+        observaciones: desdoblamiento.observaciones
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creando desdoblamiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear el desdoblamiento: ' + error.message
+    });
+  }
+};
+
+// Exportar las nuevas funciones del calendario
+exports.getCalendarioVacunacion = getCalendarioVacunacion;
+exports.editarFechaCalendario = editarFechaCalendario;
+exports.desdoblarDosis = desdoblarDosis;

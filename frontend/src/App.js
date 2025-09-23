@@ -468,6 +468,7 @@ function MainRoutes() {
             </RutaPrivada>
           }
         />
+        {/* RUTA DEPRECADA - Editor ahora integrado en el calendario principal 
         <Route
           path="/planes-vacunales/calendario/:cotizacionId/editar"
           element={
@@ -476,6 +477,7 @@ function MainRoutes() {
             </RutaPrivada>
           }
         />
+        */}
 
         {/* 📋 REMITOS Y VENTAS DIRECTAS */}
         <Route

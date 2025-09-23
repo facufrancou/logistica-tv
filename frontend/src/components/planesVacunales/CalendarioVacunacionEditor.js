@@ -102,7 +102,11 @@ const CalendarioVacunacionEditor = () => {
         dosis_original_id: calendarioParaDesdoblamiento.id_calendario
       };
 
-      await planesApi.crearDesdoblamientoDosis(cotizacionId, desdoblamientoData);
+      await planesApi.crearDesdoblamientoDosis(
+        cotizacionId, 
+        calendarioParaDesdoblamiento.id_calendario,
+        desdoblamientoData
+      );
       
       showSuccess('Éxito', 'Desdoblamiento creado correctamente');
       setShowDesdoblamientoModal(false);

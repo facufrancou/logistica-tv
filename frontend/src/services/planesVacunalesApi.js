@@ -264,7 +264,12 @@ export const reactivarCotizacion = async (id, estado_destino, motivo = '') => {
 };
 
 export const getCalendarioVacunacion = async (id) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/calendario`);
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}/calendario`, {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  });
 };
 
 export const actualizarEstadoDosis = async (id_calendario, estadoData) => {
@@ -284,14 +289,14 @@ export const regenerarCalendario = async (id, fechaData) => {
 // ===== EDICIÓN DE CALENDARIO =====
 
 export const editarFechaCalendario = async (id_cotizacion, id_calendario, fechaData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/editar-fecha`, {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/fecha`, {
     method: 'PUT',
     body: JSON.stringify(fechaData)
   });
 };
 
-export const crearDesdoblamientoDosis = async (id_cotizacion, desdoblamientoData) => {
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/desdoblamiento`, {
+export const crearDesdoblamientoDosis = async (id_cotizacion, id_calendario, desdoblamientoData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/desdoblar`, {
     method: 'POST',
     body: JSON.stringify(desdoblamientoData)
   });
