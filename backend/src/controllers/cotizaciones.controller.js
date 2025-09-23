@@ -514,13 +514,22 @@ exports.createCotizacion = async (req, res) => {
       id_plan, 
       fecha_inicio_plan,
       id_lista_precio,
-      observaciones 
+      observaciones,
+      cantidad_animales 
     } = req.body;
 
     // Validaciones
-    if (!id_cliente || !id_plan || !fecha_inicio_plan) {
+    if (!id_cliente || !id_plan || !fecha_inicio_plan || !cantidad_animales) {
       return res.status(400).json({ 
-        error: 'Cliente, plan y fecha de inicio son obligatorios' 
+        error: 'Cliente, plan, fecha de inicio y cantidad de animales son obligatorios' 
+      });
+    }
+
+    // Validar que cantidad_animales sea un número positivo
+    const cantidadAnimalesNum = parseInt(cantidad_animales);
+    if (isNaN(cantidadAnimalesNum) || cantidadAnimalesNum <= 0) {
+      return res.status(400).json({ 
+        error: 'La cantidad de animales debe ser un número mayor a 0' 
       });
     }
 
@@ -633,6 +642,7 @@ exports.createCotizacion = async (req, res) => {
           id_plan: parseInt(id_plan),
           id_lista_precio: listaPrecios,
           fecha_inicio_plan: new Date(fecha_inicio_plan),
+          cantidad_animales: cantidadAnimalesNum,
           precio_total: precioTotal,
           observaciones: observaciones || '',
           created_by: req.user?.id_usuario || null
@@ -2038,5 +2048,432 @@ exports.getEstadoPlan = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener estado del plan:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ===== NUEVAS FUNCIONALIDADES =====
+
+/**
+ * Actualizar cantidad de animales en una cotización
+ */
+exports.actualizarCantidadAnimales = async (req, res) => {
+  const { id } = req.params;
+  const { cantidad_animales } = req.body;
+
+  try {
+    // Validaciones
+    if (!cantidad_animales || cantidad_animales < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'La cantidad de animales debe ser mayor a 0'
+      });
+    }
+
+    // Verificar que la cotización existe
+    const cotizacionExistente = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      select: { 
+        id_cotizacion: true, 
+        numero_cotizacion: true, 
+        estado: true,
+        cantidad_animales: true
+      }
+    });
+
+    if (!cotizacionExistente) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cotización no encontrada'
+      });
+    }
+
+    // Validar que la cotización esté en estado que permita modificación
+    if (cotizacionExistente.estado === 'finalizada' || cotizacionExistente.estado === 'cancelada') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede modificar una cotización finalizada o cancelada'
+      });
+    }
+
+    // Actualizar cantidad de animales
+    const cotizacionActualizada = await prisma.cotizacion.update({
+      where: { id_cotizacion: parseInt(id) },
+      data: {
+        cantidad_animales: parseInt(cantidad_animales),
+        updated_at: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Cantidad de animales actualizada exitosamente',
+      data: {
+        id_cotizacion: cotizacionActualizada.id_cotizacion,
+        numero_cotizacion: cotizacionActualizada.numero_cotizacion,
+        cantidad_animales_anterior: cotizacionExistente.cantidad_animales,
+        cantidad_animales_nueva: cotizacionActualizada.cantidad_animales
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar cantidad de animales:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar la cantidad de animales'
+    });
+  }
+};
+
+/**
+ * Editar fecha programada en el calendario de vacunación
+ */
+exports.editarFechaCalendario = async (req, res) => {
+  const { id_cotizacion, id_calendario } = req.params;
+  const { nueva_fecha, observaciones } = req.body;
+
+  try {
+    // Validaciones
+    if (!nueva_fecha) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nueva fecha es requerida'
+      });
+    }
+
+    const fechaProgramada = new Date(nueva_fecha);
+    if (isNaN(fechaProgramada.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato de fecha no válido'
+      });
+    }
+
+    // Verificar que el calendario existe y pertenece a la cotización
+    const calendarioExistente = await prisma.calendarioVacunacion.findFirst({
+      where: {
+        id_calendario: parseInt(id_calendario),
+        id_cotizacion: parseInt(id_cotizacion)
+      },
+      include: {
+        cotizacion: {
+          select: { 
+            numero_cotizacion: true, 
+            estado: true,
+            fecha_inicio_plan: true
+          }
+        },
+        producto: {
+          select: { nombre: true }
+        }
+      }
+    });
+
+    if (!calendarioExistente) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registro de calendario no encontrado'
+      });
+    }
+
+    // Validar que la cotización permita modificaciones
+    if (calendarioExistente.cotizacion.estado === 'finalizada' || 
+        calendarioExistente.cotizacion.estado === 'cancelada') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede modificar el calendario de una cotización finalizada o cancelada'
+      });
+    }
+
+    // Validar que la nueva fecha no sea anterior al inicio del plan
+    if (fechaProgramada < calendarioExistente.cotizacion.fecha_inicio_plan) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha programada no puede ser anterior al inicio del plan'
+      });
+    }
+
+    // Actualizar la fecha
+    const calendarioActualizado = await prisma.calendarioVacunacion.update({
+      where: { id_calendario: parseInt(id_calendario) },
+      data: {
+        fecha_programada: fechaProgramada,
+        observaciones: observaciones ? 
+          `${calendarioExistente.observaciones || ''}\nFecha modificada: ${observaciones}` :
+          calendarioExistente.observaciones,
+        updated_at: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Fecha del calendario actualizada exitosamente',
+      data: {
+        id_calendario: calendarioActualizado.id_calendario,
+        numero_semana: calendarioActualizado.numero_semana,
+        producto: calendarioExistente.producto.nombre,
+        fecha_anterior: calendarioExistente.fecha_programada,
+        fecha_nueva: calendarioActualizado.fecha_programada
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al editar fecha del calendario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar la fecha del calendario'
+    });
+  }
+};
+
+/**
+ * Desdoblar una dosis del calendario (dividir en varias aplicaciones)
+ */
+exports.desdoblarDosis = async (req, res) => {
+  const { id_cotizacion, id_calendario } = req.params;
+  const { desdoblamientos } = req.body;
+
+  try {
+    // Validaciones
+    if (!desdoblamientos || !Array.isArray(desdoblamientos) || desdoblamientos.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe especificar al menos 2 desdoblamientos'
+      });
+    }
+
+    // Validar que la suma de cantidades coincida
+    const totalCantidad = desdoblamientos.reduce((sum, d) => sum + (d.cantidad_dosis || 0), 0);
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Obtener la dosis original
+      const dosisOriginal = await tx.calendarioVacunacion.findFirst({
+        where: {
+          id_calendario: parseInt(id_calendario),
+          id_cotizacion: parseInt(id_cotizacion)
+        },
+        include: {
+          cotizacion: {
+            select: { estado: true, numero_cotizacion: true }
+          }
+        }
+      });
+
+      if (!dosisOriginal) {
+        throw new Error('Registro de calendario no encontrado');
+      }
+
+      if (dosisOriginal.es_desdoblamiento) {
+        throw new Error('No se puede desdoblar una dosis que ya es un desdoblamiento');
+      }
+
+      if (dosisOriginal.cotizacion.estado === 'finalizada' || 
+          dosisOriginal.cotizacion.estado === 'cancelada') {
+        throw new Error('No se puede desdoblar dosis de una cotización finalizada o cancelada');
+      }
+
+      if (totalCantidad !== dosisOriginal.cantidad_dosis) {
+        throw new Error(`La suma de desdoblamientos (${totalCantidad}) debe coincidir con la cantidad original (${dosisOriginal.cantidad_dosis})`);
+      }
+
+      // Marcar la dosis original como desdoblada (mantener para referencia)
+      await tx.calendarioVacunacion.update({
+        where: { id_calendario: parseInt(id_calendario) },
+        data: {
+          observaciones: `${dosisOriginal.observaciones || ''}\nDosis desdoblada en ${desdoblamientos.length} aplicaciones`,
+          updated_at: new Date()
+        }
+      });
+
+      // Crear los desdoblamientos
+      const nuevosDesdoblamientos = [];
+      
+      for (let i = 0; i < desdoblamientos.length; i++) {
+        const desdoblamiento = desdoblamientos[i];
+        
+        if (!desdoblamiento.fecha_programada || !desdoblamiento.cantidad_dosis) {
+          throw new Error(`Desdoblamiento ${i + 1}: fecha y cantidad son requeridas`);
+        }
+
+        const nuevoCalendario = await tx.calendarioVacunacion.create({
+          data: {
+            id_cotizacion: parseInt(id_cotizacion),
+            id_producto: dosisOriginal.id_producto,
+            numero_semana: dosisOriginal.numero_semana,
+            fecha_programada: new Date(desdoblamiento.fecha_programada),
+            cantidad_dosis: desdoblamiento.cantidad_dosis,
+            estado_dosis: 'pendiente',
+            es_desdoblamiento: true,
+            dosis_original_id: parseInt(id_calendario),
+            numero_desdoblamiento: i + 1,
+            observaciones: desdoblamiento.observaciones || `Desdoblamiento ${i + 1} de ${desdoblamientos.length}`
+          }
+        });
+
+        nuevosDesdoblamientos.push(nuevoCalendario);
+      }
+
+      return nuevosDesdoblamientos;
+    });
+
+    res.json({
+      success: true,
+      message: 'Dosis desdoblada exitosamente',
+      data: {
+        dosis_original_id: parseInt(id_calendario),
+        cantidad_desdoblamientos: resultado.length,
+        desdoblamientos: resultado.map(d => ({
+          id_calendario: d.id_calendario,
+          numero_desdoblamiento: d.numero_desdoblamiento,
+          fecha_programada: d.fecha_programada,
+          cantidad_dosis: d.cantidad_dosis
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al desdoblar dosis:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error al desdoblar la dosis'
+    });
+  }
+};
+
+/**
+ * Obtener desdoblamientos de una dosis
+ */
+exports.obtenerDesdoblamientos = async (req, res) => {
+  const { id_calendario } = req.params;
+
+  try {
+    const desdoblamientos = await prisma.calendarioVacunacion.findMany({
+      where: {
+        dosis_original_id: parseInt(id_calendario)
+      },
+      include: {
+        producto: {
+          select: { nombre: true, tipo_producto: true }
+        }
+      },
+      orderBy: {
+        numero_desdoblamiento: 'asc'
+      }
+    });
+
+    // También obtener la dosis original
+    const dosisOriginal = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(id_calendario) },
+      include: {
+        producto: {
+          select: { nombre: true, tipo_producto: true }
+        }
+      }
+    });
+
+    if (!dosisOriginal) {
+      return res.status(404).json({
+        success: false,
+        message: 'Dosis original no encontrada'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        dosis_original: {
+          id_calendario: dosisOriginal.id_calendario,
+          numero_semana: dosisOriginal.numero_semana,
+          fecha_programada: dosisOriginal.fecha_programada,
+          cantidad_dosis: dosisOriginal.cantidad_dosis,
+          producto: dosisOriginal.producto.nombre,
+          estado_dosis: dosisOriginal.estado_dosis
+        },
+        desdoblamientos: desdoblamientos.map(d => ({
+          id_calendario: d.id_calendario,
+          numero_desdoblamiento: d.numero_desdoblamiento,
+          fecha_programada: d.fecha_programada,
+          cantidad_dosis: d.cantidad_dosis,
+          estado_dosis: d.estado_dosis,
+          fecha_aplicacion: d.fecha_aplicacion,
+          observaciones: d.observaciones
+        })),
+        resumen: {
+          total_desdoblamientos: desdoblamientos.length,
+          cantidad_total: desdoblamientos.reduce((sum, d) => sum + d.cantidad_dosis, 0),
+          desdoblamientos_pendientes: desdoblamientos.filter(d => d.estado_dosis === 'pendiente').length,
+          desdoblamientos_aplicados: desdoblamientos.filter(d => d.estado_dosis === 'aplicada').length
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener desdoblamientos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener los desdoblamientos'
+    });
+  }
+};
+
+/**
+ * Eliminar un desdoblamiento
+ */
+exports.eliminarDesdoblamiento = async (req, res) => {
+  const { id_calendario } = req.params;
+
+  try {
+    const desdoblamiento = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(id_calendario) },
+      include: {
+        cotizacion: {
+          select: { estado: true }
+        }
+      }
+    });
+
+    if (!desdoblamiento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Desdoblamiento no encontrado'
+      });
+    }
+
+    if (!desdoblamiento.es_desdoblamiento) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este registro no es un desdoblamiento'
+      });
+    }
+
+    if (desdoblamiento.estado_dosis === 'aplicada') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar un desdoblamiento ya aplicado'
+      });
+    }
+
+    if (desdoblamiento.cotizacion.estado === 'finalizada' || 
+        desdoblamiento.cotizacion.estado === 'cancelada') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar desdoblamientos de una cotización finalizada o cancelada'
+      });
+    }
+
+    await prisma.calendarioVacunacion.delete({
+      where: { id_calendario: parseInt(id_calendario) }
+    });
+
+    res.json({
+      success: true,
+      message: 'Desdoblamiento eliminado exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar desdoblamiento:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar el desdoblamiento'
+    });
   }
 };

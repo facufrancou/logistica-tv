@@ -1,0 +1,210 @@
+/* RemitosGenerator Styles */
+.remitos-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #6c757d;
+}
+
+.remitos-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.3em solid transparent;
+  border-top: 0.3em solid #007bff;
+  border-radius: 50%;
+  animation: remitos-spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes remitos-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Table enhancements */
+.table td {
+  vertical-align: middle;
+}
+
+.table .btn-group {
+  box-shadow: none;
+}
+
+.table .btn-group .btn {
+  border-radius: 0.375rem;
+  margin-right: 0.25rem;
+}
+
+.table .btn-group .btn:last-child {
+  margin-right: 0;
+}
+
+/* Badge styles */
+.badge {
+  font-size: 0.75em;
+  padding: 0.375em 0.75em;
+}
+
+/* Modal enhancements */
+.modal-body .card {
+  border: 1px solid #dee2e6;
+}
+
+.modal-body .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Alert improvements */
+.alert {
+  border-left: 4px solid;
+}
+
+.alert-info {
+  border-left-color: #0dcaf0;
+}
+
+/* Input group enhancements */
+.input-group-text {
+  background-color: #f8f9fa;
+  border-color: #ced4da;
+}
+
+/* Button improvements */
+.btn {
+  border-color: #007bff;
+  color: #495057;
+}
+
+/* Empty state styling */
+.text-center.py-5 {
+  padding: 3rem 1rem !important;
+}
+
+.text-center.py-5 h4 {
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+/* Pagination styling */
+.pagination .page-link {
+  border-color: #dee2e6;
+  color: #495057;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* Table responsive improvements */
+.table-responsive {
+  border-radius: 0.375rem;
+}
+
+/* Loading overlay */
+.table-loading {
+  position: relative;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.table-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* Form enhancements */
+.form-control:focus,
+.form-select:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Header improvements */
+.card-header h3 {
+  color: #495057;
+}
+
+.card-header small {
+  color: #6c757d;
+}
+
+/* Icon spacing */
+.me-1 {
+  margin-right: 0.25rem !important;
+}
+
+.me-2 {
+  margin-right: 0.5rem !important;
+}
+
+/* Text colors */
+.text-primary {
+  color: #007bff !important;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
+.text-info {
+  color: #17a2b8 !important;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .card-header .d-flex > div:last-child {
+    margin-top: 1rem;
+    width: 100%;
+  }
+  
+  .btn-group {
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+  }
+  
+  .table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .card,
+  .btn,
+  .pagination,
+  .modal {
+    display: none !important;
+  }
+}

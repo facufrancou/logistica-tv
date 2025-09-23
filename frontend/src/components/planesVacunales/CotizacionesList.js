@@ -456,9 +456,9 @@ const CotizacionesList = () => {
                               <FaEye />
                             </Link>
                             <Link
-                              to={`/planes-vacunales/calendario/${cotizacion.id_cotizacion}`}
+                              to={`/planes-vacunales/calendario/${cotizacion.id_cotizacion}/editar`}
                               className="btn btn-sm btn-outline-info"
-                              title="Ver calendario"
+                              title="Editar calendario de vacunación"
                             >
                               <FaCalendarAlt />
                             </Link>

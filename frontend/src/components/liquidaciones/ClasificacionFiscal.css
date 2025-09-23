@@ -1,31 +1,123 @@
 /* Estilos para el componente de Clasificación Fiscal */
 
 .clasificacion-fiscal {
-  .table-responsive {
-    max-height: 500px;
-  }
+  padding: 1rem;
+}
 
-  .btn-group {
-    .btn {
-      font-size: 0.8rem;
-      padding: 0.25rem 0.5rem;
-    }
-  }
+/* Cards de resumen mejoradas */
+.clasificacion-fiscal .card {
+  border-radius: 12px !important;
+}
 
-  .badge {
-    font-size: 0.75rem;
-  }
+/* Iconos sin animación */
+.clasificacion-fiscal .fas {
+  /* Sin transiciones */
+}
 
-  .alert-info {
-    background-color: #e3f2fd;
-    border-color: #bbdefb;
-    color: #1976d2;
-  }
+/* Mejora de contraste para texto */
+.clasificacion-fiscal .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
 
-  .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+.clasificacion-fiscal h4 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabla más legible */
+.clasificacion-fiscal .table {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.clasificacion-fiscal .table thead th {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+/* Tabla sin efectos hover */
+
+/* Badges mejorados */
+.clasificacion-fiscal .badge {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* Botones de acción sin efectos */
+.clasificacion-fiscal .btn-group-sm .btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 768px) {
+  .clasificacion-fiscal .row.g-3 {
+    gap: 1rem;
   }
+  
+  .clasificacion-fiscal .card-body {
+    padding: 1.5rem 1rem !important;
+  }
+  
+  .clasificacion-fiscal h4 {
+    font-size: 1.3rem;
+  }
+  
+  .clasificacion-fiscal .fas {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* Cards específicas con mejores colores */
+.card-via-2 {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+}
+
+.card-via-1 {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border: 2px solid #28a745 !important;
+}
+
+.card-pendiente {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+}
+
+.card-total {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+}
+
+.clasificacion-fiscal .table-responsive {
+  max-height: 500px;
+}
+
+.clasificacion-fiscal .btn-group {
+  .btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+.clasificacion-fiscal .alert-info {
+  background-color: #e3f2fd;
+  border-color: #bbdefb;
+  color: #1976d2;
+}
+
+.clasificacion-fiscal .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
 }
 
 /* Animaciones para el estado de guardado */

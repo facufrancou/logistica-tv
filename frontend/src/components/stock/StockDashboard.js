@@ -81,24 +81,24 @@ const StockDashboard = () => {
 
   const getTipoProductoBadge = (tipo) => {
     const tipos = {
-      'vacuna': { class: 'bg-success', text: 'Vacuna', icon: '💉' },
-      'medicamento': { class: 'bg-primary', text: 'Medicamento', icon: '💊' },
-      'suplemento': { class: 'bg-info', text: 'Suplemento', icon: '🧪' },
-      'insecticida': { class: 'bg-warning', text: 'Insecticida', icon: '🦟' },
-      'desinfectante': { class: 'bg-secondary', text: 'Desinfectante', icon: '🧽' },
-      'otros': { class: 'bg-dark', text: 'Otros', icon: '📦' }
+      'vacuna': { class: 'bg-success text-white', text: 'Vacuna', icon: '💉' },
+      'medicamento': { class: 'bg-primary text-white', text: 'Medicamento', icon: '💊' },
+      'suplemento': { class: 'bg-info text-white', text: 'Suplemento', icon: '🧪' },
+      'insecticida': { class: 'bg-warning text-dark', text: 'Insecticida', icon: '🦟' },
+      'desinfectante': { class: 'bg-secondary text-white', text: 'Desinfectante', icon: '🧽' },
+      'otros': { class: 'bg-dark text-white', text: 'Otros', icon: '📦' }
     };
-    return tipos[tipo] || { class: 'bg-secondary', text: tipo, icon: '📦' };
+    return tipos[tipo] || { class: 'bg-secondary text-white', text: tipo, icon: '📦' };
   };
 
   const getEstadoStockBadge = (estado) => {
     const estados = {
-      'critico': { class: 'bg-danger', text: 'Crítico' },
-      'bajo': { class: 'bg-warning', text: 'Bajo' },
-      'normal': { class: 'bg-success', text: 'Normal' },
-      'alto': { class: 'bg-info', text: 'Alto' }
+      'critico': { class: 'bg-danger text-white fw-bold', text: 'Crítico' },
+      'bajo': { class: 'bg-warning text-dark fw-bold', text: 'Bajo' },
+      'normal': { class: 'bg-success text-white fw-bold', text: 'Normal' },
+      'alto': { class: 'bg-info text-white fw-bold', text: 'Alto' }
     };
-    return estados[estado] || { class: 'bg-secondary', text: estado };
+    return estados[estado] || { class: 'bg-secondary text-white', text: estado };
   };
 
   const calcularTotales = () => {

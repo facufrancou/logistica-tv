@@ -48,12 +48,12 @@
   --tamano-texto-xl: 1.25rem;
   --tamano-texto-2xl: 1.5rem;
   
-  /* Espaciado */
-  --espaciado-xs: 0.25rem;
-  --espaciado-sm: 0.5rem;
-  --espaciado-md: 1rem;
-  --espaciado-lg: 1.5rem;
-  --espaciado-xl: 2rem;
+  /* Espaciado optimizado para mejor uso de pantalla */
+  --espaciado-xs: 0.2rem;
+  --espaciado-sm: 0.4rem;
+  --espaciado-md: 0.8rem;
+  --espaciado-lg: 1.2rem;
+  --espaciado-xl: 1.6rem;
   
   /* Transiciones */
   --transicion-rapida: all 0.2s ease;

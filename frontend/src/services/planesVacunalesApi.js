@@ -281,6 +281,22 @@ export const regenerarCalendario = async (id, fechaData) => {
   });
 };
 
+// ===== EDICIÓN DE CALENDARIO =====
+
+export const editarFechaCalendario = async (id_cotizacion, id_calendario, fechaData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/editar-fecha`, {
+    method: 'PUT',
+    body: JSON.stringify(fechaData)
+  });
+};
+
+export const crearDesdoblamientoDosis = async (id_cotizacion, desdoblamientoData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/desdoblamiento`, {
+    method: 'POST',
+    body: JSON.stringify(desdoblamientoData)
+  });
+};
+
 // ===== CONTROL DE ENTREGAS =====
 
 export const marcarEntregaDosis = async (id_calendario, entregaData) => {
@@ -629,6 +645,8 @@ export const planesVacunalesApi = {
   getCalendarioVacunacion,
   actualizarEstadoDosis,
   regenerarCalendario,
+  editarFechaCalendario,
+  crearDesdoblamientoDosis,
   
   // Control de Entregas
   marcarEntregaDosis,

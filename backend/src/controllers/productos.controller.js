@@ -40,6 +40,51 @@ exports.getProductos = async (req, res) => {
   }
 };
 
+// GET /api/productos/disponibles - Solo productos con stock > 0
+exports.getProductosDisponibles = async (req, res) => {
+  try {
+    const { tipo_producto } = req.query;
+    
+    // Construir filtros - solo productos con stock > 0
+    const where = {
+      stock: {
+        gt: 0
+      }
+    };
+    
+    if (tipo_producto) {
+      where.tipo_producto = tipo_producto;
+    }
+
+    const productos = await prisma.producto.findMany({
+      where,
+      include: {
+        proveedores: {
+          select: {
+            nombre: true
+          }
+        }
+      },
+      orderBy: {
+        nombre: 'asc'
+      }
+    });
+
+    // Formatear respuesta para mantener compatibilidad con el frontend
+    const productosFormatted = productos.map(producto => ({
+      ...producto,
+      id_producto: Number(producto.id_producto),
+      id_proveedor: producto.id_proveedor ? Number(producto.id_proveedor) : null,
+      proveedor_nombre: producto.proveedores?.nombre || null
+    }));
+
+    res.json(productosFormatted);
+  } catch (error) {
+    console.error('Error al obtener productos disponibles:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 exports.createProducto = async (req, res) => {
   try {
     const { nombre, precio_unitario, descripcion, id_proveedor, tipo_producto } = req.body;

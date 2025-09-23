@@ -116,10 +116,7 @@
   color: #17a2b8 !important;
 }
 
-/* Tabla de Stock */
-.table-hover tbody tr:hover {
-  background-color: #f8f9fa;
-}
+/* Tabla de Stock sin efectos */
 
 /* Asegurar visibilidad de encabezados de tabla */
 .table thead th {
@@ -258,10 +255,6 @@
 .reserva-card {
   border-left: 4px solid #007bff;
   transition: all 0.2s ease-in-out;
-}
-
-.reserva-card:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .reserva-card.activa {

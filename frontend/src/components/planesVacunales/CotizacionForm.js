@@ -34,6 +34,7 @@ const CotizacionForm = () => {
     id_plan: planPreseleccionado || '',
     id_lista_precio: '',
     fecha_inicio_plan: '',
+    cantidad_animales: '',
     observaciones: ''
   });
 
@@ -63,6 +64,7 @@ const CotizacionForm = () => {
           id_lista_precio: cotizacion.id_lista_precio || '',
           fecha_inicio_plan: cotizacion.fecha_inicio_plan ? 
             new Date(cotizacion.fecha_inicio_plan).toISOString().split('T')[0] : '',
+          cantidad_animales: cotizacion.cantidad_animales || '',
           observaciones: cotizacion.observaciones || ''
         });
       }
@@ -167,6 +169,14 @@ const CotizacionForm = () => {
 
     if (!formData.id_plan) {
       newErrors.id_plan = 'Debe seleccionar un plan vacunal';
+    }
+
+    if (!formData.cantidad_animales) {
+      newErrors.cantidad_animales = 'Debe especificar la cantidad de pollos a vacunar';
+    } else if (parseInt(formData.cantidad_animales) <= 0) {
+      newErrors.cantidad_animales = 'La cantidad debe ser mayor a 0';
+    } else if (parseInt(formData.cantidad_animales) > 100000) {
+      newErrors.cantidad_animales = 'La cantidad no puede ser mayor a 100,000';
     }
 
     if (!formData.fecha_inicio_plan) {
@@ -320,7 +330,28 @@ const CotizacionForm = () => {
 
                   <div className="col-md-6">
                     <label className="form-label">
-                      Fecha de Inicio del Plan <span className="text-danger">*</span>
+                      Cantidad de Pollos a Vacunar <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      className={`form-control ${errors.cantidad_animales ? 'is-invalid' : ''}`}
+                      name="cantidad_animales"
+                      value={formData.cantidad_animales}
+                      onChange={handleInputChange}
+                      min="1"
+                      placeholder="Ej: 1000"
+                    />
+                    {errors.cantidad_animales && (
+                      <div className="invalid-feedback">{errors.cantidad_animales}</div>
+                    )}
+                    <small className="text-muted">
+                      Este valor determinará la cantidad total de vacunas necesarias
+                    </small>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      Fecha de Nacimiento/Inicio del Plan <span className="text-danger">*</span>
                     </label>
                     <input
                       type="date"
@@ -333,6 +364,9 @@ const CotizacionForm = () => {
                     {errors.fecha_inicio_plan && (
                       <div className="invalid-feedback">{errors.fecha_inicio_plan}</div>
                     )}
+                    <small className="text-muted">
+                      Fecha de nacimiento de los pollos o inicio programado del plan
+                    </small>
                   </div>
 
                   <div className="col-md-6">

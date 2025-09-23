@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -17,7 +17,9 @@ import {
   FaArrowLeft,
   FaInfoCircle,
   FaCalculator,
-  FaBalanceScale
+  FaBalanceScale,
+  FaPaw,
+  FaClipboardList
 } from 'react-icons/fa';
 import ClasificacionFiscal from '../liquidaciones/ClasificacionFiscal';
 import ResumenLiquidacion from '../liquidaciones/ResumenLiquidacion';
@@ -47,6 +49,9 @@ const CotizacionDetalle = () => {
   const [observacionesEstado, setObservacionesEstado] = useState('');
   const [mostrarClasificacion, setMostrarClasificacion] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
+  
+  // Ref para mantener la posición en la página
+  const clasificacionRef = useRef(null);
 
   useEffect(() => {
     cargarDatos();
@@ -378,7 +383,7 @@ const CotizacionDetalle = () => {
         {/* Panel Lateral */}
         <div className="col-lg-4">
           {/* Resumen Financiero */}
-          <div className="card mb-4 sticky-top">
+          <div className="card mb-4" style={{ position: 'sticky', top: '80px', zIndex: 999 }}>
             <div className="card-header">
               <h5 className="mb-0">
                 <FaMoneyBillWave className="me-2" />

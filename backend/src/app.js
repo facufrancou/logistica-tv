@@ -47,4 +47,9 @@ app.use('/api/dashboard', require('./routes/dashboard.routes'));
 // Nuevas rutas para liquidaciones y clasificación fiscal
 app.use('/api/liquidaciones', require('./routes/liquidaciones.routes'));
 
+// Nuevas funcionalidades Sprint 7-10: Remitos, Ventas Directas e Indicadores
+app.use('/remitos', require('./routes/remitos.routes'));
+app.use('/ventas-directas', require('./routes/ventasDirectas.routes'));
+app.use('/indicadores-stock', require('./routes/indicadoresStock.routes'));
+
 module.exports = app;

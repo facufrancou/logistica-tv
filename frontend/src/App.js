@@ -61,7 +61,7 @@ import PlanVacunalDetalle from "./components/planesVacunales/PlanVacunalDetalle"
 import ListasPreciosList from "./components/planesVacunales/ListasPreciosList";
 import CotizacionesList from "./components/planesVacunales/CotizacionesList";
 import CotizacionForm from "./components/planesVacunales/CotizacionForm";
-import CotizacionDetalle from "./components/planesVacunales/CotizacionDetalle";
+import CotizacionDetalle from "./components/planesVacunales/CotizacionDetalleOptimizado";
 import CalendarioVacunacion from "./components/planesVacunales/CalendarioVacunacion";
 import CalendariosVacunalesList from "./components/planesVacunales/CalendariosVacunalesList";
 
@@ -93,6 +93,12 @@ import NotasCreditoDebito from "./components/facturacion/NotasCreditoDebito";
 // Crear componentes faltantes como alias temporales
 const CobrosFacturacion = FacturasList; // Temporal - mismo componente
 const ReportesFacturacion = ReportesView; // Temporal - usar reportes existente
+
+// Nuevos componentes desarrollados
+import RemitosGenerator from "./components/remitos/RemitosGenerator";
+import VentasDirectasView from "./components/ventas-directas/VentasDirectasView";
+import IndicadoresStockPlan from "./components/indicadores-stock/IndicadoresStockPlan";
+import CalendarioVacunacionEditor from "./components/planesVacunales/CalendarioVacunacionEditor";
 
 import { getPedidos } from "./services/api";
 import { useEffect, useState, useContext } from "react";
@@ -182,6 +188,10 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/calendarios-vacunales"><FaCalendarAlt className="me-2" /> Calendarios Vacunales</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/remitos/generar"><FaFileInvoice className="me-2" /> Generar Remitos</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/indicadores-stock"><FaChartBar className="me-2" /> Indicadores Stock</Link></li>
               </ul>
             </li>
 
@@ -207,7 +217,7 @@ function Navbar() {
             </li>
 
             {/* 📊 Seguimiento (Sprint 4) */}
-            {/* <li className="nav-item dropdown">
+            <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -226,10 +236,10 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/cumplimiento"><FaClipboardList className="me-2" /> Cumplimiento</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/seguimiento/notificaciones"><FaBell className="me-2" /> Notificaciones</Link></li>
               </ul>
-            </li> */}
+            </li>
 
             {/* 💰 Facturación (Sprint 5) */}
-            {/* <li className="nav-item dropdown">
+            <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -250,10 +260,10 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/configuracion-facturacion"><FaCog className="me-2" /> Config. AFIP</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/reportes-facturacion"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
-            </li> */}
+            </li>
 
             {/* ⚖️ Liquidaciones */}
-            {/* <li className="nav-item dropdown">
+            <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -271,7 +281,7 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Clasificar Cotizaciones</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
-            </li> */}
+            </li>
 
             {/* 🚚 Logística */}
             <li className="nav-item dropdown">
@@ -354,7 +364,7 @@ function MainRoutes() {
   );
 
   return (
-    <div className="container-fluid px-3 px-md-4 py-4">
+    <div className="container-fluid px-2 py-2">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/pedido/acceso" element={<PedidoAcceso />} />
@@ -455,6 +465,40 @@ function MainRoutes() {
           element={
             <RutaPrivada>
               <CalendarioVacunacion />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/planes-vacunales/calendario/:cotizacionId/editar"
+          element={
+            <RutaPrivada>
+              <CalendarioVacunacionEditor />
+            </RutaPrivada>
+          }
+        />
+
+        {/* 📋 REMITOS Y VENTAS DIRECTAS */}
+        <Route
+          path="/remitos/generar"
+          element={
+            <RutaPrivada>
+              <RemitosGenerator />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/ventas-directas"
+          element={
+            <RutaPrivada>
+              <VentasDirectasView />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/indicadores-stock"
+          element={
+            <RutaPrivada>
+              <IndicadoresStockPlan />
             </RutaPrivada>
           }
         />

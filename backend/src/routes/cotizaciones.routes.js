@@ -54,4 +54,21 @@ router.post('/:id/finalizar-plan', validarSesion, cotizacionesController.finaliz
 // Obtener estado general del plan
 router.get('/:id/estado-plan', validarSesion, cotizacionesController.getEstadoPlan);
 
+// ===== NUEVAS FUNCIONALIDADES SPRINT 7 =====
+
+// Actualizar cantidad de animales
+router.put('/:id/cantidad-animales', validarSesion, cotizacionesController.actualizarCantidadAnimales);
+
+// Editar fecha programada en calendario
+router.put('/:id_cotizacion/calendario/:id_calendario/fecha', validarSesion, cotizacionesController.editarFechaCalendario);
+
+// Desdoblar una dosis del calendario
+router.post('/:id_cotizacion/calendario/:id_calendario/desdoblar', validarSesion, cotizacionesController.desdoblarDosis);
+
+// Obtener desdoblamientos de una dosis
+router.get('/calendario/:id_calendario/desdoblamientos', validarSesion, cotizacionesController.obtenerDesdoblamientos);
+
+// Eliminar un desdoblamiento
+router.delete('/calendario/:id_calendario/desdoblamiento', validarSesion, cotizacionesController.eliminarDesdoblamiento);
+
 module.exports = router;

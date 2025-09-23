@@ -58,6 +58,8 @@ model Cliente {
   pedido_tokens             PedidoToken[]
   pedidos                   Pedido[]
   productos_habilitados     ProductoHabilitado[]
+  remitos                   Remito[]
+  ventas_directas           VentaDirecta[]
 
   @@index([cuit], map: "idx_clientes_cuit")
   @@index([nombre], map: "idx_clientes_nombre")
@@ -107,6 +109,9 @@ model Producto {
   reservas_stock             ReservaStock[]
   retiros_campo              RetiroCampo[]
   control_entregas_vacunas   ControlEntregaVacunas[]
+  detalle_remito             DetalleRemito[]
+  detalle_venta_directa      DetalleVentaDirecta[]
+  indicadores_stock          IndicadorStockPlan[]
 
   @@index([id_proveedor], map: "id_proveedor")
   @@index([nombre], map: "idx_productos_nombre")
@@ -318,6 +323,7 @@ model PlanVacunal {
   cotizaciones     Cotizacion[]
   productos_plan   PlanProducto[]
   lista_precio     ListaPrecio?   @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction)
+  indicadores_stock IndicadorStockPlan[]
 
   @@index([estado], map: "idx_planes_estado")
   @@index([id_lista_precio], map: "idx_planes_lista_precio")
@@ -377,6 +383,7 @@ model Cotizacion {
   id_lista_precio            Int?
   estado                     estado_cotizacion         @default(en_proceso)
   fecha_inicio_plan          DateTime                  @db.Date
+  cantidad_animales          Int                       @default(0)
   precio_total               Decimal                   @db.Decimal(10, 2)
   observaciones              String?                   @db.Text
   fecha_envio                DateTime?                 @db.DateTime(0)
@@ -401,6 +408,7 @@ model Cotizacion {
   seguimiento_cumplimiento   SeguimientoCumplimiento[]
   resumen_liquidacion        ResumenLiquidacion?
   control_entregas_vacunas   ControlEntregaVacunas[]
+  remitos                    Remito[]
 
   @@index([id_cliente], map: "idx_cotizaciones_cliente")
   @@index([id_plan], map: "idx_cotizaciones_plan")
@@ -456,11 +464,16 @@ model CalendarioVacunacion {
   responsable_entrega        String?                  @db.VarChar(100)
   observaciones_entrega      String?                  @db.Text
   estado_entrega             estado_entrega           @default(pendiente)
+  es_desdoblamiento          Boolean                  @default(false)
+  dosis_original_id          Int?
+  numero_desdoblamiento      Int                      @default(1)
   created_at                 DateTime?                @default(now()) @db.DateTime(0)
   updated_at                 DateTime?                @default(now()) @db.DateTime(0)
   aplicaciones_dosis         AplicacionDosis[]
   cotizacion                 Cotizacion               @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
   producto                   Producto                 @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  dosis_original             CalendarioVacunacion?    @relation("DesdoblamientoDosis", fields: [dosis_original_id], references: [id_calendario])
+  desdoblamientos            CalendarioVacunacion[]   @relation("DesdoblamientoDosis")
   notificaciones_automaticas NotificacionAutomatica[]
   control_entregas           ControlEntregaVacunas[]
 
@@ -900,4 +913,147 @@ model ResumenLiquidacion {
   @@index([total_negro], map: "idx_resumen_total_negro")
   @@index([total_blanco], map: "idx_resumen_total_blanco")
   @@map("resumenes_liquidacion")
+}
+
+// NUEVOS MODELOS PARA REMITOS Y VENTAS DIRECTAS
+
+model Remito {
+  id_remito           Int      @id @default(autoincrement())
+  numero_remito       String   @unique @db.VarChar(50)
+  id_cotizacion       Int?
+  id_cliente          Int
+  id_venta_directa    Int?
+  fecha_emision       DateTime @db.DateTime(0)
+  fecha_entrega       DateTime? @db.DateTime(0)
+  tipo_remito         TipoRemito @default(plan_vacunal)
+  estado_remito       EstadoRemito @default(pendiente)
+  precio_total        Decimal? @db.Decimal(10, 2)
+  observaciones       String?  @db.Text
+  created_by          Int?
+  created_at          DateTime @default(now()) @db.DateTime(0)
+  updated_at          DateTime @updatedAt @db.DateTime(0)
+  
+  cliente             Cliente @relation(fields: [id_cliente], references: [id_cliente])
+  cotizacion          Cotizacion? @relation(fields: [id_cotizacion], references: [id_cotizacion])
+  venta_directa       VentaDirecta? @relation(fields: [id_venta_directa], references: [id_venta_directa])
+  detalle_remito      DetalleRemito[]
+  
+  @@index([numero_remito], map: "idx_remito_numero")
+  @@index([fecha_emision], map: "idx_remito_fecha_emision")
+  @@index([estado_remito], map: "idx_remito_estado")
+  @@index([tipo_remito], map: "idx_remito_tipo")
+  @@map("remitos")
+}
+
+model DetalleRemito {
+  id_detalle_remito   Int @id @default(autoincrement())
+  id_remito           Int
+  id_producto         Int
+  cantidad_entregada  Int
+  precio_unitario     Decimal? @db.Decimal(10, 2)
+  subtotal            Decimal? @db.Decimal(10, 2)
+  lote_producto       String? @db.VarChar(100)
+  fecha_vencimiento   DateTime? @db.DateTime(0)
+  observaciones       String? @db.Text
+  created_at          DateTime @default(now()) @db.DateTime(0)
+  
+  remito              Remito @relation(fields: [id_remito], references: [id_remito], onDelete: Cascade)
+  producto            Producto @relation(fields: [id_producto], references: [id_producto])
+  
+  @@index([id_remito], map: "idx_detalle_remito_remito")
+  @@index([id_producto], map: "idx_detalle_remito_producto")
+  @@map("detalle_remitos")
+}
+
+model VentaDirecta {
+  id_venta_directa    Int      @id @default(autoincrement())
+  numero_venta        String   @unique @db.VarChar(50)
+  id_cliente          Int
+  fecha_venta         DateTime @db.DateTime(0)
+  precio_total        Decimal  @db.Decimal(10, 2)
+  estado_venta        EstadoVenta @default(pendiente)
+  observaciones       String?  @db.Text
+  created_by          Int?
+  created_at          DateTime @default(now()) @db.DateTime(0)
+  updated_at          DateTime @updatedAt @db.DateTime(0)
+  
+  cliente             Cliente @relation(fields: [id_cliente], references: [id_cliente])
+  detalle_venta       DetalleVentaDirecta[]
+  remitos             Remito[]
+  
+  @@index([numero_venta], map: "idx_venta_directa_numero")
+  @@index([fecha_venta], map: "idx_venta_directa_fecha")
+  @@index([estado_venta], map: "idx_venta_directa_estado")
+  @@map("ventas_directas")
+}
+
+model DetalleVentaDirecta {
+  id_detalle_venta    Int @id @default(autoincrement())
+  id_venta_directa    Int
+  id_producto         Int
+  cantidad            Int
+  precio_unitario     Decimal @db.Decimal(10, 2)
+  subtotal            Decimal @db.Decimal(10, 2)
+  observaciones       String? @db.Text
+  created_at          DateTime @default(now()) @db.DateTime(0)
+  
+  venta_directa       VentaDirecta @relation(fields: [id_venta_directa], references: [id_venta_directa], onDelete: Cascade)
+  producto            Producto @relation(fields: [id_producto], references: [id_producto])
+  
+  @@index([id_venta_directa], map: "idx_detalle_venta_directa_venta")
+  @@index([id_producto], map: "idx_detalle_venta_directa_producto")
+  @@map("detalle_ventas_directas")
+}
+
+model IndicadorStockPlan {
+  id_indicador        Int      @id @default(autoincrement())
+  id_plan_vacunal     Int
+  id_producto         Int
+  stock_necesario     Int
+  stock_reservado     Int      @default(0)
+  stock_disponible    Int      @default(0)
+  stock_minimo        Int?
+  fecha_calculo       DateTime @db.DateTime(0)
+  estado_stock        EstadoStock @default(suficiente)
+  observaciones       String?  @db.Text
+  created_at          DateTime @default(now()) @db.DateTime(0)
+  updated_at          DateTime @updatedAt @db.DateTime(0)
+  
+  plan_vacunal        PlanVacunal @relation(fields: [id_plan_vacunal], references: [id_plan])
+  producto            Producto @relation(fields: [id_producto], references: [id_producto])
+  
+  @@unique([id_plan_vacunal, id_producto])
+  @@index([fecha_calculo], map: "idx_indicador_stock_fecha")
+  @@index([estado_stock], map: "idx_indicador_stock_estado")
+  @@map("indicadores_stock_plan")
+}
+
+// NUEVOS ENUMS
+
+enum TipoRemito {
+  plan_vacunal
+  venta_directa
+}
+
+enum EstadoRemito {
+  pendiente
+  preparando
+  listo_entrega
+  entregado
+  cancelado
+}
+
+enum EstadoVenta {
+  pendiente
+  confirmada
+  preparando
+  entregada
+  cancelada
+}
+
+enum EstadoStock {
+  suficiente
+  bajo
+  insuficiente
+  critico
 }
