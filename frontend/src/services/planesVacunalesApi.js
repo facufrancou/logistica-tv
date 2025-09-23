@@ -316,6 +316,25 @@ export const getControlEntregas = async (id_cotizacion, filters = {}) => {
   return await fetchConSesion(url);
 };
 
+export const generarRemitoEntrega = async (id_calendario, entregaData = {}) => {
+  const response = await fetch(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/remito`, {
+    method: 'POST',
+    credentials: 'include', // Usar cookies de sesión
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify(entregaData)
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
+    throw new Error(error.message || 'Error al generar el remito PDF');
+  }
+  
+  return await response.blob();
+};
+
 export const ajustarStockCalendario = async (id_cotizacion, id_calendario, ajusteData) => {
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/ajustar-stock`, {
     method: 'PUT',
@@ -651,6 +670,7 @@ export const planesVacunalesApi = {
   // Control de Entregas
   marcarEntregaDosis,
   getControlEntregas,
+  generarRemitoEntrega,
   ajustarStockCalendario,
   finalizarPlan,
   getEstadoPlan,

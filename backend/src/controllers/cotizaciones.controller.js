@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const PriceCalculator = require('../lib/priceCalculator');
+const pdfService = require('../services/pdfService');
 
 // ===== FUNCIONES AUXILIARES =====
 
@@ -1541,6 +1542,7 @@ exports.marcarEntregaDosis = async (req, res) => {
     const { 
       cantidad_entregada, 
       responsable_entrega, 
+      responsable_recibe,
       observaciones_entrega,
       tipo_entrega = 'completa' 
     } = req.body;
@@ -1598,12 +1600,17 @@ exports.marcarEntregaDosis = async (req, res) => {
       // Actualizar calendario con la entrega
       const nuevoEstadoEntrega = nuevasEntregadas >= calendarioExistente.cantidad_dosis ? 'entregada' : 'parcial';
       
+      // Concatenar responsable entrega y responsable recibe
+      const responsableCompleto = responsable_recibe 
+        ? `Entrega: ${responsable_entrega || 'Sistema'} | Recibe: ${responsable_recibe}`
+        : responsable_entrega || 'Sistema';
+      
       await tx.calendarioVacunacion.update({
         where: { id_calendario: parseInt(id_calendario) },
         data: {
           dosis_entregadas: nuevasEntregadas,
           fecha_entrega: new Date(),
-          responsable_entrega,
+          responsable_entrega: responsableCompleto,
           observaciones_entrega,
           estado_entrega: nuevoEstadoEntrega,
           updated_at: new Date()
@@ -1618,7 +1625,7 @@ exports.marcarEntregaDosis = async (req, res) => {
           id_producto: calendarioExistente.id_producto,
           cantidad_entregada,
           fecha_entrega: new Date(),
-          responsable_entrega,
+          responsable_entrega: responsableCompleto,
           observaciones: observaciones_entrega,
           tipo_entrega,
           stock_afectado: cantidad_entregada,
@@ -2474,6 +2481,156 @@ exports.eliminarDesdoblamiento = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al eliminar el desdoblamiento'
+    });
+  }
+};
+
+/**
+ * Generar remito PDF de entrega de dosis
+ */
+exports.generarRemitoPDF = async (req, res) => {
+  try {
+    const { id_calendario } = req.params;
+    
+    // Obtener datos adicionales del body si es una petición POST
+    const {
+      cantidad_entregada,
+      responsable_entrega,
+      responsable_recibe,
+      observaciones_entrega,
+      tipo_entrega
+    } = req.body || {};
+
+    // Obtener datos del calendario con todas las relaciones necesarias
+    const calendario = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(id_calendario) },
+      include: {
+        cotizacion: {
+          include: {
+            cliente: true
+          }
+        },
+        producto: true,
+        control_entregas: {
+          orderBy: { fecha_entrega: 'desc' },
+          take: 1 // Solo la última entrega
+        }
+      }
+    });
+
+    if (!calendario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Calendario no encontrado'
+      });
+    }
+
+    // Usar datos del body si están disponibles (POST), sino usar última entrega (GET)
+    let datosEntrega;
+    if (req.method === 'POST' && cantidad_entregada !== undefined) {
+      // Usar datos del POST request
+      datosEntrega = {
+        cantidad_entregada: cantidad_entregada,
+        tipo_entrega: tipo_entrega || 'completa',
+        fecha_entrega: new Date(),
+        responsable_entrega: responsable_entrega || 'Sistema',
+        responsable_recibe: responsable_recibe || '',
+        observaciones: observaciones_entrega || '',
+        estado: tipo_entrega === 'parcial' ? 'parcial' : 'completo'
+      };
+    } else {
+      // Usar última entrega registrada (método GET)
+      if (!calendario.control_entregas.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'No hay entregas registradas para este calendario'
+        });
+      }
+      const ultimaEntrega = calendario.control_entregas[0];
+      
+      // Separar responsable_entrega si contiene ambos datos
+      let responsableEntrega = ultimaEntrega.responsable_entrega || '';
+      let responsableRecibe = '';
+      
+      if (responsableEntrega.includes('|')) {
+        const partes = responsableEntrega.split('|');
+        responsableEntrega = partes[0]?.replace('Entrega:', '').trim() || '';
+        responsableRecibe = partes[1]?.replace('Recibe:', '').trim() || '';
+      }
+      
+      datosEntrega = {
+        cantidad_entregada: ultimaEntrega.cantidad_entregada,
+        tipo_entrega: ultimaEntrega.tipo_entrega,
+        fecha_entrega: ultimaEntrega.fecha_entrega,
+        responsable_entrega: responsableEntrega,
+        responsable_recibe: responsableRecibe,
+        observaciones: ultimaEntrega.observaciones || '',
+        estado: calendario.estado_entrega
+      };
+    }
+
+    // Calcular dosis restantes según el tipo de entrega
+    let dosisRestantes;
+    if (datosEntrega.tipo_entrega === 'completa') {
+      dosisRestantes = 0; // Si es completa, no quedan restantes
+    } else {
+      // Para entregas parciales, calcular las restantes de esa semana específica
+      dosisRestantes = calendario.cantidad_dosis - datosEntrega.cantidad_entregada;
+    }
+
+    // Preparar datos para el template
+    const pdfData = {
+      cliente: {
+        nombre: calendario.cotizacion.cliente.nombre,
+        email: calendario.cotizacion.cliente.email,
+        telefono: calendario.cotizacion.cliente.telefono,
+        direccion: calendario.cotizacion.cliente.direccion,
+        localidad: calendario.cotizacion.cliente.localidad,
+        cuit: calendario.cotizacion.cliente.cuit
+      },
+      plan: {
+        numeroCotizacion: calendario.cotizacion.numero_cotizacion,
+        numeroSemana: calendario.numero_semana,
+        fechaProgramada: calendario.fecha_programada,
+        cantidadAnimales: calendario.cotizacion.cantidad_animales,
+        estado: calendario.cotizacion.estado,
+        fechaInicio: calendario.cotizacion.fecha_inicio_plan
+      },
+      producto: {
+        nombre: calendario.producto.nombre,
+        descripcion: calendario.producto.descripcion,
+        cantidadProgramada: calendario.cantidad_dosis
+      },
+      entrega: {
+        cantidadEntregada: datosEntrega.cantidad_entregada,
+        tipoEntrega: datosEntrega.tipo_entrega,
+        fechaEntrega: datosEntrega.fecha_entrega,
+        responsable: datosEntrega.responsable_entrega,
+        responsableRecibe: datosEntrega.responsable_recibe,
+        observaciones: datosEntrega.observaciones,
+        estado: datosEntrega.estado,
+        // Usar las dosis restantes calculadas
+        dosisRestantes: dosisRestantes,
+        cantidadProgramadaTotal: calendario.cantidad_dosis
+      }
+    };
+
+    // Generar PDF
+    const pdfBuffer = await pdfService.generateRemitoPDF(pdfData);
+
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="remito-entrega-${calendario.cotizacion.numero_cotizacion}-semana-${calendario.numero_semana}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    // Enviar PDF
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error al generar remito PDF:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar el remito PDF: ' + error.message
     });
   }
 };

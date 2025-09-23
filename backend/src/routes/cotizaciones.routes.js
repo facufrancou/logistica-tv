@@ -71,4 +71,8 @@ router.get('/calendario/:id_calendario/desdoblamientos', validarSesion, cotizaci
 // Eliminar un desdoblamiento
 router.delete('/calendario/:id_calendario/desdoblamiento', validarSesion, cotizacionesController.eliminarDesdoblamiento);
 
+// Generar remito PDF de entrega
+router.get('/calendario/:id_calendario/remito', validarSesion, cotizacionesController.generarRemitoPDF);
+router.post('/calendario/:id_calendario/remito', validarSesion, cotizacionesController.generarRemitoPDF);
+
 module.exports = router;

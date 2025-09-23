@@ -16,7 +16,8 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaBan,
-  FaEye
+  FaEye,
+  FaPrint
 } from 'react-icons/fa';
 import * as planesApi from '../../services/planesVacunalesApi';
 import './PlanesVacunales.css';
@@ -41,8 +42,10 @@ const CalendarioVacunacion = () => {
   const [entregaForm, setEntregaForm] = useState({
     cantidad_entregada: 0,
     responsable_entrega: '',
+    responsable_recibe: '',
     observaciones_entrega: '',
-    tipo_entrega: 'completa'
+    tipo_entrega: 'completa',
+    imprimir_remito: false
   });
 
   useEffect(() => {
@@ -88,7 +91,31 @@ const CalendarioVacunacion = () => {
         return;
       }
 
-      await planesApi.marcarEntregaDosis(calendarioSeleccionado.id_calendario, entregaForm);
+      const response = await planesApi.marcarEntregaDosis(calendarioSeleccionado.id_calendario, entregaForm);
+      
+      // Si el usuario seleccionó imprimir remito, generar PDF
+      if (entregaForm.imprimir_remito) {
+        try {
+          const pdfBlob = await planesApi.generarRemitoEntrega(calendarioSeleccionado.id_calendario, {
+            cantidad_entregada: entregaForm.cantidad_entregada,
+            responsable_entrega: entregaForm.responsable_entrega,
+            responsable_recibe: entregaForm.responsable_recibe,
+            observaciones_entrega: entregaForm.observaciones_entrega,
+            tipo_entrega: entregaForm.tipo_entrega
+          });
+          const url = window.URL.createObjectURL(pdfBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `remito-entrega-semana-${calendarioSeleccionado.numero_semana}-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (pdfError) {
+          console.error('Error al generar remito PDF:', pdfError);
+          alert('Entrega registrada correctamente, pero hubo un error al generar el remito PDF');
+        }
+      }
       
       // Recargar datos
       await cargarDatosIniciales();
@@ -99,8 +126,10 @@ const CalendarioVacunacion = () => {
       setEntregaForm({
         cantidad_entregada: 0,
         responsable_entrega: '',
+        responsable_recibe: '',
         observaciones_entrega: '',
-        tipo_entrega: 'completa'
+        tipo_entrega: 'completa',
+        imprimir_remito: false
       });
       
       alert('Entrega registrada correctamente');
@@ -134,10 +163,107 @@ const CalendarioVacunacion = () => {
     setEntregaForm({
       cantidad_entregada: calendarioItem.cantidad_dosis - (calendarioItem.dosis_entregadas || 0),
       responsable_entrega: '',
+      responsable_recibe: '',
       observaciones_entrega: '',
-      tipo_entrega: 'completa'
+      tipo_entrega: 'completa',
+      imprimir_remito: false
     });
     setShowEntregaModal(true);
+  };
+
+  const reimprimirRemito = async (calendarioItem) => {
+    try {
+      console.log('Generando remito para calendario:', calendarioItem.id_calendario);
+      console.log('Datos del calendario:', {
+        id: calendarioItem.id_calendario,
+        semana: calendarioItem.numero_semana,
+        estado: calendarioItem.estado_entrega,
+        dosis_entregadas: calendarioItem.dosis_entregadas
+      });
+      
+      // Verificar que tenga entregas antes de intentar
+      if (!calendarioItem.dosis_entregadas || calendarioItem.dosis_entregadas === 0) {
+        alert('No hay entregas registradas para esta semana. No se puede generar el remito.');
+        return;
+      }
+      
+      // Usar método GET para reimprimir con datos existentes
+      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
+        console.error('Error del servidor:', error);
+        throw new Error(error.message || 'Error al generar el remito PDF');
+      }
+      
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `remito-entrega-semana-${calendarioItem.numero_semana}-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Remito descargado exitosamente');
+    } catch (error) {
+      console.error('Error al reimprimir remito:', error);
+      alert('Error al generar el remito: ' + error.message);
+    }
+  };
+
+  const reimprimirRemitoPorCalendario = async (id_calendario) => {
+    try {
+      console.log('Generando remito para calendario ID:', id_calendario);
+      
+      // Buscar el item del calendario para obtener el número de semana
+      const calendarioItem = calendario.find(item => item.id_calendario === id_calendario);
+      const numeroSemana = calendarioItem ? calendarioItem.numero_semana : 'X';
+      
+      console.log('Datos encontrados:', {
+        id: id_calendario,
+        semana: numeroSemana,
+        estado: calendarioItem?.estado_entrega,
+        encontrado: !!calendarioItem
+      });
+      
+      // Usar método GET para reimprimir con datos existentes
+      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${id_calendario}/remito`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
+        console.error('Error del servidor:', error);
+        throw new Error(error.message || 'Error al generar el remito PDF');
+      }
+      
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `remito-entrega-semana-${numeroSemana}-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Remito descargado exitosamente');
+    } catch (error) {
+      console.error('Error al reimprimir remito:', error);
+      alert('Error al generar el remito: ' + error.message);
+    }
   };
 
   const getEstadoBadge = (estado) => {
@@ -378,6 +504,15 @@ const CalendarioVacunacion = () => {
                               <FaCheck />
                             </button>
                           )}
+                          {item.dosis_entregadas > 0 && (
+                            <button
+                              className="btn btn-sm btn-success me-2"
+                              onClick={() => reimprimirRemito(item)}
+                              title="Reimprimir remito"
+                            >
+                              <FaPrint />
+                            </button>
+                          )}
                           <button
                             className="btn btn-sm btn-outline-info"
                             onClick={() => {
@@ -410,6 +545,7 @@ const CalendarioVacunacion = () => {
                     <th>Tipo</th>
                     <th>Responsable</th>
                     <th>Usuario</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -445,11 +581,20 @@ const CalendarioVacunacion = () => {
                       <td>
                         <small>{entrega.usuario_nombre}</small>
                       </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-success"
+                          onClick={() => reimprimirRemitoPorCalendario(entrega.id_calendario)}
+                          title="Reimprimir remito"
+                        >
+                          <FaPrint />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {controlEntregas.length === 0 && (
                     <tr>
-                      <td colSpan="7" className="text-center text-muted">
+                      <td colSpan="8" className="text-center text-muted">
                         <em>No hay entregas registradas</em>
                       </td>
                     </tr>
@@ -563,7 +708,22 @@ const CalendarioVacunacion = () => {
                           ...entregaForm,
                           responsable_entrega: e.target.value
                         })}
-                        placeholder="Nombre del responsable"
+                        placeholder="Quien entrega las dosis"
+                      />
+                    </div>
+                    
+                    <div className="mb-3">
+                      <label className="form-label">Responsable que Recibe *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={entregaForm.responsable_recibe}
+                        onChange={(e) => setEntregaForm({
+                          ...entregaForm,
+                          responsable_recibe: e.target.value
+                        })}
+                        placeholder="Quien recibe las dosis"
+                        required
                       />
                     </div>
                     
@@ -596,6 +756,27 @@ const CalendarioVacunacion = () => {
                         })}
                         placeholder="Observaciones adicionales..."
                       />
+                    </div>
+                    
+                    <div className="mb-3">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="imprimirRemito"
+                          checked={entregaForm.imprimir_remito}
+                          onChange={(e) => setEntregaForm({
+                            ...entregaForm,
+                            imprimir_remito: e.target.checked
+                          })}
+                        />
+                        <label className="form-check-label" htmlFor="imprimirRemito">
+                          <strong>¿Imprimir remito de entrega?</strong>
+                          <small className="d-block text-muted">
+                            Se generará un PDF con los detalles de la entrega
+                          </small>
+                        </label>
+                      </div>
                     </div>
                   </>
                 )}
