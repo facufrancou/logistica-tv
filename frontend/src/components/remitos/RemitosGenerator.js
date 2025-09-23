@@ -15,6 +15,7 @@ import {
   FaExclamationTriangle
 } from 'react-icons/fa';
 import { useNotification } from '../../context/NotificationContext';
+import LoadingSpinner from '../common/LoadingSpinner';
 import './Remitos.css';
 
 const RemitosGenerator = () => {
@@ -22,6 +23,7 @@ const RemitosGenerator = () => {
   const { showSuccess, showError, showWarning } = useNotification();
   
   const [loading, setLoading] = useState(true);
+  const [generandoRemito, setGenerandoRemito] = useState(false);
   const [cotizaciones, setCotizaciones] = useState([]);
   const [filtros, setFiltros] = useState({
     busqueda: '',
@@ -76,7 +78,11 @@ const RemitosGenerator = () => {
   };
 
   const handleGenerarRemito = async () => {
+    setGenerandoRemito(true);
     try {
+      // Delay mínimo para mostrar la animación
+      const startTime = Date.now();
+      
       const response = await fetch(`http://localhost:3001/remitos/cotizacion/${cotizacionSeleccionada.id_cotizacion}`, {
         method: 'POST',
         headers: {
@@ -94,6 +100,14 @@ const RemitosGenerator = () => {
       }
 
       const data = await response.json();
+      
+      // Asegurar que el loading se muestre por al menos 2 segundos
+      const elapsedTime = Date.now() - startTime;
+      const minLoadingTime = 2000;
+      if (elapsedTime < minLoadingTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+      }
+      
       showSuccess('Éxito', `Remito ${data.data.numero_remito} generado correctamente`);
       setShowGenerarModal(false);
       setCotizacionSeleccionada(null);
@@ -105,11 +119,17 @@ const RemitosGenerator = () => {
     } catch (error) {
       console.error('Error generando remito:', error);
       showError('Error', 'No se pudo generar el remito');
+    } finally {
+      setGenerandoRemito(false);
     }
   };
 
   const handleImprimirRemito = async (idRemito) => {
+    setGenerandoRemito(true);
     try {
+      // Delay mínimo para mostrar la animación
+      const startTime = Date.now();
+      
       const response = await fetch(`http://localhost:3001/remitos/${idRemito}/pdf`, {
         credentials: 'include'
       });
@@ -119,6 +139,14 @@ const RemitosGenerator = () => {
       }
 
       const blob = await response.blob();
+      
+      // Asegurar que el loading se muestre por al menos 1.5 segundos
+      const elapsedTime = Date.now() - startTime;
+      const minLoadingTime = 1500;
+      if (elapsedTime < minLoadingTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+      }
+      
       const url = window.URL.createObjectURL(blob);
       
       // Abrir en nueva ventana para imprimir
@@ -129,6 +157,8 @@ const RemitosGenerator = () => {
     } catch (error) {
       console.error('Error imprimiendo remito:', error);
       showError('Error', 'No se pudo imprimir el remito');
+    } finally {
+      setGenerandoRemito(false);
     }
   };
 
@@ -475,10 +505,47 @@ const RemitosGenerator = () => {
                   type="button" 
                   className="btn btn-success"
                   onClick={handleGenerarRemito}
+                  disabled={generandoRemito}
                 >
-                  <FaFileInvoice className="me-1" />
-                  Generar Remito
+                  {generandoRemito ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <FaFileInvoice className="me-1" />
+                      Generar Remito
+                    </>
+                  )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Loading para Generación de Remitos */}
+      {generandoRemito && (
+        <div className="modal show d-block loading-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
+          <div className="modal-dialog modal-dialog-centered loading-modal-enter-active">
+            <div className="modal-content border-0 shadow-lg loading-modal-content">
+              <div className="modal-body text-center p-5">
+                <LoadingSpinner 
+                  message="Procesando remito" 
+                  size="lg" 
+                />
+                <div className="mt-4">
+                  <div className="progress mb-3" style={{ height: '6px' }}>
+                    <div 
+                      className="progress-bar progress-bar-striped progress-bar-animated bg-success loading-progress" 
+                      style={{ width: '100%' }}
+                    ></div>
+                  </div>
+                  <small className="text-muted loading-text">
+                    Por favor no cierre esta ventana mientras se procesa el documento
+                  </small>
+                </div>
               </div>
             </div>
           </div>

@@ -1,403 +1,441 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Remito de Entrega - Plan Vacunal</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 10px;
+        line-height: 1.2;
+        color: #000;
+        background: white;
+        margin: 10px;
+        min-height: calc(297mm - 20mm); /* A4 height minus margins */
+        display: flex;
+        flex-direction: column;
+      }
+
+      .content-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .main-content {
+        flex: 1;
+      }
+
+      .header {
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo-section {
+        flex: 1;
+      }
+
+      .logo {
+        width: 80px;
+        height: auto;
+        margin-bottom: 5px;
+      }
+
+      .company-info {
+        color: #000;
+        font-weight: bold;
+      }
+
+      .company-name {
+        font-size: 14px;
+        color: #000;
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
+
+      .document-info {
+        text-align: right;
+        flex: 1;
+      }
+
+      .document-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 8px;
+      }
+
+      .document-number {
+        font-size: 12px;
+        font-weight: bold;
+        background: #f8f9fa;
+        padding: 6px 10px;
+        border-radius: 4px;
+        border: 1px solid #000;
+      }
+
+      .info-section {
+        margin-bottom: 12px;
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #000;
+      }
+
+      .section-title {
+        font-size: 12px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 6px;
+        border-bottom: 1px solid #000;
+        padding-bottom: 3px;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .info-item {
+        margin-bottom: 4px;
+      }
+
+      .info-label {
+        font-weight: bold;
+        color: #000;
+        display: inline-block;
+        width: 80px;
+      }
+
+      .info-value {
+        color: #000;
+      }
+
+      .entrega-details {
+        background: white;
+        border: 2px solid #000;
+        border-radius: 6px;
+        padding: 12px;
+        margin: 12px 0;
+      }
+
+      .entrega-title {
+        font-size: 14px;
+        font-weight: bold;
+        color: #000;
+        text-align: center;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .entrega-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        text-align: center;
+      }
+
+      .entrega-item {
+        background: #f8f9fa;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #000;
+      }
+
+      .entrega-item-label {
+        font-size: 9px;
+        color: #000;
+        text-transform: uppercase;
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
+
+      .entrega-item-value {
+        font-size: 12px;
+        font-weight: bold;
+        color: #000;
+      }
+
+      .productos-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+        font-size: 9px;
+      }
+
+      .productos-table th,
+      .productos-table td {
+        border: 1px solid #000;
+        padding: 4px;
+        text-align: left;
+      }
+
+      .productos-table th {
+        background: #000;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      .productos-table td {
+        background: white;
+        color: #000;
+      }
+
+      .productos-table .cantidad {
+        text-align: center;
+        font-weight: bold;
+        color: #000;
+      }
+
+      .observaciones {
+        margin-top: 12px;
+        padding: 8px;
+        background: #f8f9fa;
+        border: 1px solid #000;
+        border-radius: 4px;
+      }
+
+      .observaciones-title {
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 4px;
+      }
+
+      .observaciones-text {
+        color: #000;
+        font-style: italic;
+      }
+
+      .footer {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #000;
+        text-align: center;
+      }
+
+      .signatures {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: auto;
+        padding-top: 20px;
+      }
+
+      .signature-box {
+        text-align: center;
+        padding: 15px 0;
+      }
+
+      .signature-line {
+        border-top: 1px solid #000;
+        margin-bottom: 3px;
+        height: 25px;
+      }
+
+      .signature-label {
+        font-size: 10px;
+        color: #000;
+        font-weight: bold;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        font-size: 9px;
+        font-weight: bold;
+        text-transform: uppercase;
+        border-radius: 3px;
+        background: #f8f9fa;
+        color: #000;
+        border: 1px solid #000;
+      }
+
+      @media print {
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #000;
-            background: white;
-            margin: 20px;
+          margin: 0;
         }
-        
         .header {
-            border-bottom: 2px solid #000;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+          page-break-inside: avoid;
         }
-        
-        .logo-section {
-            flex: 1;
-        }
-        
-        .logo {
-            width: 120px;
-            height: auto;
-            margin-bottom: 10px;
-        }
-        
-        .company-info {
-            color: #000;
-            font-weight: bold;
-        }
-        
-        .company-name {
-            font-size: 18px;
-            color: #000;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .document-info {
-            text-align: right;
-            flex: 1;
-        }
-        
-        .document-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 10px;
-        }
-        
-        .document-number {
-            font-size: 14px;
-            font-weight: bold;
-            background: #f8f9fa;
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #000;
-        }
-        
-        .info-section {
-            margin-bottom: 25px;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #000;
-        }
-        
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .info-item {
-            margin-bottom: 8px;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            color: #000;
-            display: inline-block;
-            width: 100px;
-        }
-        
-        .info-value {
-            color: #000;
-        }
-        
         .entrega-details {
-            background: white;
-            border: 2px solid #000;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
+          page-break-inside: avoid;
         }
-        
-        .entrega-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
-            text-align: center;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .content-wrapper {
+          min-height: 100vh;
         }
-        
-        .entrega-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-            text-align: center;
-        }
-        
-        .entrega-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #000;
-        }
-        
-        .entrega-item-label {
-            font-size: 10px;
-            color: #000;
-            text-transform: uppercase;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .entrega-item-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
-        }
-        
-        .productos-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 10px;
-        }
-        
-        .productos-table th,
-        .productos-table td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-        }
-        
-        .productos-table th {
-            background: #000;
-            color: white;
-            font-weight: bold;
-            text-align: center;
-        }
-        
-        .productos-table td {
-            background: white;
-            color: #000;
-        }
-        
-        .productos-table .cantidad {
-            text-align: center;
-            font-weight: bold;
-            color: #000;
-        }
-        
-        .observaciones {
-            margin-top: 25px;
-            padding: 15px;
-            background: #f8f9fa;
-            border: 1px solid #000;
-            border-radius: 6px;
-        }
-        
-        .observaciones-title {
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 8px;
-        }
-        
-        .observaciones-text {
-            color: #000;
-            font-style: italic;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #000;
-            text-align: center;
-        }
-        
-        .signatures {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60px;
-            margin-top: 40px;
-        }
-        
-        .signature-box {
-            text-align: center;
-            padding: 20px 0;
-        }
-        
-        .signature-line {
-            border-top: 1px solid #000;
-            margin-bottom: 5px;
-            height: 40px;
-        }
-        
-        .signature-label {
-            font-size: 10px;
-            color: #000;
-            font-weight: bold;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            font-size: 9px;
-            font-weight: bold;
-            text-transform: uppercase;
-            border-radius: 3px;
-            background: #f8f9fa;
-            color: #000;
-            border: 1px solid #000;
-        }
-        
-        @media print {
-            body {
-                margin: 0;
-            }
-            .header {
-                page-break-inside: avoid;
-            }
-            .entrega-details {
-                page-break-inside: avoid;
-            }
-        }
+      }
+
+      @page {
+        size: A4;
+        margin: 10mm;
+      }
     </style>
-</head>
-<body>
-    <div class="header">
-        <div class="logo-section">
-            <!-- Logo placeholder - se puede agregar logo real aquí -->
-            <div class="company-name">TIERRA VOLGA</div>
+  </head>
+  <body>
+    <div class="content-wrapper">
+      <div class="main-content">
+        <div class="header">
+          <div class="logo-section">
+            <!-- Logo de la empresa -->
+            <img
+              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIUAAAAoCAYAAADQWDkMAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEo2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI1LTAyLTA0PC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkV4dElkPmZjZGI3MTYwLTMwMmMtNDI5Yy05YjVjLWJlMzMwNjk4MzliYjwvQXR0cmliOkV4dElkPgogICAgIDxBdHRyaWI6RmJJZD41MjUyNjU5MTQxNzk1ODA8L0F0dHJpYjpGYklkPgogICAgIDxBdHRyaWI6VG91Y2hUeXBlPjI8L0F0dHJpYjpUb3VjaFR5cGU+CiAgICA8L3JkZjpsaT4KICAgPC9yZGY6U2VxPgogIDwvQXR0cmliOkFkcz4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PScnCiAgeG1sbnM6ZGM9J2h0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvJz4KICA8ZGM6dGl0bGU+CiAgIDxyZGY6QWx0PgogICAgPHJkZjpsaSB4bWw6bGFuZz0neC1kZWZhdWx0Jz5Uw610dWxvIHByaW1hcmlvIC0gMTwvcmRmOmxpPgogICA8L3JkZjpBbHQ+CiAgPC9kYzp0aXRsZT4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRp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"
+              alt="Logo Logística TV"
+              style="width: 200px; height: auto"
+            />
+
+            <br>
+            <br>
+            
             <div class="company-info">
-                Sistema de Gestión Veterinaria<br>
-                Planes Vacunales y Logística
+              Sistema de Gestión Veterinaria<br />
+              Planes Vacunales y Logística
             </div>
-        </div>
-        <div class="document-info">
+          </div>
+          <div class="document-info">
             <div class="document-title">REMITO DE ENTREGA</div>
             <div class="document-number">N° {{numeroRemito}}</div>
-            <div style="margin-top: 10px; font-size: 11px;">
-                <strong>Fecha:</strong> {{fechaEmision}}<br>
-                <strong>Hora:</strong> {{horaEmision}}
+            <div style="margin-top: 8px; font-size: 10px">
+              <strong>Fecha:</strong> {{fechaEmision}}<br />
+              <strong>Hora:</strong> {{horaEmision}}
             </div>
+          </div>
         </div>
-    </div>
 
-    <div class="info-section">
-        <div class="section-title">INFORMACIÓN DEL CLIENTE</div>
-        <div class="info-grid">
+        <div class="info-section">
+          <div class="section-title">INFORMACIÓN DEL CLIENTE</div>
+          <div class="info-grid">
             <div>
-                <div class="info-item">
-                    <span class="info-label">Cliente:</span>
-                    <span class="info-value">{{cliente.nombre}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Email:</span>
-                    <span class="info-value">{{cliente.email}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Teléfono:</span>
-                    <span class="info-value">{{cliente.telefono}}</span>
-                </div>
+              <div class="info-item">
+                <span class="info-label">Cliente:</span>
+                <span class="info-value">{{cliente.nombre}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Email:</span>
+                <span class="info-value">{{cliente.email}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Teléfono:</span>
+                <span class="info-value">{{cliente.telefono}}</span>
+              </div>
             </div>
             <div>
-                <div class="info-item">
-                    <span class="info-label">Dirección:</span>
-                    <span class="info-value">{{cliente.direccion}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Localidad:</span>
-                    <span class="info-value">{{cliente.localidad}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">CUIT:</span>
-                    <span class="info-value">{{cliente.cuit}}</span>
-                </div>
+              <div class="info-item">
+                <span class="info-label">Dirección:</span>
+                <span class="info-value">{{cliente.direccion}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Localidad:</span>
+                <span class="info-value">{{cliente.localidad}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">CUIT:</span>
+                <span class="info-value">{{cliente.cuit}}</span>
+              </div>
             </div>
+          </div>
         </div>
-    </div>
 
-    <div class="info-section">
-        <div class="section-title">INFORMACIÓN DEL PLAN VACUNAL</div>
-        <div class="info-grid">
+        <div class="info-section">
+          <div class="section-title">INFORMACIÓN DEL PLAN VACUNAL</div>
+          <div class="info-grid">
             <div>
-                <div class="info-item">
-                    <span class="info-label">Plan N°:</span>
-                    <span class="info-value">{{plan.numeroCotizacion}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Semana:</span>
-                    <span class="info-value">{{plan.numeroSemana}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Fecha Plan:</span>
-                    <span class="info-value">{{plan.fechaProgramada}}</span>
-                </div>
+              <div class="info-item">
+                <span class="info-label">Plan N°:</span>
+                <span class="info-value">{{plan.numeroCotizacion}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Semana:</span>
+                <span class="info-value">{{plan.numeroSemana}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Fecha Plan:</span>
+                <span class="info-value">{{plan.fechaProgramada}}</span>
+              </div>
             </div>
             <div>
-                <div class="info-item">
-                    <span class="info-label">Animales:</span>
-                    <span class="info-value">{{plan.cantidadAnimales}}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Estado:</span>
-                    <span class="info-value">
-                        <span class="badge badge-{{plan.estadoBadge}}">{{plan.estado}}</span>
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Inicio Plan:</span>
-                    <span class="info-value">{{plan.fechaInicio}}</span>
-                </div>
+              <div class="info-item">
+                <span class="info-label">Animales:</span>
+                <span class="info-value">{{plan.cantidadAnimales}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Estado:</span>
+                <span class="info-value">
+                  <span class="badge badge-{{plan.estadoBadge}}"
+                    >{{plan.estado}}</span
+                  >
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Inicio Plan:</span>
+                <span class="info-value">{{plan.fechaInicio}}</span>
+              </div>
             </div>
+          </div>
         </div>
-    </div>
 
-    <div class="entrega-details">
-        <div class="entrega-title">Detalles de la Entrega</div>
-        <div class="entrega-grid">
+        <div class="entrega-details">
+          <div class="entrega-title">Detalles de la Entrega</div>
+          <div class="entrega-grid">
             <div class="entrega-item">
-                <div class="entrega-item-label">Cantidad Entregada</div>
-                <div class="entrega-item-value">{{entrega.cantidadEntregada}}</div>
+              <div class="entrega-item-label">Cantidad Entregada</div>
+              <div class="entrega-item-value">
+                {{entrega.cantidadEntregada}}
+              </div>
             </div>
             <div class="entrega-item">
-                <div class="entrega-item-label">Tipo de Entrega</div>
-                <div class="entrega-item-value">{{entrega.tipoEntregaDisplay}}</div>
+              <div class="entrega-item-label">Tipo de Entrega</div>
+              <div class="entrega-item-value">
+                {{entrega.tipoEntregaDisplay}}
+              </div>
             </div>
             <div class="entrega-item">
-                <div class="entrega-item-label">Fecha Entrega</div>
-                <div class="entrega-item-value">{{entrega.fechaEntrega}}</div>
+              <div class="entrega-item-label">Fecha Entrega</div>
+              <div class="entrega-item-value">{{entrega.fechaEntrega}}</div>
             </div>
+          </div>
         </div>
-    </div>
 
-    <div class="info-section">
-        <div class="section-title">PRODUCTOS ENTREGADOS</div>
-        <table class="productos-table">
+        <div class="info-section">
+          <div class="section-title">PRODUCTOS ENTREGADOS</div>
+          <table class="productos-table">
             <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Descripción</th>
-                    <th>Cantidad Programada</th>
-                    <th>Cantidad Entregada</th>
-                    <th>Tipo Entrega</th>
-                </tr>
+              <tr>
+                <th>Producto</th>
+                <th>Descripción</th>
+                <th>Cantidad Programada</th>
+                <th>Cantidad Entregada</th>
+                <th>Tipo Entrega</th>
+              </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td><strong>{{producto.nombre}}</strong></td>
-                    <td>{{producto.descripcion}}</td>
-                    <td class="cantidad">{{producto.cantidadProgramada}}</td>
-                    <td class="cantidad">{{entrega.cantidadEntregada}}</td>
-                    <td style="text-align: center;">
-                        <span class="badge">{{entrega.tipoEntregaDisplay}}</span>
-                    </td>
-                </tr>
+              <tr>
+                <td><strong>{{producto.nombre}}</strong></td>
+                <td>{{producto.descripcion}}</td>
+                <td class="cantidad">{{producto.cantidadProgramada}}</td>
+                <td class="cantidad">{{entrega.cantidadEntregada}}</td>
+                <td style="text-align: center">
+                  <span class="badge">{{entrega.tipoEntregaDisplay}}</span>
+                </td>
+              </tr>
             </tbody>
-        </table>
-    </div>
+          </table>
+        </div>
 
-    <div class="info-section">
+        <!-- <div class="info-section">
         <div class="section-title">RESPONSABLES</div>
         <div class="info-grid">
             <div>
@@ -415,33 +453,38 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
-    {{#if entrega.observaciones}}
-    <div class="observaciones">
-        <div class="observaciones-title">OBSERVACIONES:</div>
-        <div class="observaciones-text">{{entrega.observaciones}}</div>
-    </div>
-    {{/if}}
+        {{#if entrega.observaciones_entrega}}
+        <div class="observaciones">
+          <div class="observaciones-title">OBSERVACIONES:</div>
+          <div class="observaciones-text">{{entrega.observaciones_entrega}}</div>
+        </div>
+        {{/if}}
+      </div>
+      <!-- Cierre de main-content -->
 
-    <div class="signatures">
+      <div class="signatures">
         <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-label">ENTREGADO POR</div>
+          <div class="signature-line"></div>
+          <div class="signature-label">ENTREGADO POR</div>
         </div>
         <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-label">RECIBIDO POR</div>
+          <div class="signature-line"></div>
+          <div class="signature-label">RECIBIDO POR</div>
         </div>
-    </div>
+      </div>
 
-    <div class="footer">
-        <p style="font-size: 10px; color: #000;">
-            Documento generado automáticamente por Tierra Volga - Sistema de Gestión Veterinaria
+      <div class="footer">
+        <p style="font-size: 10px; color: #000">
+          Documento generado automáticamente por Tierra Volga - Sistema de
+          Gestión Veterinaria
         </p>
-        <p style="font-size: 9px; color: #000; margin-top: 5px;">
-            Fecha de generación: {{fechaGeneracion}} | Hora: {{horaGeneracion}}
+        <p style="font-size: 9px; color: #000; margin-top: 5px">
+          Fecha de generación: {{fechaGeneracion}} | Hora: {{horaGeneracion}}
         </p>
+      </div>
     </div>
-</body>
+    <!-- Cierre de content-wrapper -->
+  </body>
 </html>

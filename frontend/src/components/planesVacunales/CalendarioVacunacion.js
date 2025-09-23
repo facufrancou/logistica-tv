@@ -20,6 +20,7 @@ import {
   FaPrint
 } from 'react-icons/fa';
 import * as planesApi from '../../services/planesVacunalesApi';
+import LoadingSpinner from '../common/LoadingSpinner';
 import './PlanesVacunales.css';
 
 const CalendarioVacunacion = () => {
@@ -27,6 +28,7 @@ const CalendarioVacunacion = () => {
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
+  const [generandoRemito, setGenerandoRemito] = useState(false);
   const [cotizacion, setCotizacion] = useState(null);
   const [calendario, setCalendario] = useState([]);
   const [estadoPlan, setEstadoPlan] = useState(null);
@@ -45,7 +47,7 @@ const CalendarioVacunacion = () => {
     responsable_recibe: '',
     observaciones_entrega: '',
     tipo_entrega: 'completa',
-    imprimir_remito: false
+    imprimir_remito: true
   });
 
   useEffect(() => {
@@ -95,7 +97,11 @@ const CalendarioVacunacion = () => {
       
       // Si el usuario seleccionó imprimir remito, generar PDF
       if (entregaForm.imprimir_remito) {
+        setGenerandoRemito(true);
         try {
+          // Delay mínimo para mostrar la animación
+          const startTime = Date.now();
+          
           const pdfBlob = await planesApi.generarRemitoEntrega(calendarioSeleccionado.id_calendario, {
             cantidad_entregada: entregaForm.cantidad_entregada,
             responsable_entrega: entregaForm.responsable_entrega,
@@ -103,6 +109,14 @@ const CalendarioVacunacion = () => {
             observaciones_entrega: entregaForm.observaciones_entrega,
             tipo_entrega: entregaForm.tipo_entrega
           });
+          
+          // Asegurar que el loading se muestre por al menos 2 segundos
+          const elapsedTime = Date.now() - startTime;
+          const minLoadingTime = 2000;
+          if (elapsedTime < minLoadingTime) {
+            await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+          }
+          
           const url = window.URL.createObjectURL(pdfBlob);
           const link = document.createElement('a');
           link.href = url;
@@ -114,6 +128,8 @@ const CalendarioVacunacion = () => {
         } catch (pdfError) {
           console.error('Error al generar remito PDF:', pdfError);
           alert('Entrega registrada correctamente, pero hubo un error al generar el remito PDF');
+        } finally {
+          setGenerandoRemito(false);
         }
       }
       
@@ -129,10 +145,9 @@ const CalendarioVacunacion = () => {
         responsable_recibe: '',
         observaciones_entrega: '',
         tipo_entrega: 'completa',
-        imprimir_remito: false
+        imprimir_remito: true
       });
       
-      alert('Entrega registrada correctamente');
       
     } catch (error) {
       console.error('Error al marcar entrega:', error);
@@ -150,7 +165,7 @@ const CalendarioVacunacion = () => {
       await cargarDatosIniciales();
       
       setShowFinalizarModal(false);
-      alert('Plan vacunal finalizado correctamente');
+      /* alert('Plan vacunal finalizado correctamente'); */
       
     } catch (error) {
       console.error('Error al finalizar plan:', error);
@@ -166,12 +181,13 @@ const CalendarioVacunacion = () => {
       responsable_recibe: '',
       observaciones_entrega: '',
       tipo_entrega: 'completa',
-      imprimir_remito: false
+      imprimir_remito: true
     });
     setShowEntregaModal(true);
   };
 
   const reimprimirRemito = async (calendarioItem) => {
+    setGenerandoRemito(true);
     try {
       console.log('Generando remito para calendario:', calendarioItem.id_calendario);
       console.log('Datos del calendario:', {
@@ -186,6 +202,9 @@ const CalendarioVacunacion = () => {
         alert('No hay entregas registradas para esta semana. No se puede generar el remito.');
         return;
       }
+      
+      // Delay mínimo para mostrar la animación
+      const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
       const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
@@ -203,6 +222,14 @@ const CalendarioVacunacion = () => {
       }
       
       const pdfBlob = await response.blob();
+      
+      // Asegurar que el loading se muestre por al menos 1.5 segundos
+      const elapsedTime = Date.now() - startTime;
+      const minLoadingTime = 1500;
+      if (elapsedTime < minLoadingTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+      }
+      
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -216,10 +243,13 @@ const CalendarioVacunacion = () => {
     } catch (error) {
       console.error('Error al reimprimir remito:', error);
       alert('Error al generar el remito: ' + error.message);
+    } finally {
+      setGenerandoRemito(false);
     }
   };
 
   const reimprimirRemitoPorCalendario = async (id_calendario) => {
+    setGenerandoRemito(true);
     try {
       console.log('Generando remito para calendario ID:', id_calendario);
       
@@ -233,6 +263,9 @@ const CalendarioVacunacion = () => {
         estado: calendarioItem?.estado_entrega,
         encontrado: !!calendarioItem
       });
+      
+      // Delay mínimo para mostrar la animación
+      const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
       const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${id_calendario}/remito`, {
@@ -250,6 +283,14 @@ const CalendarioVacunacion = () => {
       }
       
       const pdfBlob = await response.blob();
+      
+      // Asegurar que el loading se muestre por al menos 1.5 segundos
+      const elapsedTime = Date.now() - startTime;
+      const minLoadingTime = 1500;
+      if (elapsedTime < minLoadingTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
+      }
+      
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -263,6 +304,8 @@ const CalendarioVacunacion = () => {
     } catch (error) {
       console.error('Error al reimprimir remito:', error);
       alert('Error al generar el remito: ' + error.message);
+    } finally {
+      setGenerandoRemito(false);
     }
   };
 
@@ -445,7 +488,7 @@ const CalendarioVacunacion = () => {
                     <th>Programadas</th>
                     <th>Entregadas</th>
                     <th>Estado</th>
-                    <th>Responsable</th>
+                    <th>Datos</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -509,8 +552,13 @@ const CalendarioVacunacion = () => {
                               className="btn btn-sm btn-success me-2"
                               onClick={() => reimprimirRemito(item)}
                               title="Reimprimir remito"
+                              disabled={generandoRemito}
                             >
-                              <FaPrint />
+                              {generandoRemito ? (
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                              ) : (
+                                <FaPrint />
+                              )}
                             </button>
                           )}
                           <button
@@ -586,8 +634,13 @@ const CalendarioVacunacion = () => {
                           className="btn btn-sm btn-success"
                           onClick={() => reimprimirRemitoPorCalendario(entrega.id_calendario)}
                           title="Reimprimir remito"
+                          disabled={generandoRemito}
                         >
-                          <FaPrint />
+                          {generandoRemito ? (
+                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          ) : (
+                            <FaPrint />
+                          )}
                         </button>
                       </td>
                     </tr>
@@ -657,13 +710,13 @@ const CalendarioVacunacion = () => {
 
       {/* Modal para Marcar Entrega */}
       {showEntregaModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
                   <FaCheck className="me-2" />
-                  Marcar Entrega de Dosis
+                  Marcar Entrega de Dosis - Semana {calendarioSeleccionado?.numero_semana} - {calendarioSeleccionado?.nombre_producto}
                 </h5>
                 <button 
                   className="btn-close"
@@ -673,16 +726,6 @@ const CalendarioVacunacion = () => {
               <div className="modal-body">
                 {calendarioSeleccionado && (
                   <>
-                    <div className="alert alert-info">
-                      <strong>Semana {calendarioSeleccionado.numero_semana}</strong> - {calendarioSeleccionado.nombre_producto}
-                      <br />
-                      <small>
-                        Programadas: {calendarioSeleccionado.cantidad_dosis} | 
-                        Ya entregadas: {calendarioSeleccionado.dosis_entregadas || 0} |
-                        Pendientes: {calendarioSeleccionado.cantidad_dosis - (calendarioSeleccionado.dosis_entregadas || 0)}
-                      </small>
-                    </div>
-                    
                     <div className="mb-3">
                       <label className="form-label">Cantidad a Entregar *</label>
                       <input
@@ -791,9 +834,19 @@ const CalendarioVacunacion = () => {
                 <button 
                   className="btn btn-primary"
                   onClick={handleMarcarEntrega}
+                  disabled={generandoRemito}
                 >
-                  <FaCheck className="me-2" />
-                  Registrar Entrega
+                  {generandoRemito ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Generando remito...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheck className="me-2" />
+                      Registrar Entrega
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -817,10 +870,6 @@ const CalendarioVacunacion = () => {
                 ></button>
               </div>
               <div className="modal-body">
-                <div className="alert alert-warning">
-                  <strong>¡Atención!</strong> Esta acción finalizará definitivamente el plan vacunal y limpiará todas las reservas de stock. No se podrá deshacer.
-                </div>
-                
                 <div className="mb-3">
                   <label className="form-label">Observaciones de Finalización</label>
                   <textarea
@@ -829,15 +878,6 @@ const CalendarioVacunacion = () => {
                     rows="4"
                     placeholder="Ingrese observaciones sobre la finalización del plan..."
                   />
-                </div>
-                
-                <div className="alert alert-info">
-                  <small>
-                    <strong>Resumen del plan:</strong>
-                    <br />• Total dosis entregadas: {estadoPlan.estadisticas?.total_dosis_entregadas || 0}
-                    <br />• Dosis pendientes: {estadoPlan.estadisticas?.dosis_pendientes || 0}
-                    <br />• Porcentaje completado: {estadoPlan.estadisticas?.porcentaje_completado || 0}%
-                  </small>
                 </div>
               </div>
               <div className="modal-footer">
@@ -854,6 +894,33 @@ const CalendarioVacunacion = () => {
                   <FaFingerprint className="me-2" />
                   Finalizar Plan
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Loading para Generación de Remitos */}
+      {generandoRemito && (
+        <div className="modal show d-block loading-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1060 }}>
+          <div className="modal-dialog modal-dialog-centered loading-modal-enter-active">
+            <div className="modal-content border-0 shadow-lg loading-modal-content">
+              <div className="modal-body text-center p-5">
+                <LoadingSpinner 
+                  message="Generando remito de entrega" 
+                  size="lg" 
+                />
+                <div className="mt-4">
+                  <div className="progress mb-3" style={{ height: '6px' }}>
+                    <div 
+                      className="progress-bar progress-bar-striped progress-bar-animated bg-primary loading-progress" 
+                      style={{ width: '100%' }}
+                    ></div>
+                  </div>
+                  <small className="text-muted loading-text">
+                    Por favor no cierre esta ventana mientras se genera el documento
+                  </small>
+                </div>
               </div>
             </div>
           </div>

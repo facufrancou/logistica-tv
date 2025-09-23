@@ -2535,7 +2535,7 @@ exports.generarRemitoPDF = async (req, res) => {
         fecha_entrega: new Date(),
         responsable_entrega: responsable_entrega || 'Sistema',
         responsable_recibe: responsable_recibe || '',
-        observaciones: observaciones_entrega || '',
+        observaciones_entrega: observaciones_entrega || '',
         estado: tipo_entrega === 'parcial' ? 'parcial' : 'completo'
       };
     } else {
@@ -2564,7 +2564,7 @@ exports.generarRemitoPDF = async (req, res) => {
         fecha_entrega: ultimaEntrega.fecha_entrega,
         responsable_entrega: responsableEntrega,
         responsable_recibe: responsableRecibe,
-        observaciones: ultimaEntrega.observaciones || '',
+        observaciones_entrega: calendario.observaciones_entrega || ultimaEntrega.observaciones || '',
         estado: calendario.estado_entrega
       };
     }
@@ -2607,7 +2607,7 @@ exports.generarRemitoPDF = async (req, res) => {
         fechaEntrega: datosEntrega.fecha_entrega,
         responsable: datosEntrega.responsable_entrega,
         responsableRecibe: datosEntrega.responsable_recibe,
-        observaciones: datosEntrega.observaciones,
+        observaciones_entrega: datosEntrega.observaciones_entrega,
         estado: datosEntrega.estado,
         // Usar las dosis restantes calculadas
         dosisRestantes: dosisRestantes,

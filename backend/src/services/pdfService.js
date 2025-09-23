@@ -59,7 +59,8 @@ class PDFService {
     // Función auxiliar para manejar condicionales {{#if}}
     const replaceConditional = (condition, content) => {
       const regex = new RegExp(`{{#if ${condition}}}([\\s\\S]*?){{/if}}`, 'g');
-      if (data[condition]) {
+      
+      if (content) {
         processedTemplate = processedTemplate.replace(regex, '$1');
       } else {
         processedTemplate = processedTemplate.replace(regex, '');
@@ -101,7 +102,7 @@ class PDFService {
     replace('entrega.fechaEntrega', this.formatDate(data.entrega?.fechaEntrega));
     replace('entrega.responsable', data.entrega?.responsable);
     replace('entrega.responsableRecibe', data.entrega?.responsableRecibe);
-    replace('entrega.observaciones', data.entrega?.observaciones);
+    replace('entrega.observaciones_entrega', data.entrega?.observaciones_entrega);
     replace('entrega.estado', data.entrega?.estado);
     replace('entrega.estadoBadge', this.getEstadoBadge(data.entrega?.estado));
     replace('entrega.dosisRestantes', data.entrega?.dosisRestantes);
@@ -115,8 +116,8 @@ class PDFService {
 
     // Manejar condicionales
     replaceConditional('entrega.responsable', data.entrega?.responsable);
-    replaceConditional('entrega.observaciones', data.entrega?.observaciones);
-
+    replaceConditional('entrega.observaciones_entrega', data.entrega?.observaciones_entrega);
+    
     return processedTemplate;
   }
 

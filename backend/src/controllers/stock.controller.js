@@ -414,7 +414,7 @@ exports.getEstadoStock = async (req, res) => {
 exports.getAlertasStock = async (req, res) => {
   try {
     const { tipo_alerta, tipo_producto } = req.query;
-    
+
     // Construir filtros
     let whereClause = {
       requiere_control_stock: true
@@ -424,123 +424,75 @@ exports.getAlertasStock = async (req, res) => {
       whereClause.tipo_producto = tipo_producto;
     }
 
-    // Obtener productos con información de demanda reciente
+    // Obtener productos con stock bajo o sin stock
     const productos = await prisma.producto.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id_producto: true,
+        nombre: true,
+        descripcion: true,
+        stock: true,
+        stock_minimo: true,
+        stock_reservado: true,
+        tipo_producto: true,
         proveedores: {
           select: {
             nombre: true
-          }
-        },
-        _count: {
-          select: {
-            detalle_cotizacion: {
-              where: {
-                cotizacion: {
-                  estado: { in: ['en_proceso', 'enviada', 'aceptada'] }
-                }
-              }
-            }
           }
         }
       }
     });
 
     const alertas = [];
-    
-    productos.forEach(producto => {
-      const stock = Number(producto.stock) || 0;
-      const stockMinimo = Number(producto.stock_minimo) || 5; // Valor por defecto si no está configurado
-      const stockReservado = Number(producto.stock_reservado) || 0;
-      const stockDisponible = stock - stockReservado;
-      const tieneMovimientoReciente = producto._count.detalle_cotizacion > 0;
 
-      // Alerta por stock agotado (máxima prioridad)
-      if (stock === 0) {
-        alertas.push({
-          id_producto: Number(producto.id_producto),
-          nombre: producto.nombre,
-          tipo_alerta: 'stock_agotado',
-          mensaje: `Producto agotado - Sin stock disponible`,
-          severidad: 'error',
-          estado_stock: 'agotado',
-          stock: stock,
-          stock_minimo: stockMinimo,
-          stock_reservado: stockReservado,
-          stock_disponible: stockDisponible,
-          proveedor_nombre: producto.proveedores?.nombre || null,
-          requiere_atencion_inmediata: true
-        });
-      }
-      // Alerta por stock crítico (menos del 50% del mínimo y hay demanda)
-      else if (stock > 0 && stock <= stockMinimo * 0.5) {
-        alertas.push({
-          id_producto: Number(producto.id_producto),
-          nombre: producto.nombre,
-          tipo_alerta: 'stock_critico',
-          mensaje: `Stock crítico: ${stock} unidades (mínimo recomendado: ${stockMinimo})`,
-          severidad: 'error',
-          estado_stock: 'critico',
-          stock: stock,
-          stock_minimo: stockMinimo,
-          stock_reservado: stockReservado,
-          stock_disponible: stockDisponible,
-          proveedor_nombre: producto.proveedores?.nombre || null,
-          requiere_atencion_inmediata: true
-        });
-      }
-      // Alerta por stock bajo (entre 50% del mínimo y el mínimo)
-      else if (stock > stockMinimo * 0.5 && stock <= stockMinimo) {
+    productos.forEach(producto => {
+      const stock = producto.stock || 0;
+      const stockReservado = producto.stock_reservado || 0;
+      const stockMinimo = producto.stock_minimo || 0;
+      const stockDisponible = stock - stockReservado;
+
+      // Alerta de stock bajo
+      if (stock > 0 && stock <= stockMinimo) {
         alertas.push({
           id_producto: Number(producto.id_producto),
           nombre: producto.nombre,
           tipo_alerta: 'stock_bajo',
-          mensaje: `Stock bajo: ${stock} unidades (mínimo recomendado: ${stockMinimo})`,
+          mensaje: `Stock bajo: ${stock} unidades (mínimo: ${stockMinimo})`,
           severidad: 'warning',
-          estado_stock: 'bajo',
           stock: stock,
           stock_minimo: stockMinimo,
-          stock_reservado: stockReservado,
           stock_disponible: stockDisponible,
-          proveedor_nombre: producto.proveedores?.nombre || null,
-          requiere_atencion_inmediata: false
+          proveedor_nombre: producto.proveedores?.nombre || null
         });
       }
 
-      // Alerta por stock totalmente reservado (pero hay stock físico)
-      if (stock > 0 && stockDisponible <= 0 && stockReservado > 0) {
+      // Alerta de sin stock
+      if (stock <= 0) {
+        alertas.push({
+          id_producto: Number(producto.id_producto),
+          nombre: producto.nombre,
+          tipo_alerta: 'sin_stock',
+          mensaje: `Sin stock disponible`,
+          severidad: 'error',
+          stock: stock,
+          stock_minimo: stockMinimo,
+          stock_disponible: stockDisponible,
+          proveedor_nombre: producto.proveedores?.nombre || null
+        });
+      }
+
+      // Alerta de stock totalmente reservado
+      if (stock > 0 && stockDisponible <= 0) {
         alertas.push({
           id_producto: Number(producto.id_producto),
           nombre: producto.nombre,
           tipo_alerta: 'stock_reservado',
-          mensaje: `Stock totalmente reservado: ${stockReservado} de ${stock} unidades comprometidas`,
+          mensaje: `Stock totalmente reservado: ${stockReservado} de ${stock} unidades`,
           severidad: 'warning',
-          estado_stock: 'reservado',
           stock: stock,
-          stock_minimo: stockMinimo,
           stock_reservado: stockReservado,
           stock_disponible: stockDisponible,
-          proveedor_nombre: producto.proveedores?.nombre || null,
-          requiere_atencion_inmediata: false
-        });
-      }
-
-      // Alerta por producto con demanda pero sin stock mínimo configurado
-      if (tieneMovimientoReciente && (!producto.stock_minimo || producto.stock_minimo === 0)) {
-        alertas.push({
-          id_producto: Number(producto.id_producto),
-          nombre: producto.nombre,
-          tipo_alerta: 'configuracion_faltante',
-          mensaje: `Producto con demanda pero sin stock mínimo configurado`,
-          severidad: 'info',
-          estado_stock: 'sin_configurar',
-          stock: stock,
-          stock_minimo: 0,
-          stock_reservado: stockReservado,
-          stock_disponible: stockDisponible,
-          proveedor_nombre: producto.proveedores?.nombre || null,
-          requiere_atencion_inmediata: false
+          proveedor_nombre: producto.proveedores?.nombre || null
         });
       }
     });
@@ -551,16 +503,10 @@ exports.getAlertasStock = async (req, res) => {
       alertasFiltradas = alertas.filter(alerta => alerta.tipo_alerta === tipo_alerta);
     }
 
-    // Ordenar por prioridad: error > warning > info
+    // Ordenar por severidad (error primero, luego warning)
     alertasFiltradas.sort((a, b) => {
-      const prioridad = { 'error': 0, 'warning': 1, 'info': 2 };
-      if (prioridad[a.severidad] !== prioridad[b.severidad]) {
-        return prioridad[a.severidad] - prioridad[b.severidad];
-      }
-      // En caso de igual severidad, ordenar por stock disponible (menos stock primero)
-      if (a.stock !== b.stock) {
-        return a.stock - b.stock;
-      }
+      if (a.severidad === 'error' && b.severidad === 'warning') return -1;
+      if (a.severidad === 'warning' && b.severidad === 'error') return 1;
       return a.nombre.localeCompare(b.nombre);
     });
 
@@ -568,11 +514,8 @@ exports.getAlertasStock = async (req, res) => {
       total_alertas: alertasFiltradas.length,
       alertas_criticas: alertasFiltradas.filter(a => a.severidad === 'error').length,
       alertas_warning: alertasFiltradas.filter(a => a.severidad === 'warning').length,
-      alertas_info: alertasFiltradas.filter(a => a.severidad === 'info').length,
-      productos_sin_configurar: alertasFiltradas.filter(a => a.tipo_alerta === 'configuracion_faltante').length,
       alertas: alertasFiltradas
     });
-
   } catch (error) {
     console.error('Error al obtener alertas de stock:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
