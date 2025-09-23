@@ -2604,8 +2604,17 @@ const getCalendarioVacunacion = async (req, res) => {
       vacuna_descripcion: item.producto?.descripcion || '',
       cantidad_dosis: item.cantidad_dosis,
       estado_dosis: item.estado_dosis,
+      estado_entrega: item.estado_entrega || item.estado_dosis, // Campo que necesita el frontend
+      dosis_entregadas: item.dosis_entregadas || 0, // Campo que necesita el frontend
+      responsable_entrega: item.responsable_entrega || null, // Campo que necesita el frontend
+      fecha_entrega: item.fecha_entrega ? item.fecha_entrega.toISOString().split('T')[0] : null,
+      observaciones_entrega: item.observaciones_entrega || null,
       dosis_por_animal: item.cantidad_dosis || 1,
-      total_dosis: item.cantidad_dosis || 1
+      total_dosis: item.cantidad_dosis || 1,
+      // Campos adicionales para desdoblamientos
+      es_desdoblamiento: item.es_desdoblamiento || false,
+      numero_desdoblamiento: item.numero_desdoblamiento || null,
+      dosis_original_id: item.dosis_original_id || null
     }));
 
     res.json(calendarioFormateado);

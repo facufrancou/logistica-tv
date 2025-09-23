@@ -413,9 +413,49 @@ const CalendarioVacunacion = () => {
     }
   };
 
+  // Función auxiliar para cargar el logo de la empresa
+  const cargarLogo = () => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = this.naturalWidth;
+        canvas.height = this.naturalHeight;
+        ctx.drawImage(this, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => {
+        console.warn('No se pudo cargar LOGO.PNG, intentando logo blanco');
+        // Fallback al logo blanco
+        const fallbackImg = new Image();
+        fallbackImg.crossOrigin = 'anonymous';
+        fallbackImg.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = this.naturalWidth;
+          canvas.height = this.naturalHeight;
+          ctx.drawImage(this, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        fallbackImg.onerror = () => {
+          console.warn('No se pudo cargar ningún logo');
+          resolve(null);
+        };
+        fallbackImg.src = '/img/Logo blanco.png';
+      };
+      // Usar el nuevo LOGO.PNG (3780x945)
+      img.src = '/img/LOGO.PNG';
+    });
+  };
+
   const handleExportarPDF = async () => {
     try {
       setGenerandoPDF(true);
+      
+      // Cargar logo de la empresa
+      const logoDataUrl = await cargarLogo();
       
       // Crear instancia del documento
       const doc = new jsPDF({
@@ -427,80 +467,254 @@ const CalendarioVacunacion = () => {
       // Configuración del documento
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 15;
+      const margin = 15; // Reducir márgenes para más espacio
 
-      // Título principal
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`PLAN VACUNAL ${cotizacion?.cliente?.nombre_empresa || 'CLIENTE'}`, pageWidth / 2, 20, { align: 'center' });
+      // Colores corporativos en escala de grises
+      const primaryColor = [64, 64, 64]; // Gris oscuro principal
+      const secondaryColor = [96, 96, 96]; // Gris medio
+      const accentColor = [128, 128, 128]; // Gris claro
+      const lightGray = [245, 245, 245]; // Gris muy claro para fondos
 
-      // Información del cliente
+      // ENCABEZADO CON LOGO Y DISEÑO PROFESIONAL (más compacto)
+      // Rectángulo superior con color corporativo
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 25, 'F'); // Reducir altura del encabezado
+
+      // Logo de la empresa (LOGO.PNG 3780x945)
+      if (logoDataUrl) {
+        try {
+          // LOGO.PNG tiene proporción 3780:945 = 4:1 aproximadamente
+          const logoHeight = 15; // Altura en mm
+          const logoWidth = logoHeight * 4; // Ancho proporcional (4:1)
+          
+          // Posicionar el logo en el encabezado
+          doc.addImage(logoDataUrl, 'PNG', margin, 5, logoWidth, logoHeight, undefined, 'FAST');
+        } catch (error) {
+          console.warn('No se pudo cargar el logo:', error);
+          // Fallback mejorado
+          doc.setFillColor(255, 255, 255);
+          doc.rect(margin, 4, 60, 15, 'F'); // Ajustar tamaño del fallback
+          doc.setTextColor(64, 64, 64);
+          doc.setFontSize(8);
+          doc.setFont('courier', 'bold');
+          doc.text('TERMOPLAST', margin + 30, 10, { align: 'center' });
+          doc.text('LOGÍSTICA', margin + 30, 14, { align: 'center' });
+          doc.text('VETERINARIA', margin + 30, 18, { align: 'center' });
+        }
+      } else {
+        // Fallback elegante si no hay logo
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin, 4, 30, 17, 'F');
+        doc.setTextColor(64, 64, 64);
+        doc.setFontSize(8);
+        doc.setFont('courier', 'bold');
+        doc.text('TERMOPLAST', margin + 15, 10, { align: 'center' });
+        doc.text('LOGÍSTICA', margin + 15, 14, { align: 'center' });
+        doc.text('VETERINARIA', margin + 15, 18, { align: 'center' });
+      }
+
+      // Título principal (más compacto)
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('courier', 'bold');
+      doc.text('PLAN VACUNAL', pageWidth / 2, 14, { align: 'center' });
+
+      // Subtítulo
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      let yPos = 35;
-      
-      doc.text(`FECHA NACIMIENTO: ${cotizacion?.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'N/A'}`, margin, yPos);
-      doc.text(`CANTIDAD: ${cotizacion?.cantidad_animales || 'N/A'}`, margin + 80, yPos);
-      doc.text(`GENÉTICA: ${cotizacion?.genetica || 'N/A'}`, margin + 150, yPos);
+      doc.setFont('courier', 'normal');
+      /* doc.text('Programa de Inmunización Avícola', pageWidth / 2, 20, { align: 'center' }); */
 
-      // Preparar datos para la tabla
-      const tableHeaders = ['FECHA', 'DÍA', 'SEMANA', 'VACUNAS', 'PATOLOGÍA', 'VÍA', 'LAB.', 'FRASCOS'];
+      // Información del encabezado en recuadros estilizados (más compactos)
+      doc.setTextColor(...secondaryColor);
+      let yPos = 32; // Reducir espacio inicial
+
+      // Crear recuadros para la información del encabezado
+      const infoBoxWidth = (pageWidth - 2 * margin) / 2;
+      const infoBoxHeight = 28; // Reducir altura de las cajas
+
+      // Recuadro izquierdo - Información del cliente
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, yPos, infoBoxWidth - 3, infoBoxHeight, 'F');
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(0.8);
+      doc.rect(margin, yPos, infoBoxWidth - 3, infoBoxHeight, 'S');
+
+      // Datos del cliente (compactos)
+      doc.setFontSize(10);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('INFORMACIÓN DEL CLIENTE', margin + 2, yPos + 5);
       
-      const tableData = calendario.map(item => {
+      doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text(`Cliente: ${cotizacion?.cliente?.nombre || 'N/A'}`, margin + 2, yPos + 10);
+      doc.text(`Cotización: ${cotizacion?.numero_cotizacion || 'N/A'}`, margin + 2, yPos + 14);
+      doc.text(`Fecha Nacimiento: ${cotizacion?.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'N/A'}`, margin + 2, yPos + 18);
+      doc.text(`Cantidad de Pollos: ${cotizacion?.cantidad_animales?.toLocaleString() || 'N/A'}`, margin + 2, yPos + 22);
+      doc.text(`Genética: ${cotizacion?.genetica || 'A definir'}`, margin + 2, yPos + 26);
+
+      // Recuadro derecho - Información técnica
+      doc.setFillColor(...lightGray);
+      doc.rect(margin + infoBoxWidth + 3, yPos, infoBoxWidth - 3, infoBoxHeight, 'F');
+      doc.rect(margin + infoBoxWidth + 3, yPos, infoBoxWidth - 3, infoBoxHeight, 'S');
+
+      // Datos técnicos
+      doc.setFontSize(10);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('INFORMACIÓN TÉCNICA', margin + infoBoxWidth + 5, yPos + 5);
+      
+      doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text(`Plan: ${cotizacion?.plan?.nombre || 'N/A'}`, margin + infoBoxWidth + 5, yPos + 10);
+      doc.text(`Duración: ${cotizacion?.plan?.duracion_semanas || 'N/A'} semanas`, margin + infoBoxWidth + 5, yPos + 14);
+      doc.text(`Estado: ${cotizacion?.estado || 'N/A'}`, margin + infoBoxWidth + 5, yPos + 18);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, margin + infoBoxWidth + 5, yPos + 22);
+      doc.text(`Hora: ${new Date().toLocaleTimeString('es-ES')}`, margin + infoBoxWidth + 5, yPos + 26);
+
+      // Separador elegante con decoración (más compacto)
+      yPos += 33;
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(1.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      
+      // Pequeños círculos decorativos
+      doc.setFillColor(...accentColor);
+      doc.circle(margin + 15, yPos, 0.8, 'F');
+      doc.circle(pageWidth - margin - 15, yPos, 0.8, 'F');
+
+      // TABLA DE CALENDARIO OPTIMIZADA PARA 12 ITEMS - ANCHO COMPLETO
+      yPos += 6;
+
+      // Preparar datos para la tabla con todos los campos solicitados
+      const tableHeaders = [
+        'FECHA', 
+        'DÍA', 
+        'SEM', 
+        'VACUNA (PRODUCTO)', 
+        'PATOLOGÍA', 
+        'VÍA', 
+        'MARCA', 
+        'FRASCOS'
+      ];
+      
+      const tableData = calendario.map((item, index) => {
         const fecha = new Date(item.fecha_aplicacion_programada);
-        const fechaStr = fecha.toLocaleDateString('es-ES');
-        const diaStr = String(fecha.getDate()).padStart(3, '0');
+        const fechaInicio = new Date(cotizacion.fecha_inicio_plan);
+        
+        // Calcular día del plan
+        const diffTime = fecha.getTime() - fechaInicio.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        // Calcular frascos (asumiendo 1000 dosis por frasco como ejemplo)
+        const dosisPorFrasco = 1000;
+        const frascos = Math.ceil(item.cantidad_dosis / dosisPorFrasco);
         
         return [
-          fechaStr,
-          diaStr,
-          item.semana_aplicacion,
-          item.vacuna_nombre || '',
-          item.vacuna_descripcion || '',
-          'IM', // Vía por defecto
-          'MSD', // Laboratorio por defecto  
-          Math.ceil(item.cantidad_dosis / 1000) // Calcular frascos
+          fecha.toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: '2-digit'
+          }),
+          diffDays.toString(),
+          item.semana_aplicacion.toString(),
+          `${item.producto_nombre || item.vacuna_nombre} | ${item.vacuna_descripcion || item.vacuna_nombre}`,
+          'A definir',
+          'IM',
+          'A definir',
+          frascos.toString()
         ];
       });
 
-      // Crear tabla
+      // Calcular el ancho disponible para la tabla (usar todo el ancho como en los recuadros)
+      const tableWidth = pageWidth - 2 * margin;
+
+      // Crear tabla optimizada para espacio y ancho completo
       autoTable(doc, {
         head: [tableHeaders],
         body: tableData,
-        startY: yPos + 15,
+        startY: yPos,
         margin: { left: margin, right: margin },
+        tableWidth: tableWidth, // Forzar ancho de tabla
         styles: {
-          fontSize: 8,
-          cellPadding: 2,
-          halign: 'center'
+          fontSize: 9, // Aumentar tamaño de fuente para mejor legibilidad
+          cellPadding: 2.5, // Ajustar padding proporcionalmente
+          halign: 'center',
+          valign: 'middle',
+          lineColor: primaryColor,
+          lineWidth: 0.1,
+          font: 'courier' // Fuente moderna y redondeada
         },
         headStyles: {
-          fillColor: [220, 220, 220],
-          textColor: [0, 0, 0],
-          fontStyle: 'bold'
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 10, // Aumentar tamaño de encabezados
+          cellPadding: 3.5, // Ajustar padding de encabezados
+          font: 'courier' // Fuente moderna y redondeada
+        },
+        alternateRowStyles: {
+          fillColor: [250, 250, 250]
         },
         columnStyles: {
-          0: { cellWidth: 25 }, // FECHA
-          1: { cellWidth: 15 }, // DÍA
-          2: { cellWidth: 20 }, // SEMANA
-          3: { cellWidth: 60 }, // VACUNAS
-          4: { cellWidth: 80 }, // PATOLOGÍA
-          5: { cellWidth: 15 }, // VÍA
-          6: { cellWidth: 20 }, // LAB
-          7: { cellWidth: 25 }  // FRASCOS
+          0: { cellWidth: tableWidth * 0.10, halign: 'center' }, // FECHA - 10%
+          1: { cellWidth: tableWidth * 0.08, halign: 'center' }, // DÍA - 8%
+          2: { cellWidth: tableWidth * 0.08, halign: 'center' }, // SEMANA - 8%
+          3: { cellWidth: tableWidth * 0.35, halign: 'left', fontSize: 8 }, // VACUNA - 35% (aumentar tamaño)
+          4: { cellWidth: tableWidth * 0.15, halign: 'center', fontSize: 8 }, // PATOLOGÍA - 15% (aumentar tamaño)
+          5: { cellWidth: tableWidth * 0.08, halign: 'center' }, // VÍA - 8%
+          6: { cellWidth: tableWidth * 0.11, halign: 'center', fontSize: 8 }, // MARCA - 11% (aumentar tamaño)
+          7: { cellWidth: tableWidth * 0.05, halign: 'center' }  // FRASCOS - 5%
+        },
+        didDrawPage: function (data) {
+          // Agregar números de página
+          doc.setFontSize(7);
+          doc.setTextColor(...secondaryColor);
+          doc.setFont('courier', 'normal');
+          doc.text(`Página ${data.pageNumber}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
         }
       });
 
-      // Pie de página con información adicional
-      const finalY = yPos + 15 + (tableData.length * 8) + 20; // Estimar posición
+      // PIE DE PÁGINA PROFESIONAL (más compacto)
+      const finalY = doc.lastAutoTable.finalY + 8;
+      
+      // Nota importante (más compacta)
+      if (finalY < pageHeight - 35) {
+        doc.setFillColor(248, 248, 248);
+        doc.rect(margin, finalY, pageWidth - 2 * margin, 15, 'F');
+        doc.setDrawColor(...accentColor);
+        doc.setLineWidth(0.8);
+        doc.rect(margin, finalY, pageWidth - 2 * margin, 15, 'S');
+        
+        doc.setFontSize(8);
+        doc.setTextColor(...primaryColor);
+        doc.setFont('courier', 'bold');
+        doc.text('⚠ IMPORTANTE:', margin + 3, finalY + 5);
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(7);
+        doc.text('Los campos "A definir" requieren ser completados por el veterinario responsable antes de la implementación.', margin + 3, finalY + 9);
+        doc.text('Este documento debe ser validado y firmado antes de su uso en campo.', margin + 3, finalY + 12);
+      }
+      
+      // Rectángulo inferior con información del sistema (más compacto)
+      doc.setFillColor(...lightGray);
+      doc.rect(0, pageHeight - 18, pageWidth, 18, 'F');
+      
       doc.setFontSize(8);
-      doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} - Sistema de Gestión de Planes Vacunales`, margin, finalY);
-
+      doc.setTextColor(...secondaryColor);
+      doc.setFont('courier', 'bold');
+      doc.text('Sistema de Gestión - Tierra Volga', margin, pageHeight - 12);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')} | contacto@tierravolga.com.ar`, margin, pageHeight - 8);
+      doc.text('Documento de uso profesional - Prohibida su reproducción sin autorización', margin, pageHeight - 4);
+      
       // Descargar el PDF
       const fileName = `plan-vacunal-${cotizacion?.numero_cotizacion || 'calendario'}-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
       
-      showSuccess('Éxito', 'PDF generado correctamente');
+      showSuccess('Éxito', 'PDF generado correctamente - Optimizado para una página');
       
     } catch (error) {
       console.error('Error generando PDF:', error);
