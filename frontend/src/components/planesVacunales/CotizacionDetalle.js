@@ -19,8 +19,11 @@ import {
   FaCalculator,
   FaBalanceScale,
   FaPaw,
-  FaClipboardList
+  FaClipboardList,
+  FaPrint
 } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import ClasificacionFiscal from '../liquidaciones/ClasificacionFiscal';
 import ResumenLiquidacion from '../liquidaciones/ResumenLiquidacion';
 import './PlanesVacunales.css';
@@ -48,6 +51,7 @@ const CotizacionDetalle = () => {
   });
   const [observacionesEstado, setObservacionesEstado] = useState('');
   const [mostrarClasificacion, setMostrarClasificacion] = useState(false);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
   
   // Ref para mantener la posición en la página
@@ -157,6 +161,33 @@ const CotizacionDetalle = () => {
     return new Date(fecha).toLocaleDateString('es-ES');
   };
 
+  // Función para cargar el logo
+  const cargarLogo = () => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Usar dimensiones originales del logo
+        const width = img.width;
+        const height = img.height;
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(null);
+      img.src = '/img/LOGO.PNG';
+    });
+  };
+
+  // Función para exportar cotización a PDF
+  const handleExportarCotizacionPDF = () => {
+    alert('¡Botón de PDF funcionando!');
+  };
+
   if (loading || !cotizacion) {
     return (
       <div className="planes-loading">
@@ -194,6 +225,29 @@ const CotizacionDetalle = () => {
             </div>
             <div className="d-flex align-items-center gap-2">
               {getEstadoBadge(cotizacion.estado)}
+              
+              {/* Botón de Imprimir - Siempre visible */}
+              <button
+                className="btn btn-outline-success btn-sm"
+                onClick={handleExportarCotizacionPDF}
+                disabled={generandoPDF}
+                title="Exportar cotización a PDF"
+              >
+                {generandoPDF ? (
+                  <>
+                    <div className="spinner-border spinner-border-sm me-1" role="status">
+                      <span className="visually-hidden">Generando...</span>
+                    </div>
+                    PDF...
+                  </>
+                ) : (
+                  <>
+                    <FaPrint className="me-1" />
+                    PDF
+                  </>
+                )}
+              </button>
+              
               {cotizacion.estado === 'en_proceso' && (
                 <button
                   className="btn btn-outline-primary btn-sm"
@@ -416,6 +470,30 @@ const CotizacionDetalle = () => {
               </div>
 
               <hr />
+
+              {/* Botón de Imprimir PDF - Siempre visible */}
+              <div className="d-grid gap-2 mb-3">
+                <button
+                  className="btn btn-outline-success"
+                  onClick={handleExportarCotizacionPDF}
+                  disabled={generandoPDF}
+                  title="Exportar cotización a PDF"
+                >
+                  {generandoPDF ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm me-2" role="status">
+                        <span className="visually-hidden">Generando...</span>
+                      </div>
+                      Generando PDF...
+                    </>
+                  ) : (
+                    <>
+                      <FaPrint className="me-2" />
+                      Imprimir Cotización
+                    </>
+                  )}
+                </button>
+              </div>
 
               {/* Acciones según el estado */}
               <div className="d-grid gap-2">

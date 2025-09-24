@@ -13,8 +13,6 @@ const PlanVacunalForm = () => {
     crearPlan, 
     actualizarPlan, 
     obtenerPlan, 
-    cargarListasPrecios, 
-    listasPrecios,
     loading 
   } = usePlanesVacunales();
 
@@ -23,7 +21,6 @@ const PlanVacunalForm = () => {
     descripcion: '',
     duracion_semanas: 12,
     estado: 'borrador',
-    id_lista_precio: '',
     observaciones: '',
     productos: []
   });
@@ -44,10 +41,7 @@ const PlanVacunalForm = () => {
 
   const cargarDatos = async () => {
     try {
-      const [productosData] = await Promise.all([
-        getVacunas(), // Solo cargar vacunas para planes vacunales
-        cargarListasPrecios({ activa: true })
-      ]);
+      const productosData = await getVacunas(); // Solo cargar vacunas para planes vacunales
       setProductos(productosData);
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -63,14 +57,12 @@ const PlanVacunalForm = () => {
           descripcion: plan.descripcion || '',
           duracion_semanas: plan.duracion_semanas,
           estado: plan.estado || 'borrador',
-          id_lista_precio: plan.id_lista_precio || '',
           observaciones: plan.observaciones || '',
           productos: plan.productos_plan?.map(pp => ({
             id_producto: pp.id_producto,
-            cantidad_total: pp.cantidad_total,
-            dosis_por_semana: pp.dosis_por_semana,
+            dosis_por_semana: pp.dosis_por_semana || 1,
             semana_inicio: pp.semana_inicio,
-            semana_fin: pp.semana_fin || '',
+            semana_fin: pp.semana_fin || pp.semana_inicio, // Si no hay fin, usar inicio
             observaciones: pp.observaciones || '',
             producto: pp.producto
           })) || []
@@ -159,13 +151,11 @@ const PlanVacunalForm = () => {
     try {
       const planData = {
         ...formData,
-        id_lista_precio: formData.id_lista_precio || null,
         productos: formData.productos.map(p => ({
           id_producto: p.id_producto,
-          cantidad_total: p.cantidad_total,
-          dosis_por_semana: p.dosis_por_semana,
+          dosis_por_semana: p.dosis_por_semana || 1,
           semana_inicio: p.semana_inicio,
-          semana_fin: p.semana_fin || null,
+          semana_fin: p.semana_fin || p.semana_inicio,
           observaciones: p.observaciones
         }))
       };
@@ -180,13 +170,6 @@ const PlanVacunalForm = () => {
     } catch (error) {
       console.error('Error guardando plan:', error);
     }
-  };
-
-  const calcularTotalDosis = (producto) => {
-    if (!producto.semana_fin) {
-      return producto.dosis_por_semana * (formData.duracion_semanas - producto.semana_inicio + 1);
-    }
-    return producto.dosis_por_semana * (producto.semana_fin - producto.semana_inicio + 1);
   };
 
   if (loading) {
@@ -291,23 +274,6 @@ const PlanVacunalForm = () => {
                     />
                   </div>
 
-                  <div className="col-md-6">
-                    <label className="form-label">Lista de Precios</label>
-                    <select
-                      className="form-select"
-                      name="id_lista_precio"
-                      value={formData.id_lista_precio}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">Seleccionar lista de precios</option>
-                      {listasPrecios.map(lista => (
-                        <option key={lista.id_lista} value={lista.id_lista}>
-                          {lista.tipo} - {lista.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   <div className="col-12">
                     <label className="form-label">Observaciones</label>
                     <textarea
@@ -363,10 +329,7 @@ const PlanVacunalForm = () => {
                       <thead className="table-light">
                         <tr>
                           <th>Vacuna</th>
-                          <th>Dosis/Semana</th>
-                          <th>Semana Inicio</th>
-                          <th>Semana Fin</th>
-                          <th>Total Dosis</th>
+                          <th>Semana de Aplicación</th>
                           <th>Acciones</th>
                         </tr>
                       </thead>
@@ -390,12 +353,9 @@ const PlanVacunalForm = () => {
                                 )}
                               </div>
                             </td>
-                            <td>{producto.dosis_por_semana}</td>
-                            <td>{producto.semana_inicio}</td>
-                            <td>{producto.semana_fin || 'Hasta el final'}</td>
                             <td>
                               <span className="badge bg-primary">
-                                {calcularTotalDosis(producto)} dosis
+                                Semana {producto.semana_inicio}
                               </span>
                             </td>
                             <td>
@@ -443,27 +403,9 @@ const PlanVacunalForm = () => {
                 </div>
                 
                 <div className="mb-3">
-                  <small className="text-muted">Productos</small>
-                  <div className="fw-bold">{formData.productos.length} productos</div>
+                  <small className="text-muted">Vacunas</small>
+                  <div className="fw-bold">{formData.productos.length} vacunas programadas</div>
                 </div>
-
-                <div className="mb-3">
-                  <small className="text-muted">Total de dosis</small>
-                  <div className="fw-bold">
-                    {formData.productos.reduce((total, producto) => 
-                      total + calcularTotalDosis(producto), 0
-                    )} dosis
-                  </div>
-                </div>
-
-                {formData.id_lista_precio && (
-                  <div className="mb-3">
-                    <small className="text-muted">Lista de precios</small>
-                    <div className="fw-bold">
-                      {listasPrecios.find(l => l.id_lista == formData.id_lista_precio)?.tipo}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -511,10 +453,7 @@ const PlanVacunalForm = () => {
 const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
   const [productoData, setProductoData] = useState({
     id_producto: '',
-    cantidad_total: 1,
-    dosis_por_semana: 1,
-    semana_inicio: 1,
-    semana_fin: '',
+    semana_aplicacion: 1,
     observaciones: ''
   });
 
@@ -524,9 +463,7 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
     const { name, value } = e.target;
     setProductoData(prev => ({
       ...prev,
-      [name]: ['cantidad_total', 'dosis_por_semana', 'semana_inicio', 'semana_fin'].includes(name) 
-        ? parseInt(value) || '' 
-        : value
+      [name]: name === 'semana_aplicacion' ? parseInt(value) || '' : value
     }));
   };
 
@@ -537,16 +474,8 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
       newErrors.id_producto = 'Debe seleccionar una vacuna';
     }
 
-    if (productoData.semana_inicio < 1 || productoData.semana_inicio > duracionSemanas) {
-      newErrors.semana_inicio = 'Semana de inicio inválida';
-    }
-
-    if (productoData.semana_fin && productoData.semana_fin > duracionSemanas) {
-      newErrors.semana_fin = 'Semana de fin inválida';
-    }
-
-    if (productoData.semana_fin && productoData.semana_fin < productoData.semana_inicio) {
-      newErrors.semana_fin = 'Semana de fin debe ser mayor a la de inicio';
+    if (productoData.semana_aplicacion < 1 || productoData.semana_aplicacion > duracionSemanas) {
+      newErrors.semana_aplicacion = 'Semana de aplicación inválida';
     }
 
     setErrors(newErrors);
@@ -558,6 +487,9 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
       const producto = productos.find(p => p.id_producto == productoData.id_producto);
       onSave({
         ...productoData,
+        dosis_por_semana: 1, // Por defecto 1 dosis por animal
+        semana_inicio: productoData.semana_aplicacion,
+        semana_fin: productoData.semana_aplicacion, // Misma semana de inicio y fin
         producto
       });
     }
@@ -594,60 +526,22 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
 
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="form-label">Dosis por semana *</label>
+                <label className="form-label">Semana de aplicación *</label>
                 <input
                   type="number"
-                  className="form-control"
-                  name="dosis_por_semana"
-                  value={productoData.dosis_por_semana}
-                  onChange={handleInputChange}
-                  min="1"
-                />
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label">Cantidad total</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  name="cantidad_total"
-                  value={productoData.cantidad_total}
-                  onChange={handleInputChange}
-                  min="1"
-                />
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label">Semana de inicio *</label>
-                <input
-                  type="number"
-                  className={`form-control ${errors.semana_inicio ? 'is-invalid' : ''}`}
-                  name="semana_inicio"
-                  value={productoData.semana_inicio}
+                  className={`form-control ${errors.semana_aplicacion ? 'is-invalid' : ''}`}
+                  name="semana_aplicacion"
+                  value={productoData.semana_aplicacion}
                   onChange={handleInputChange}
                   min="1"
                   max={duracionSemanas}
                 />
-                {errors.semana_inicio && (
-                  <div className="invalid-feedback">{errors.semana_inicio}</div>
+                {errors.semana_aplicacion && (
+                  <div className="invalid-feedback">{errors.semana_aplicacion}</div>
                 )}
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label">Semana de fin</label>
-                <input
-                  type="number"
-                  className={`form-control ${errors.semana_fin ? 'is-invalid' : ''}`}
-                  name="semana_fin"
-                  value={productoData.semana_fin}
-                  onChange={handleInputChange}
-                  min={productoData.semana_inicio}
-                  max={duracionSemanas}
-                  placeholder="Opcional"
-                />
-                {errors.semana_fin && (
-                  <div className="invalid-feedback">{errors.semana_fin}</div>
-                )}
+                <small className="text-muted">
+                  En qué semana del plan se aplica esta vacuna
+                </small>
               </div>
 
               <div className="col-12">

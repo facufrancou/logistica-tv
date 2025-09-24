@@ -17,6 +17,35 @@ import * as planesApi from '../../services/planesVacunalesApi';
 import { useNotification } from '../../context/NotificationContext';
 import './PlanesVacunales.css';
 
+// Función auxiliar para formatear fecha para inputs de tipo date
+const formatearFechaParaInput = (fecha) => {
+  if (!fecha) return '';
+  
+  try {
+    // Si ya viene en el formato correcto (YYYY-MM-DD), devolverla tal como está
+    if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return fecha;
+    }
+    
+    const fechaObj = new Date(fecha);
+    
+    // Verificar que la fecha sea válida
+    if (isNaN(fechaObj.getTime())) {
+      return '';
+    }
+    
+    // Usar métodos UTC para evitar problemas de timezone
+    const year = fechaObj.getUTCFullYear();
+    const month = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(fechaObj.getUTCDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return '';
+  }
+};
+
 const CalendarioVacunacionEditor = () => {
   const { cotizacionId } = useParams();
   const navigate = useNavigate();
@@ -62,7 +91,7 @@ const CalendarioVacunacionEditor = () => {
 
   const handleEditarFecha = (calendarioItem) => {
     setEditandoFecha(calendarioItem.id_calendario);
-    setFechaEditForm(calendarioItem.fecha_aplicacion_programada || '');
+    setFechaEditForm(formatearFechaParaInput(calendarioItem.fecha_aplicacion_programada));
   };
 
   const handleGuardarFecha = async (calendarioId) => {

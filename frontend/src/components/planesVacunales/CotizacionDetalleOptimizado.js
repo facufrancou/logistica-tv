@@ -19,8 +19,11 @@ import {
   FaCalculator,
   FaBalanceScale,
   FaPaw,
-  FaClipboardList
+  FaClipboardList,
+  FaPrint
 } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import ClasificacionFiscal from '../liquidaciones/ClasificacionFiscalSimple';
 import ResumenLiquidacion from '../liquidaciones/ResumenLiquidacionSimple';
 import './PlanesVacunales.css';
@@ -48,6 +51,7 @@ const CotizacionDetalleOptimizado = () => {
   });
   const [observacionesEstado, setObservacionesEstado] = useState('');
   const [mostrarClasificacion, setMostrarClasificacion] = useState(false);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
   
   // Refs para mantener la posición en la página
@@ -58,20 +62,27 @@ const CotizacionDetalleOptimizado = () => {
     cargarDatos();
   }, [id]);
 
+  useEffect(() => {
+    // Buscar la cotización cuando las cotizaciones se actualicen
+    if (cotizaciones.length > 0 && id) {
+      const cotizacionEncontrada = cotizaciones.find(c => c.id_cotizacion == id);
+      console.log('Buscando cotización ID:', id, 'Encontrada:', !!cotizacionEncontrada);
+      setCotizacion(cotizacionEncontrada || null);
+      
+      // Si no se encuentra la cotización después de cargar, mostrar error
+      if (!cotizacionEncontrada) {
+        showError('Error', 'No se encontró la cotización solicitada');
+        setTimeout(() => navigate('/cotizaciones'), 3000);
+      }
+    }
+  }, [cotizaciones, id, navigate, showError]);
+
   const cargarDatos = async () => {
     try {
       await cargarCotizaciones();
-      const cotizacionEncontrada = cotizaciones.find(c => c.id_cotizacion == id);
-      if (cotizacionEncontrada) {
-        setCotizacion(cotizacionEncontrada);
-      } else {
-        // Si no se encuentra en el estado, recargar
-        await cargarCotizaciones();
-        const cotizacionRecargada = cotizaciones.find(c => c.id_cotizacion == id);
-        setCotizacion(cotizacionRecargada);
-      }
     } catch (error) {
-      console.error('Error cargando cotización:', error);
+      console.error('Error cargando cotizaciones:', error);
+      showError('Error', 'No se pudo cargar la cotización');
     }
   };
 
@@ -167,6 +178,283 @@ const CotizacionDetalleOptimizado = () => {
     return new Date(fecha).toLocaleDateString('es-ES');
   };
 
+  // Función para cargar el logo
+  const cargarLogo = () => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Usar dimensiones originales del logo
+        const width = img.width;
+        const height = img.height;
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(null);
+      img.src = '/img/LOGO.PNG';
+    });
+  };
+
+  // Función para exportar cotización a PDF
+  const handleExportarCotizacionPDF = async () => {
+    if (!cotizacion) {
+      showError('Error', 'No hay datos de cotización para exportar');
+      return;
+    }
+
+    try {
+      setGenerandoPDF(true);
+      
+      // Cargar logo de la empresa
+      const logoDataUrl = await cargarLogo();
+      
+      // Crear instancia del documento en formato A4 vertical
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Configuración del documento
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+
+      // Colores corporativos
+      const primaryColor = [64, 64, 64];
+      const secondaryColor = [96, 96, 96];
+      const lightGray = [245, 245, 245];
+      const accentColor = [128, 128, 128];
+
+      // ENCABEZADO
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 35, 'F');
+
+      // Logo de la empresa centrado verticalmente
+      if (logoDataUrl) {
+        const logoWidth = 55;
+        const logoHeight = 15; // Mantiene relación aproximada 3.67:1
+        const logoY = (35 - logoHeight) / 2; // Centrado vertical en el header de 35mm
+        doc.addImage(logoDataUrl, 'PNG', margin, logoY, logoWidth, logoHeight);
+      } else {
+        // Texto alternativo si no hay logo
+        const logoBoxHeight = 18;
+        const logoY = (35 - logoBoxHeight) / 2; // Centrado vertical
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin, logoY, 55, logoBoxHeight, 'F');
+        doc.setTextColor(64, 64, 64);
+        doc.setFontSize(9);
+        doc.setFont('courier', 'bold');
+        doc.text('TERMOPLAST', margin + 27.5, logoY + 6, { align: 'center' });
+        doc.text('LOGÍSTICA', margin + 27.5, logoY + 11, { align: 'center' });
+        doc.text('VETERINARIA', margin + 27.5, logoY + 16, { align: 'center' });
+      }
+
+      // Título principal
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('courier', 'bold');
+      doc.text('COTIZACIÓN', pageWidth / 2, 16, { align: 'center' });
+
+      // Subtítulo
+      doc.setFontSize(12);
+      doc.setFont('courier', 'normal');
+      doc.text(`#${cotizacion.numero_cotizacion || cotizacion.id_cotizacion}`, pageWidth / 2, 25, { align: 'center' });
+
+      // ENCABEZADO PROFESIONAL UNIFICADO
+      let yPos = 50;
+      const infoBoxWidth = pageWidth - 2 * margin;
+      const infoBoxHeight = 45;
+
+      // Recuadro principal con toda la información
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, yPos, infoBoxWidth, infoBoxHeight, 'F');
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(0.8);
+      doc.rect(margin, yPos, infoBoxWidth, infoBoxHeight, 'S');
+
+      // Título del recuadro
+      doc.setFillColor(...accentColor);
+      doc.rect(margin, yPos, infoBoxWidth, 8, 'F');
+      doc.setFontSize(12);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('DATOS DE LA COTIZACIÓN', pageWidth / 2, yPos + 5.5, { align: 'center' });
+
+      // Información en dos columnas
+      const leftColX = margin + 5;
+      const rightColX = margin + (infoBoxWidth / 2) + 10;
+      const infoY = yPos + 15;
+      const labelWidth = 40;
+
+      doc.setFontSize(9);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      
+      // Columna izquierda - Labels
+      doc.text('CLIENTE:', leftColX, infoY);
+      doc.text('EMAIL:', leftColX, infoY + 6);
+      doc.text('TELÉFONO:', leftColX, infoY + 12);
+      doc.text('CANTIDAD POLLOS:', leftColX, infoY + 18);
+      
+      // Columna derecha - Labels
+      doc.text('PLAN VACUNAL:', rightColX, infoY);
+      doc.text('DURACIÓN:', rightColX, infoY + 6);
+      doc.text('FECHA NACIMIENTO:', rightColX, infoY + 12);
+      doc.text('FECHA COTIZACIÓN:', rightColX, infoY + 18);
+
+      // Valores
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(...secondaryColor);
+      
+      // Valores columna izquierda
+      const nombreCliente = cotizacion.cliente?.nombre || 'N/A';
+      const emailCliente = cotizacion.cliente?.email || 'No especificado';
+      const telefonoCliente = cotizacion.cliente?.telefono || 'No especificado';
+      const cantidadPollos = cotizacion.cantidad_animales?.toLocaleString() || 'N/A';
+      
+      doc.text(nombreCliente.length > 25 ? nombreCliente.substring(0, 25) + '...' : nombreCliente, leftColX + labelWidth, infoY);
+      doc.text(emailCliente.length > 25 ? emailCliente.substring(0, 25) + '...' : emailCliente, leftColX + labelWidth, infoY + 6);
+      doc.text(telefonoCliente, leftColX + labelWidth, infoY + 12);
+      doc.text(cantidadPollos, leftColX + labelWidth, infoY + 18);
+      
+      // Valores columna derecha
+      const nombrePlan = cotizacion.plan?.nombre || 'N/A';
+      const duracionSemanas = `${cotizacion.plan?.duracion_semanas || 'N/A'} semanas`;
+      const fechaNacimiento = cotizacion.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'No especificada';
+      const fechaCotizacion = new Date().toLocaleDateString('es-ES');
+      
+      doc.text(nombrePlan.length > 20 ? nombrePlan.substring(0, 20) + '...' : nombrePlan, rightColX + labelWidth, infoY);
+      doc.text(duracionSemanas, rightColX + labelWidth, infoY + 6);
+      doc.text(fechaNacimiento, rightColX + labelWidth, infoY + 12);
+      doc.text(fechaCotizacion, rightColX + labelWidth, infoY + 18);
+
+      // Separador
+      yPos += 55;
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(1.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+
+      // TABLA DE PRODUCTOS
+      yPos += 10;
+
+      let tableData = [];
+      
+      // Usar datos del detalle de cotización si están disponibles
+      if (cotizacion.detalle_cotizacion && cotizacion.detalle_cotizacion.length > 0) {
+        tableData = cotizacion.detalle_cotizacion.map(detalle => {
+          const semanaTexto = detalle.semana_fin ? 
+            `${detalle.semana_inicio} - ${detalle.semana_fin}` : 
+            `${detalle.semana_inicio} - final`;
+          
+          const precioUnitario = parseFloat(detalle.precio_final_calculado || detalle.precio_unitario || 0);
+          const subtotal = parseFloat(detalle.subtotal || 0);
+
+          return [
+            detalle.producto?.nombre || 'Producto no encontrado',
+            semanaTexto,
+            `${detalle.dosis_por_semana} x ${cotizacion.cantidad_animales?.toLocaleString() || 'N/A'}`,
+            detalle.cantidad_total?.toLocaleString() || 'N/A',
+            `$${precioUnitario.toFixed(2)}`,
+            `$${subtotal.toLocaleString()}`
+          ];
+        });
+      } else if (cotizacion.plan?.productos_plan && cotizacion.plan.productos_plan.length > 0) {
+        // Fallback: usar datos del plan
+        tableData = cotizacion.plan.productos_plan.map(pp => {
+          const semanaTexto = pp.semana_fin ? 
+            `${pp.semana_inicio} - ${pp.semana_fin}` : 
+            `${pp.semana_inicio} - final`;
+          
+          const dosisSemanales = pp.dosis_por_semana || 0;
+          const cantidadAnimales = cotizacion.cantidad_animales || 0;
+          const totalDosis = dosisSemanales * cantidadAnimales;
+          const precioUnitario = pp.precio_unitario || 0;
+          const subtotal = totalDosis * precioUnitario;
+
+          return [
+            pp.producto?.nombre || 'Producto no encontrado',
+            semanaTexto,
+            `${dosisSemanales} x ${cantidadAnimales.toLocaleString()}`,
+            totalDosis.toLocaleString(),
+            `$${precioUnitario.toFixed(2)}`,
+            `$${subtotal.toLocaleString()}`
+          ];
+        });
+      }
+
+      // Crear la tabla
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Producto/Vacuna', 'Semanas', 'Dosis x Cantidad', 'Total Dosis', 'Precio Unit.', 'Subtotal']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: secondaryColor
+        },
+        alternateRowStyles: {
+          fillColor: [250, 250, 250]
+        },
+        margin: { left: margin, right: margin },
+        tableWidth: pageWidth - 2 * margin,
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 30, halign: 'center' },
+          3: { cellWidth: 25, halign: 'center' },
+          4: { cellWidth: 25, halign: 'right' },
+          5: { cellWidth: 30, halign: 'right' }
+        },
+        // Agregar fila del total como parte de la tabla
+        foot: cotizacion.precio_total ? [[
+          { content: 'TOTAL', colSpan: 5, styles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' } },
+          { content: `$${parseFloat(cotizacion.precio_total).toLocaleString()}`, styles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' } }
+        ]] : undefined
+      });
+
+      // PIE DE PÁGINA
+      doc.setFillColor(...lightGray);
+      doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
+      
+      doc.setFontSize(8);
+      doc.setTextColor(...secondaryColor);
+      doc.setFont('courier', 'bold');
+      doc.text('Sistema de Gestión - Tierra Volga', margin, pageHeight - 15);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')} | contacto@tierravolga.com.ar`, margin, pageHeight - 10);
+      doc.text('Documento de uso profesional - Prohibida su reproducción sin autorización', margin, pageHeight - 5);
+      
+      // Descargar el PDF
+      const clienteNombre = cotizacion.cliente?.nombre?.replace(/[^a-zA-Z0-9]/g, '-') || 'cliente';
+      const numeroCotizacion = cotizacion.numero_cotizacion || cotizacion.id_cotizacion;
+      const fecha = new Date().toISOString().split('T')[0];
+      const fileName = `cotizacion-${numeroCotizacion}-${clienteNombre}-${fecha}.pdf`;
+      
+      doc.save(fileName);
+      
+      showSuccess('Éxito', 'PDF de cotización generado correctamente');
+      
+    } catch (error) {
+      console.error('Error generando PDF de cotización:', error);
+      showError('Error', 'No se pudo generar el PDF de la cotización');
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
   const calcularFechaFinalizacion = (fechaInicio, duracionSemanas) => {
     if (!fechaInicio || !duracionSemanas) return null;
     const fecha = new Date(fechaInicio);
@@ -223,6 +511,29 @@ const CotizacionDetalleOptimizado = () => {
             </div>
             <div className="d-flex align-items-center gap-2">
               {getEstadoBadge(cotizacion.estado)}
+              
+              {/* Botón de Imprimir PDF */}
+              <button
+                className="btn btn-outline-success btn-sm"
+                onClick={handleExportarCotizacionPDF}
+                disabled={generandoPDF}
+                title="Exportar cotización a PDF"
+              >
+                {generandoPDF ? (
+                  <>
+                    <div className="spinner-border spinner-border-sm me-1" role="status">
+                      <span className="visually-hidden">Generando...</span>
+                    </div>
+                    PDF...
+                  </>
+                ) : (
+                  <>
+                    <FaPrint className="me-1" />
+                    PDF
+                  </>
+                )}
+              </button>
+              
               {cotizacion.estado === 'en_proceso' && (
                 <button
                   className="btn btn-outline-primary btn-sm"

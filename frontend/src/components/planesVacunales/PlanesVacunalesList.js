@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
-import { FaPlus, FaEdit, FaEye, FaTrash, FaSearch, FaFilter, FaSyringe, FaCalculator, FaCheckCircle, FaTimesCircle, FaEdit as FaPencil } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaEye, FaTrash, FaSearch, FaFilter, FaSyringe, FaCheckCircle, FaTimesCircle, FaEdit as FaPencil } from 'react-icons/fa';
 import './PlanesVacunales.css';
 
 const PlanesVacunalesList = () => {
@@ -9,50 +9,34 @@ const PlanesVacunalesList = () => {
     planes, 
     loading, 
     cargarPlanes, 
-    eliminarPlan, 
-    calcularPrecioPlan,
-    cargarListasPrecios 
+    eliminarPlan 
   } = usePlanesVacunales();
 
   const [filtros, setFiltros] = useState({
     estado: '',
-    lista_precio: '',
     busqueda: ''
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [precios, setPrecios] = useState({});
 
   useEffect(() => {
     cargarPlanes();
-    cargarListasPrecios();
   }, []);
 
   const aplicarFiltros = () => {
     const filtrosActivos = {};
     if (filtros.estado) filtrosActivos.estado = filtros.estado;
-    if (filtros.lista_precio) filtrosActivos.lista_precio = filtros.lista_precio;
     
     cargarPlanes(filtrosActivos);
   };
 
   const limpiarFiltros = () => {
-    setFiltros({ estado: '', lista_precio: '', busqueda: '' });
+    setFiltros({ estado: '', busqueda: '' });
     cargarPlanes();
   };
 
   const handleEliminar = async (id, nombre) => {
     if (window.confirm(`¿Está seguro que desea eliminar el plan "${nombre}"?`)) {
       await eliminarPlan(id);
-    }
-  };
-
-  const calcularPrecio = async (id) => {
-    const resultado = await calcularPrecioPlan(id);
-    if (resultado) {
-      setPrecios(prev => ({
-        ...prev,
-        [id]: resultado.precio_total
-      }));
     }
   };
 
@@ -139,22 +123,7 @@ const PlanesVacunalesList = () => {
                   <option value="borrador">Borrador</option>
                 </select>
               </div>
-              <div className="col-md-3">
-                <label className="form-label">Lista de Precios</label>
-                <select
-                  className="form-select"
-                  value={filtros.lista_precio}
-                  onChange={(e) => setFiltros(prev => ({ ...prev, lista_precio: e.target.value }))}
-                >
-                  <option value="">Todas</option>
-                  <option value="1">L15</option>
-                  <option value="2">L18</option>
-                  <option value="3">L20</option>
-                  <option value="4">L25</option>
-                  <option value="5">L30</option>
-                </select>
-              </div>
-              <div className="col-md-3 d-flex align-items-end">
+              <div className="col-md-6 d-flex align-items-end">
                 <button 
                   className="btn btn-primary me-2"
                   onClick={aplicarFiltros}
@@ -194,9 +163,7 @@ const PlanesVacunalesList = () => {
                     <th>Nombre</th>
                     <th>Estado</th>
                     <th>Duración</th>
-                    <th>Lista de Precios</th>
-                    <th>Precio Total</th>
-                    <th>Productos</th>
+                    <th>Vacunas</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -237,36 +204,8 @@ const PlanesVacunalesList = () => {
                         {plan.duracion_semanas} semana{plan.duracion_semanas !== 1 ? 's' : ''}
                       </td>
                       <td>
-                        {plan.lista_precio ? (
-                          <span className="badge bg-info">
-                            {plan.lista_precio.tipo}
-                          </span>
-                        ) : (
-                          <span className="text-muted">Sin asignar</span>
-                        )}
-                      </td>
-                      <td>
-                        {precios[plan.id_plan] ? (
-                          <span className="fw-bold text-success">
-                            ${precios[plan.id_plan].toLocaleString()}
-                          </span>
-                        ) : plan.precio_total ? (
-                          <span className="fw-bold text-success">
-                            ${plan.precio_total.toLocaleString()}
-                          </span>
-                        ) : (
-                          <button
-                            className="btn btn-sm btn-outline-secondary"
-                            onClick={() => calcularPrecio(plan.id_plan)}
-                            title="Calcular precio"
-                          >
-                            <FaCalculator />
-                          </button>
-                        )}
-                      </td>
-                      <td>
                         <span className="badge bg-primary">
-                          {plan.productos_plan?.length || 0} productos
+                          {plan.productos_plan?.length || 0} vacunas
                         </span>
                       </td>
                       <td>

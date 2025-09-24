@@ -19,30 +19,44 @@ function calcularFechaProgramada(fechaInicio, numeroSemana) {
   return fecha;
 }
 
-async function generarCalendarioVacunacion(cotizacionId, fechaInicio, productosDelPlan, tx = prisma) {
-  const calendarioItems = [];
+async function generarCalendarioVacunacion(cotizacionId, fechaInicio, productosDelPlan, cantidadAnimales, tx = prisma) {
+  const calendarioMap = new Map(); // Usar Map para agrupar por producto+semana
 
   for (const planProducto of productosDelPlan) {
     const semanaInicio = planProducto.semana_inicio;
     const semanaFin = planProducto.semana_fin || semanaInicio;
     const dosisPorSemana = planProducto.dosis_por_semana;
     
-    console.log(`Generando calendario - Producto: ${planProducto.producto?.nombre || 'N/A'}, Semana: ${semanaInicio}, Dosis: ${dosisPorSemana}`);
+    // Calcular dosis reales: template × cantidad de animales
+    const dosisRealesSemanales = dosisPorSemana * cantidadAnimales;
+    
+    console.log(`Generando calendario - Producto: ${planProducto.producto?.nombre || 'N/A'}, Semana: ${semanaInicio}, Template: ${dosisPorSemana}, Animales: ${cantidadAnimales}, Dosis Reales: ${dosisRealesSemanales}`);
 
-    // Para cada semana en el rango, crear una entrada con las dosis correspondientes
+    // Para cada semana en el rango, agrupar las dosis por producto+semana
     for (let semana = semanaInicio; semana <= semanaFin; semana++) {
-      if (dosisPorSemana > 0) {
-        calendarioItems.push({
-          id_cotizacion: cotizacionId,
-          id_producto: planProducto.id_producto,
-          numero_semana: semana,
-          fecha_programada: calcularFechaProgramada(fechaInicio, semana),
-          cantidad_dosis: dosisPorSemana, // Usar dosis_por_semana directamente
-          estado_dosis: 'pendiente'
-        });
+      if (dosisRealesSemanales > 0) {
+        const key = `${planProducto.id_producto}_${semana}`;
+        
+        if (calendarioMap.has(key)) {
+          // Si ya existe, sumar las dosis reales
+          const existing = calendarioMap.get(key);
+          existing.cantidad_dosis += dosisRealesSemanales;
+        } else {
+          // Si no existe, crear nueva entrada con dosis reales
+          calendarioMap.set(key, {
+            id_cotizacion: cotizacionId,
+            id_producto: planProducto.id_producto,
+            numero_semana: semana,
+            fecha_programada: calcularFechaProgramada(fechaInicio, semana),
+            cantidad_dosis: dosisRealesSemanales,
+            estado_dosis: 'pendiente'
+          });
+        }
       }
     }
   }
+
+  const calendarioItems = Array.from(calendarioMap.values());
 
   if (calendarioItems.length > 0) {
     await tx.calendarioVacunacion.createMany({
@@ -642,7 +656,7 @@ exports.createCotizacion = async (req, res) => {
           id_cliente: parseInt(id_cliente),
           id_plan: parseInt(id_plan),
           id_lista_precio: listaPrecios,
-          fecha_inicio_plan: new Date(fecha_inicio_plan),
+          fecha_inicio_plan: new Date(fecha_inicio_plan + 'T12:00:00'),
           cantidad_animales: cantidadAnimalesNum,
           precio_total: precioTotal,
           observaciones: observaciones || '',
@@ -663,6 +677,7 @@ exports.createCotizacion = async (req, res) => {
         cotizacion.id_cotizacion,
         new Date(fecha_inicio_plan),
         plan.productos_plan,
+        cantidad_animales, // Pasar la cantidad de animales
         tx
       );
 
@@ -1102,7 +1117,7 @@ exports.actualizarEstadoDosis = async (req, res) => {
     };
 
     if (fecha_aplicacion) {
-      updateData.fecha_aplicacion = new Date(fecha_aplicacion);
+      updateData.fecha_aplicacion = new Date(fecha_aplicacion + 'T12:00:00');
     }
 
     if (observaciones !== undefined) {
@@ -1184,6 +1199,7 @@ exports.regenerarCalendario = async (req, res) => {
         parseInt(id),
         new Date(nueva_fecha_inicio),
         cotizacion.plan.productos_plan,
+        cotizacion.cantidad_animales, // Usar la cantidad de animales de la cotización
         tx
       );
     });
@@ -2082,7 +2098,8 @@ exports.editarFechaCalendario = async (req, res) => {
       });
     }
 
-    const fechaProgramada = new Date(nueva_fecha);
+    // Crear fecha manteniendo la zona horaria local
+    const fechaProgramada = new Date(nueva_fecha + 'T12:00:00'); // Agregar hora del mediodía para evitar problemas de zona horaria
     if (isNaN(fechaProgramada.getTime())) {
       return res.status(400).json({
         success: false,
@@ -2594,11 +2611,28 @@ const getCalendarioVacunacion = async (req, res) => {
       ]
     });
 
+    // Función auxiliar para formatear fecha evitando problemas de timezone
+    const formatearFechaLocal = (fecha) => {
+      if (!fecha) return null;
+      
+      console.log('Fecha original de BD:', fecha);
+      console.log('Fecha como ISO:', fecha.toISOString());
+      
+      // Usar getUTCFullYear, getUTCMonth, getUTCDate para extraer la fecha sin conversión de zona horaria
+      const year = fecha.getUTCFullYear();
+      const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(fecha.getUTCDate()).padStart(2, '0');
+      const fechaFormateada = `${year}-${month}-${day}`;
+      
+      console.log('Fecha formateada para frontend:', fechaFormateada);
+      return fechaFormateada;
+    };
+
     // Transformar los datos para que coincidan con lo que espera el frontend
     const calendarioFormateado = calendario.map(item => ({
       id_calendario: item.id_calendario,
       semana_aplicacion: item.numero_semana,
-      fecha_aplicacion_programada: item.fecha_programada ? item.fecha_programada.toISOString().split('T')[0] : null,
+      fecha_aplicacion_programada: formatearFechaLocal(item.fecha_programada),
       vacuna_nombre: item.producto?.nombre || 'Producto no encontrado',
       vacuna_tipo: item.producto?.tipo_producto || 'N/A',
       vacuna_descripcion: item.producto?.descripcion || '',
@@ -2640,11 +2674,30 @@ const editarFechaCalendario = async (req, res) => {
       });
     }
 
+    console.log('Recibida fecha para editar:', fecha_aplicacion_programada);
+
+    // Validar formato de fecha (YYYY-MM-DD)
+    const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!fechaRegex.test(fecha_aplicacion_programada)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato de fecha inválido. Use YYYY-MM-DD'
+      });
+    }
+
+    // Crear fecha manteniendo solo la fecha sin problemas de timezone
+    // Parseamos la fecha y la guardamos como inicio del día en UTC
+    const [year, month, day] = fecha_aplicacion_programada.split('-');
+    const fechaParaGuardar = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0));
+
+    console.log('Fecha ISO para guardar:', fechaParaGuardar.toISOString());
+    console.log('Fecha objeto para guardar:', fechaParaGuardar);
+
     // Actualizar la fecha en el calendario
     const calendarioActualizado = await prisma.calendarioVacunacion.update({
       where: { id_calendario: parseInt(id_calendario) },
       data: {
-        fecha_programada: new Date(fecha_aplicacion_programada)
+        fecha_programada: fechaParaGuardar
       },
       include: {
         producto: {
@@ -2656,13 +2709,16 @@ const editarFechaCalendario = async (req, res) => {
       }
     });
 
+    console.log('Fecha guardada en BD:', calendarioActualizado.fecha_programada);
+
+    // Devolver la fecha original enviada (sin conversiones)
     res.json({
       success: true,
       message: 'Fecha actualizada correctamente',
       calendario: {
         id_calendario: calendarioActualizado.id_calendario,
         semana_aplicacion: calendarioActualizado.numero_semana,
-        fecha_aplicacion_programada: calendarioActualizado.fecha_programada.toISOString().split('T')[0],
+        fecha_aplicacion_programada: fecha_aplicacion_programada, // Devolver la fecha original
         vacuna_nombre: calendarioActualizado.producto?.nombre || 'Producto no encontrado',
         vacuna_tipo: calendarioActualizado.producto?.tipo_producto || 'N/A'
       }

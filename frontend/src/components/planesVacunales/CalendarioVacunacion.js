@@ -353,11 +353,28 @@ const CalendarioVacunacion = () => {
     return badges[estado] || badges['inactivo'];
   };
 
+  // Función auxiliar para convertir fecha a formato YYYY-MM-DD para inputs date
+  const formatearFechaParaInput = (fecha) => {
+    if (!fecha) return '';
+    
+    // Si ya viene en el formato correcto (YYYY-MM-DD), devolverla tal como está
+    if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return fecha;
+    }
+    
+    // Si es un objeto Date, usar métodos UTC para evitar problemas de timezone
+    const date = new Date(fecha);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // ===== FUNCIONES DE EDICIÓN =====
   
   const handleEditarFecha = (calendarioItem) => {
     setEditandoFecha(calendarioItem.id_calendario);
-    setFechaEditForm(calendarioItem.fecha_aplicacion_programada || '');
+    setFechaEditForm(formatearFechaParaInput(calendarioItem.fecha_aplicacion_programada));
   };
 
   const handleGuardarFecha = async (calendarioId) => {
@@ -728,6 +745,12 @@ const CalendarioVacunacion = () => {
     if (!fecha) return 'No programada';
     
     try {
+      // Si ya viene en formato string YYYY-MM-DD, formatear directamente
+      if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      
       const dateObj = new Date(fecha);
       
       // Verificar que la fecha sea válida
@@ -736,11 +759,12 @@ const CalendarioVacunacion = () => {
         return 'Fecha inválida';
       }
       
-      return dateObj.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit', 
-        year: 'numeric'
-      });
+      // Usar métodos UTC para evitar problemas de timezone
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      
+      return `${day}/${month}/${year}`;
     } catch (error) {
       console.error('Error formateando fecha:', error);
       return 'Error en fecha';
@@ -957,7 +981,7 @@ const CalendarioVacunacion = () => {
                           <strong>Semana {item.semana_aplicacion}</strong>
                         </td>
                         <td>
-                          {new Date(item.fecha_aplicacion_programada).toLocaleDateString('es-ES')}
+                          {formatearFecha(item.fecha_aplicacion_programada)}
                         </td>
                         <td>
                           <div>
@@ -1114,7 +1138,7 @@ const CalendarioVacunacion = () => {
                           <td>
                             <div>
                               <strong>{item.vacuna_nombre}</strong><br />
-                              <small className="text-muted">{item.vacuna_tipo}</small>
+                              <small className="text-muted">{item.vacuna_descripcion}</small>
                             </div>
                           </td>
                           <td>

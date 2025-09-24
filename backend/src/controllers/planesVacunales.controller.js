@@ -207,7 +207,7 @@ exports.createPlan = async (req, res) => {
           data: productos.map(producto => ({
             id_plan: plan.id_plan,
             id_producto: parseInt(producto.id_producto),
-            cantidad_total: parseInt(producto.cantidad_total),
+            cantidad_total: parseInt(producto.cantidad_total) || 1, // Por defecto 1 si no se especifica
             dosis_por_semana: parseInt(producto.dosis_por_semana) || 1,
             semana_inicio: parseInt(producto.semana_inicio),
             semana_fin: producto.semana_fin ? parseInt(producto.semana_fin) : null,
@@ -301,7 +301,7 @@ exports.updatePlan = async (req, res) => {
             data: productos.map(producto => ({
               id_plan: parseInt(id),
               id_producto: parseInt(producto.id_producto),
-              cantidad_total: parseInt(producto.cantidad_total),
+              cantidad_total: parseInt(producto.cantidad_total) || 1, // Por defecto 1 si no se especifica
               dosis_por_semana: parseInt(producto.dosis_por_semana) || 1,
               semana_inicio: parseInt(producto.semana_inicio),
               semana_fin: producto.semana_fin ? parseInt(producto.semana_fin) : null,
