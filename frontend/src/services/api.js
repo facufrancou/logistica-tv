@@ -313,3 +313,279 @@ export const getVacunas = () => fetchConSesion(API + "/productos/vacunas");
 export const getProductosPorTipo = (tipo) => 
   fetchConSesion(`${API}/productos?tipo_producto=${tipo}`);
 
+// ===== SISTEMA DE VACUNAS =====
+
+// Vacunas
+export const getVacunasNuevas = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/vacunas${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getVacunasDisponibles = () => fetchConSesion(`${API}/vacunas/disponibles`);
+
+export const getVacunaById = (id) => fetchConSesion(`${API}/vacunas/${id}`);
+
+export const crearVacuna = async (vacuna) => {
+  try {
+    const res = await fetch(`${API}/vacunas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(vacuna),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear la vacuna");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear vacuna: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarVacuna = async (id, vacuna) => {
+  try {
+    const res = await fetch(`${API}/vacunas/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(vacuna),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar la vacuna");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar vacuna: " + err.message);
+    return null;
+  }
+};
+
+export const eliminarVacuna = async (id) => {
+  try {
+    const res = await fetch(`${API}/vacunas/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo eliminar la vacuna");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al eliminar vacuna: " + err.message);
+    return null;
+  }
+};
+
+// Catálogos de Vacunas
+export const getPatologias = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/catalogos/patologias${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getPresentaciones = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/catalogos/presentaciones${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getViasAplicacion = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/catalogos/vias-aplicacion${queryString ? `?${queryString}` : ''}`);
+};
+
+export const crearPatologia = async (patologia) => {
+  try {
+    const res = await fetch(`${API}/catalogos/patologias`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patologia),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear la patología");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear patología: " + err.message);
+    return null;
+  }
+};
+
+export const crearPresentacion = async (presentacion) => {
+  try {
+    const res = await fetch(`${API}/catalogos/presentaciones`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(presentacion),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear la presentación");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear presentación: " + err.message);
+    return null;
+  }
+};
+
+export const crearViaAplicacion = async (via) => {
+  try {
+    const res = await fetch(`${API}/catalogos/vias-aplicacion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(via),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear la vía de aplicación");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear vía de aplicación: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarPatologia = async (id, patologia) => {
+  try {
+    const res = await fetch(`${API}/catalogos/patologias/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patologia),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar la patología");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar patología: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarPresentacion = async (id, presentacion) => {
+  try {
+    const res = await fetch(`${API}/catalogos/presentaciones/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(presentacion),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar la presentación");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar presentación: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarViaAplicacion = async (id, via) => {
+  try {
+    const res = await fetch(`${API}/catalogos/vias-aplicacion/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(via),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar la vía de aplicación");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar vía de aplicación: " + err.message);
+    return null;
+  }
+};
+
+// Stock de Vacunas
+export const getStockVacunas = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/stock-vacunas${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getAlertasStockVacunas = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/stock-vacunas/alertas${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getStockByVacuna = (idVacuna) => 
+  fetchConSesion(`${API}/stock-vacunas/vacuna/${idVacuna}`);
+
+export const getMovimientosStockVacuna = (idStock, params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return fetchConSesion(`${API}/stock-vacunas/${idStock}/movimientos${queryString ? `?${queryString}` : ''}`);
+};
+
+export const crearStockVacuna = async (stock) => {
+  try {
+    const res = await fetch(`${API}/stock-vacunas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(stock),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear el registro de stock");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al crear stock de vacuna: " + err.message);
+    return null;
+  }
+};
+
+export const actualizarStockVacuna = async (id, stock) => {
+  try {
+    const res = await fetch(`${API}/stock-vacunas/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(stock),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar el stock");
+    }
+
+    return await res.json();
+  } catch (err) {
+    alert("Error al actualizar stock: " + err.message);
+    return null;
+  }
+};
+

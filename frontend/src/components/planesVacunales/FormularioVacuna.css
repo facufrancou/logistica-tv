@@ -1,0 +1,465 @@
+/* Estilos profesionales para FormularioVacuna - Mejoras estéticas */
+
+/* Mejoras al modal principal */
+.vacuna-modal-enhanced .modal-content {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+.vacuna-modal-enhanced .modal-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  padding: 1.25rem 1.5rem;
+  position: relative;
+}
+
+.vacuna-modal-enhanced .modal-header::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+}
+
+.vacuna-modal-enhanced .modal-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.vacuna-modal-enhanced .modal-body {
+  padding: 2rem 1.5rem;
+  background: #fbfbfb;
+}
+
+/* Secciones profesionales con acordeón */
+.form-section-enhanced {
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 123, 255, 0.1);
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.form-section-enhanced.active {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 123, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.form-section-enhanced.inactive {
+  opacity: 0.7;
+}
+
+.form-section-enhanced.inactive:hover {
+  opacity: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 123, 255, 0.2);
+}
+
+/* Header de sección clickeable */
+.section-header-enhanced {
+  margin-bottom: 0;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.section-header-enhanced:hover {
+  background: rgba(0, 123, 255, 0.02);
+}
+
+.section-header-enhanced.active {
+  background: rgba(0, 123, 255, 0.05);
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.section-content-enhanced {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.section-content-enhanced.active {
+  max-height: 1000px;
+  opacity: 1;
+  padding: 1.5rem;
+}
+
+/* Indicador de acordeón */
+.accordion-indicator {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: #6c757d;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.accordion-indicator.active {
+  transform: translateY(-50%) rotate(180deg);
+  color: #007bff;
+}
+
+.accordion-indicator:hover {
+  color: #007bff;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.accordion-indicator.active:hover {
+  transform: translateY(-50%) rotate(180deg) scale(1.1);
+}
+
+.form-section-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 10px 10px 0 0;
+}
+
+.form-section-enhanced.info-section::before {
+  background: linear-gradient(90deg, #17a2b8, #138496);
+}
+
+.form-section-enhanced.provider-section::before {
+  background: linear-gradient(90deg, #28a745, #1e7e34);
+}
+
+.form-section-enhanced.classification-section::before {
+  background: linear-gradient(90deg, #ffc107, #e0a800);
+}
+
+.section-header-enhanced {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #f8f9fa;
+  position: relative;
+}
+
+.section-title-enhanced {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.section-title-enhanced i {
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+}
+
+.section-title-enhanced.info-title i {
+  color: #17a2b8;
+}
+
+.section-title-enhanced.provider-title i {
+  color: #28a745;
+}
+
+.section-title-enhanced.classification-title i {
+  color: #ffc107;
+}
+
+.section-subtitle-enhanced {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Mejoras en los campos */
+.form-group-enhanced {
+  margin-bottom: 1.25rem;
+}
+
+.form-label-enhanced {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.form-label-enhanced i {
+  margin-right: 0.5rem;
+  color: #6c757d;
+  width: 16px;
+  text-align: center;
+}
+
+.form-control-enhanced {
+  border: 1.5px solid #e2e6ea;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-control-enhanced:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.15);
+  background: white;
+}
+
+.form-control-enhanced:hover:not(:focus) {
+  border-color: #c6cbcf;
+}
+
+/* Input groups mejorados */
+.input-group-enhanced .input-group-prepend .input-group-text {
+  background: #f8f9fa;
+  border: 1.5px solid #e2e6ea;
+  border-right: none;
+  color: #495057;
+  font-weight: 600;
+}
+
+.input-group-enhanced .form-control-enhanced {
+  border-left: none;
+}
+
+.input-group-enhanced:focus-within .input-group-text {
+  border-color: #007bff;
+  background: #e7f3ff;
+  color: #007bff;
+}
+
+/* Botones de agregar mejorados */
+.btn-add-enhanced {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.btn-add-enhanced:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  color: white;
+}
+
+.btn-add-enhanced:active {
+  transform: translateY(0);
+}
+
+/* Switch mejorado */
+.custom-switch-enhanced {
+  margin-top: 0.5rem;
+}
+
+.custom-switch-enhanced .custom-control-label {
+  font-weight: 500;
+  color: #495057;
+  padding-left: 0.5rem;
+}
+
+.custom-switch-enhanced .custom-control-label::before {
+  background: #e9ecef;
+  border: 2px solid #dee2e6;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.custom-switch-enhanced .custom-control-input:checked ~ .custom-control-label::before {
+  background: #007bff;
+  border-color: #007bff;
+}
+
+.custom-switch-enhanced .custom-control-label::after {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Alertas mejoradas */
+.alert-enhanced {
+  border: none;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid;
+  font-size: 0.9rem;
+}
+
+.alert-success-enhanced {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border-left-color: #28a745;
+  color: #155724;
+}
+
+.alert-danger-enhanced {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  border-left-color: #dc3545;
+  color: #721c24;
+}
+
+/* Footer mejorado */
+.vacuna-modal-enhanced .modal-footer {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #dee2e6;
+  padding: 1.25rem 1.5rem;
+}
+
+.btn-enhanced {
+  border-radius: 8px;
+  padding: 0.6rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  transform: translate(-50%, -50%);
+}
+
+.btn-enhanced:hover::before {
+  width: 120px;
+  height: 120px;
+}
+
+.btn-secondary-enhanced {
+  background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
+}
+
+.btn-secondary-enhanced:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+  color: white;
+}
+
+.btn-dark-enhanced {
+  background: linear-gradient(135deg, #343a40 0%, #23272b 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(52, 58, 64, 0.2);
+}
+
+.btn-dark-enhanced:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(52, 58, 64, 0.3);
+  color: white;
+}
+
+.btn-success-enhanced {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.btn-success-enhanced:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  color: white;
+}
+
+/* Animaciones suaves */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-section-enhanced {
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+.form-section-enhanced:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.form-section-enhanced:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.form-section-enhanced:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+/* Loading state */
+.btn-enhanced:disabled {
+  opacity: 0.7;
+  transform: none !important;
+  cursor: not-allowed;
+}
+
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vacuna-modal-enhanced .modal-body {
+    padding: 1.5rem 1rem;
+  }
+  
+  .form-section-enhanced {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .btn-enhanced {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Utilidades */
+.mr-2 {
+  margin-right: 0.5rem !important;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.text-required {
+  color: #dc3545;
+  font-weight: 700;
+}

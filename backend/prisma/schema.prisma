@@ -26,10 +26,10 @@ model Usuario {
   configuraciones            Configuracion[]
   historial_precios          HistorialPrecio[]
   movimientos_stock          MovimientoStock[]
+  movimientos_stock_vacunas  MovimientoStockVacuna[]
   notificaciones             Notificacion[]
   pedidos                    Pedido[]
   retiros_campo_creados      RetiroCampo[]
-  control_entregas_creadas   ControlEntregaVacunas[]
   rol                        Rol               @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
 
   @@index([email], map: "idx_usuarios_email")
@@ -75,6 +75,7 @@ model Proveedor {
   created_by   Int?
   updated_by   Int?
   productos    Producto[]
+  vacunas      Vacuna[]
 
   @@map("proveedores")
 }
@@ -108,7 +109,6 @@ model Producto {
   productos_habilitados      ProductoHabilitado[]
   reservas_stock             ReservaStock[]
   retiros_campo              RetiroCampo[]
-  control_entregas_vacunas   ControlEntregaVacunas[]
   detalle_remito             DetalleRemito[]
   detalle_venta_directa      DetalleVentaDirecta[]
   indicadores_stock          IndicadorStockPlan[]
@@ -407,7 +407,6 @@ model Cotizacion {
   retiros_campo              RetiroCampo[]
   seguimiento_cumplimiento   SeguimientoCumplimiento[]
   resumen_liquidacion        ResumenLiquidacion?
-  control_entregas_vacunas   ControlEntregaVacunas[]
   remitos                    Remito[]
 
   @@index([id_cliente], map: "idx_cotizaciones_cliente")
@@ -475,7 +474,6 @@ model CalendarioVacunacion {
   dosis_original             CalendarioVacunacion?    @relation("DesdoblamientoDosis", fields: [dosis_original_id], references: [id_calendario])
   desdoblamientos            CalendarioVacunacion[]   @relation("DesdoblamientoDosis")
   notificaciones_automaticas NotificacionAutomatica[]
-  control_entregas           ControlEntregaVacunas[]
 
   @@unique([id_cotizacion, id_producto, numero_semana], map: "unique_calendario_cotizacion_producto_semana")
   @@index([id_cotizacion], map: "idx_calendario_cotizacion")
@@ -484,33 +482,6 @@ model CalendarioVacunacion {
   @@index([estado_entrega], map: "idx_calendario_estado_entrega")
   @@index([id_producto], map: "calendario_vacunacion_id_producto_fkey")
   @@map("calendario_vacunacion")
-}
-
-model ControlEntregaVacunas {
-  id_control_entrega   Int                  @id @default(autoincrement())
-  id_calendario        Int
-  id_cotizacion        Int
-  id_producto          Int
-  cantidad_entregada   Int
-  fecha_entrega        DateTime             @db.DateTime(0)
-  responsable_entrega  String?              @db.VarChar(100)
-  observaciones        String?              @db.Text
-  tipo_entrega         tipo_entrega         @default(completa)
-  stock_afectado       Int                  @default(0)
-  created_at           DateTime?            @default(now()) @db.DateTime(0)
-  created_by           Int?
-  calendario           CalendarioVacunacion @relation(fields: [id_calendario], references: [id_calendario], onDelete: Cascade, onUpdate: NoAction)
-  cotizacion           Cotizacion           @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
-  producto             Producto             @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
-  usuario_creador      Usuario?             @relation(fields: [created_by], references: [id_usuario], onUpdate: NoAction)
-
-  @@index([id_calendario], map: "idx_control_entrega_calendario")
-  @@index([id_cotizacion], map: "idx_control_entrega_cotizacion")
-  @@index([id_producto], map: "idx_control_entrega_producto")
-  @@index([fecha_entrega], map: "idx_control_entrega_fecha")
-  @@index([tipo_entrega], map: "idx_control_entrega_tipo")
-  @@index([created_by], map: "control_entregas_vacunas_created_by_fkey")
-  @@map("control_entregas_vacunas")
 }
 
 model MovimientoStock {
@@ -1056,4 +1027,165 @@ enum EstadoStock {
   bajo
   insuficiente
   critico
+}
+
+// NUEVAS TABLAS PARA SISTEMA DE VACUNAS
+
+model Patologia {
+  id_patologia    Int      @id @default(autoincrement())
+  codigo          String   @unique @db.VarChar(20)
+  nombre          String   @db.VarChar(100)
+  descripcion     String?  @db.Text
+  activa          Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.DateTime(0)
+  updated_at      DateTime @updatedAt @db.DateTime(0)
+  created_by      Int?
+  updated_by      Int?
+  
+  vacunas         Vacuna[]
+  
+  @@index([codigo], map: "idx_patologia_codigo")
+  @@index([nombre], map: "idx_patologia_nombre")
+  @@map("patologias")
+}
+
+model Presentacion {
+  id_presentacion Int      @id @default(autoincrement())
+  codigo          String   @unique @db.VarChar(20)
+  nombre          String   @db.VarChar(100)
+  descripcion     String?  @db.Text
+  unidad_medida   String?  @db.VarChar(50)
+  activa          Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.DateTime(0)
+  updated_at      DateTime @updatedAt @db.DateTime(0)
+  created_by      Int?
+  updated_by      Int?
+  
+  vacunas         Vacuna[]
+  
+  @@index([codigo], map: "idx_presentacion_codigo")
+  @@index([nombre], map: "idx_presentacion_nombre")
+  @@map("presentaciones")
+}
+
+model ViaAplicacion {
+  id_via_aplicacion Int      @id @default(autoincrement())
+  codigo            String   @unique @db.VarChar(20)
+  nombre            String   @db.VarChar(100)
+  descripcion       String?  @db.Text
+  activa            Boolean  @default(true)
+  created_at        DateTime @default(now()) @db.DateTime(0)
+  updated_at        DateTime @updatedAt @db.DateTime(0)
+  created_by        Int?
+  updated_by        Int?
+  
+  vacunas           Vacuna[]
+  
+  @@index([codigo], map: "idx_via_aplicacion_codigo")
+  @@index([nombre], map: "idx_via_aplicacion_nombre")
+  @@map("vias_aplicacion")
+}
+
+model Vacuna {
+  id_vacuna         Int             @id @default(autoincrement())
+  codigo            String          @unique @db.VarChar(50)
+  nombre            String          @db.VarChar(255)
+  detalle           String?         @db.Text
+  id_proveedor      Int
+  id_patologia      Int
+  id_presentacion   Int
+  id_via_aplicacion Int
+  precio_lista      Decimal         @db.Decimal(10, 2)
+  activa            Boolean         @default(true)
+  requiere_frio     Boolean?        @default(false)
+  dias_vencimiento  Int?
+  observaciones     String?         @db.Text
+  created_at        DateTime        @default(now()) @db.DateTime(0)
+  updated_at        DateTime        @updatedAt @db.DateTime(0)
+  created_by        Int?
+  updated_by        Int?
+  
+  proveedor         Proveedor       @relation(fields: [id_proveedor], references: [id_proveedor])
+  patologia         Patologia       @relation(fields: [id_patologia], references: [id_patologia])
+  presentacion      Presentacion    @relation(fields: [id_presentacion], references: [id_presentacion])
+  via_aplicacion    ViaAplicacion   @relation(fields: [id_via_aplicacion], references: [id_via_aplicacion])
+  stock_vacunas     StockVacuna[]
+  
+  @@index([codigo], map: "idx_vacuna_codigo")
+  @@index([nombre], map: "idx_vacuna_nombre")
+  @@index([id_proveedor], map: "idx_vacuna_proveedor")
+  @@index([id_patologia], map: "idx_vacuna_patologia")
+  @@index([activa], map: "idx_vacuna_activa")
+  @@map("vacunas")
+}
+
+model StockVacuna {
+  id_stock_vacuna   Int             @id @default(autoincrement())
+  id_vacuna         Int
+  lote              String          @db.VarChar(100)
+  fecha_vencimiento DateTime        @db.Date
+  stock_actual      Int             @default(0)
+  stock_minimo      Int?            @default(0)
+  stock_reservado   Int             @default(0)
+  precio_compra     Decimal?        @db.Decimal(10, 2)
+  ubicacion_fisica  String?         @db.VarChar(100)
+  temperatura_req   String?         @db.VarChar(50)
+  estado_stock      EstadoStockVacuna @default(disponible)
+  observaciones     String?         @db.Text
+  created_at        DateTime        @default(now()) @db.DateTime(0)
+  updated_at        DateTime        @updatedAt @db.DateTime(0)
+  created_by        Int?
+  updated_by        Int?
+  
+  vacuna            Vacuna          @relation(fields: [id_vacuna], references: [id_vacuna])
+  movimientos_stock MovimientoStockVacuna[]
+  
+  @@unique([id_vacuna, lote], map: "unique_vacuna_lote")
+  @@index([lote], map: "idx_stock_vacuna_lote")
+  @@index([fecha_vencimiento], map: "idx_stock_vacuna_vencimiento")
+  @@index([estado_stock], map: "idx_stock_vacuna_estado")
+  @@map("stock_vacunas")
+}
+
+model MovimientoStockVacuna {
+  id_movimiento     Int                     @id @default(autoincrement())
+  id_stock_vacuna   Int
+  tipo_movimiento   TipoMovimientoStock
+  cantidad          Int
+  stock_anterior    Int
+  stock_posterior   Int
+  motivo            String                  @db.VarChar(255)
+  observaciones     String?                 @db.Text
+  precio_unitario   Decimal?                @db.Decimal(10, 2)
+  id_usuario        Int?
+  created_at        DateTime                @default(now()) @db.DateTime(0)
+  
+  stock_vacuna      StockVacuna             @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
+  usuario           Usuario?                @relation(fields: [id_usuario], references: [id_usuario])
+  
+  @@index([id_stock_vacuna], map: "idx_movimiento_stock_vacuna")
+  @@index([tipo_movimiento], map: "idx_movimiento_tipo")
+  @@index([created_at], map: "idx_movimiento_fecha")
+  @@map("movimientos_stock_vacunas")
+}
+
+// NUEVOS ENUMS PARA VACUNAS
+
+enum EstadoStockVacuna {
+  disponible
+  reservado
+  vencido
+  bloqueado
+  en_transito
+}
+
+enum TipoMovimientoStock {
+  ingreso
+  egreso
+  ajuste_positivo
+  ajuste_negativo
+  reserva
+  liberacion_reserva
+  vencimiento
+  transferencia
 }

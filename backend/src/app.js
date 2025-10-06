@@ -52,4 +52,9 @@ app.use('/remitos', require('./routes/remitos.routes'));
 app.use('/ventas-directas', require('./routes/ventasDirectas.routes'));
 app.use('/indicadores-stock', require('./routes/indicadoresStock.routes'));
 
+// Sistema de Vacunas: Nuevas rutas para gestión completa de vacunas
+app.use('/vacunas', require('./routes/vacunas.routes'));
+app.use('/catalogos', require('./routes/catalogos.routes'));
+app.use('/stock-vacunas', require('./routes/stockVacunas.routes'));
+
 module.exports = app;

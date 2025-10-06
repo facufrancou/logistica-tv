@@ -98,6 +98,12 @@ const ReportesFacturacion = ReportesView; // Temporal - usar reportes existente
 import RemitosGenerator from "./components/remitos/RemitosGenerator";
 import VentasDirectasView from "./components/ventas-directas/VentasDirectasView";
 import IndicadoresStockPlan from "./components/indicadores-stock/IndicadoresStockPlan";
+
+// Componentes del Sistema de Vacunas
+import VacunasList from "./components/vacunas/VacunasList";
+import StockVacunas from "./components/vacunas/StockVacunas";
+import CatalogosVacunas from "./components/vacunas/CatalogosVacunas";
+import AdminVacunas from "./components/planesVacunales/AdminVacunas";
 import CalendarioVacunacionEditor from "./components/planesVacunales/CalendarioVacunacionEditor";
 
 import { getPedidos } from "./services/api";
@@ -189,6 +195,8 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/calendarios-vacunales"><FaCalendarAlt className="me-2" /> Calendarios Vacunales</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
                 <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> <strong>Administrar Vacunas</strong></Link></li>
+                <li><hr className="dropdown-divider" /></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/remitos/generar"><FaFileInvoice className="me-2" /> Generar Remitos</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/indicadores-stock"><FaChartBar className="me-2" /> Indicadores Stock</Link></li>
@@ -213,6 +221,26 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/stock/movimientos"><FaTruck className="me-2" /> Movimientos</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/stock/alertas"><FaBell className="me-2" /> Alertas</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/stock/reservas"><FaClipboardList className="me-2" /> Reservas</Link></li>
+              </ul>
+            </li>
+
+            {/* 💉 Vacunas */}
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="vacunasDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaSyringe className="me-1" />
+                <span>Vacunas</span>
+              </a>
+              <ul className="dropdown-menu" aria-labelledby="vacunasDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/vacunas"><FaSyringe className="me-2" /> Gestión Vacunas</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/vacunas/stock"><FaWarehouse className="me-2" /> Stock Vacunas</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/vacunas/catalogos"><FaStethoscope className="me-2" /> Catálogos</Link></li>
               </ul>
             </li>
 
@@ -468,6 +496,14 @@ function MainRoutes() {
             </RutaPrivada>
           }
         />
+        <Route
+          path="/admin-vacunas"
+          element={
+            <RutaPrivada>
+              <AdminVacunas />
+            </RutaPrivada>
+          }
+        />
         {/* RUTA DEPRECADA - Editor ahora integrado en el calendario principal 
         <Route
           path="/planes-vacunales/calendario/:cotizacionId/editar"
@@ -551,6 +587,32 @@ function MainRoutes() {
           element={
             <RutaPrivada>
               <ProductoStock />
+            </RutaPrivada>
+          }
+        />
+
+        {/* 💉 VACUNAS */}
+        <Route
+          path="/vacunas"
+          element={
+            <RutaPrivada>
+              <VacunasList />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/vacunas/stock"
+          element={
+            <RutaPrivada>
+              <StockVacunas />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/vacunas/catalogos"
+          element={
+            <RutaPrivada>
+              <CatalogosVacunas />
             </RutaPrivada>
           }
         />

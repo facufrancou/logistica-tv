@@ -101,6 +101,14 @@ function Dashboard() {
       stats: ""
     },
     {
+      title: "Vacunas",
+      description: "Gestión de vacunas, stock especializado y catálogos",
+      icon: FaSyringe,
+      link: "/vacunas",
+      color: "gradient-primary",
+      stats: ""
+    },
+    {
       title: "Seguimiento",
       description: "Seguimiento de dosis y cumplimiento de vacunación",
       icon: FaChartBar,
