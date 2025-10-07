@@ -542,3 +542,293 @@ exports.getAlertas = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+/**
+ * Registrar ingreso de stock
+ */
+exports.registrarIngreso = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cantidad, motivo, observaciones, precio_unitario } = req.body;
+    const id_usuario = req.usuario?.id_usuario || 1;
+
+    if (!cantidad || cantidad <= 0) {
+      return res.status(400).json({ error: 'La cantidad debe ser mayor a 0' });
+    }
+
+    // Obtener el stock actual
+    const stockActual = await prisma.stockVacuna.findUnique({
+      where: { id_stock_vacuna: parseInt(id) }
+    });
+
+    if (!stockActual) {
+      return res.status(404).json({ error: 'Stock no encontrado' });
+    }
+
+    // Calcular nuevo stock
+    const stockAnterior = stockActual.stock_actual;
+    const stockPosterior = stockAnterior + parseInt(cantidad);
+
+    // Crear movimiento y actualizar stock en una transacción
+    const resultado = await prisma.$transaction(async (prisma) => {
+      // Crear movimiento
+      const movimiento = await prisma.movimientoStockVacuna.create({
+        data: {
+          id_stock_vacuna: parseInt(id),
+          tipo_movimiento: 'ingreso',
+          cantidad: parseInt(cantidad),
+          stock_anterior: stockAnterior,
+          stock_posterior: stockPosterior,
+          motivo: motivo || 'Ingreso manual',
+          observaciones: observaciones || null,
+          precio_unitario: precio_unitario ? parseFloat(precio_unitario) : null,
+          id_usuario: id_usuario
+        }
+      });
+
+      // Actualizar stock
+      const stockActualizado = await prisma.stockVacuna.update({
+        where: { id_stock_vacuna: parseInt(id) },
+        data: { 
+          stock_actual: stockPosterior,
+          updated_at: new Date()
+        },
+        include: {
+          vacuna: {
+            include: {
+              proveedor: true,
+              patologia: true,
+              presentacion: true
+            }
+          }
+        }
+      });
+
+      return { movimiento, stockActualizado };
+    });
+
+    res.json({
+      success: true,
+      message: 'Ingreso registrado exitosamente',
+      data: {
+        movimiento: resultado.movimiento,
+        stock: resultado.stockActualizado
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al registrar ingreso:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Registrar egreso de stock
+ */
+exports.registrarEgreso = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cantidad, motivo, observaciones, precio_unitario } = req.body;
+    const id_usuario = req.usuario?.id_usuario || 1;
+
+    if (!cantidad || cantidad <= 0) {
+      return res.status(400).json({ error: 'La cantidad debe ser mayor a 0' });
+    }
+
+    // Obtener el stock actual
+    const stockActual = await prisma.stockVacuna.findUnique({
+      where: { id_stock_vacuna: parseInt(id) }
+    });
+
+    if (!stockActual) {
+      return res.status(404).json({ error: 'Stock no encontrado' });
+    }
+
+    // Validar que hay suficiente stock
+    const stockDisponible = stockActual.stock_actual - stockActual.stock_reservado;
+    if (parseInt(cantidad) > stockDisponible) {
+      return res.status(400).json({ 
+        error: `Stock insuficiente. Disponible: ${stockDisponible}, solicitado: ${cantidad}` 
+      });
+    }
+
+    // Calcular nuevo stock
+    const stockAnterior = stockActual.stock_actual;
+    const stockPosterior = stockAnterior - parseInt(cantidad);
+
+    // Crear movimiento y actualizar stock en una transacción
+    const resultado = await prisma.$transaction(async (prisma) => {
+      // Crear movimiento
+      const movimiento = await prisma.movimientoStockVacuna.create({
+        data: {
+          id_stock_vacuna: parseInt(id),
+          tipo_movimiento: 'egreso',
+          cantidad: parseInt(cantidad),
+          stock_anterior: stockAnterior,
+          stock_posterior: stockPosterior,
+          motivo: motivo || 'Egreso manual',
+          observaciones: observaciones || null,
+          precio_unitario: precio_unitario ? parseFloat(precio_unitario) : null,
+          id_usuario: id_usuario
+        }
+      });
+
+      // Actualizar stock
+      const stockActualizado = await prisma.stockVacuna.update({
+        where: { id_stock_vacuna: parseInt(id) },
+        data: { 
+          stock_actual: stockPosterior,
+          updated_at: new Date()
+        },
+        include: {
+          vacuna: {
+            include: {
+              proveedor: true,
+              patologia: true,
+              presentacion: true
+            }
+          }
+        }
+      });
+
+      return { movimiento, stockActualizado };
+    });
+
+    res.json({
+      success: true,
+      message: 'Egreso registrado exitosamente',
+      data: {
+        movimiento: resultado.movimiento,
+        stock: resultado.stockActualizado
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al registrar egreso:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Crear movimiento genérico (para ajustes, transferencias, etc.)
+ */
+exports.crearMovimiento = async (req, res) => {
+  try {
+    const { 
+      id_stock_vacuna, 
+      tipo_movimiento, 
+      cantidad, 
+      motivo, 
+      observaciones, 
+      precio_unitario 
+    } = req.body;
+    const id_usuario = req.usuario?.id_usuario || 1;
+
+    // Validaciones
+    if (!id_stock_vacuna || !tipo_movimiento || !cantidad || !motivo) {
+      return res.status(400).json({ 
+        error: 'Campos requeridos: id_stock_vacuna, tipo_movimiento, cantidad, motivo' 
+      });
+    }
+
+    if (!['ingreso', 'egreso', 'ajuste_positivo', 'ajuste_negativo', 'vencimiento', 'transferencia'].includes(tipo_movimiento)) {
+      return res.status(400).json({ 
+        error: 'Tipo de movimiento inválido' 
+      });
+    }
+
+    // Obtener el stock actual
+    const stockActual = await prisma.stockVacuna.findUnique({
+      where: { id_stock_vacuna: parseInt(id_stock_vacuna) }
+    });
+
+    if (!stockActual) {
+      return res.status(404).json({ error: 'Stock no encontrado' });
+    }
+
+    // Calcular nuevo stock según el tipo de movimiento
+    const stockAnterior = stockActual.stock_actual;
+    let stockPosterior;
+
+    switch (tipo_movimiento) {
+      case 'ingreso':
+      case 'ajuste_positivo':
+        stockPosterior = stockAnterior + parseInt(cantidad);
+        break;
+      case 'egreso':
+      case 'ajuste_negativo':
+      case 'vencimiento':
+        // Validar stock disponible para egresos
+        const stockDisponible = stockActual.stock_actual - stockActual.stock_reservado;
+        if (parseInt(cantidad) > stockDisponible && tipo_movimiento === 'egreso') {
+          return res.status(400).json({ 
+            error: `Stock insuficiente. Disponible: ${stockDisponible}, solicitado: ${cantidad}` 
+          });
+        }
+        stockPosterior = stockAnterior - parseInt(cantidad);
+        break;
+      case 'transferencia':
+        // Para transferencias, solo registramos el movimiento sin cambiar el stock
+        stockPosterior = stockAnterior;
+        break;
+      default:
+        return res.status(400).json({ error: 'Tipo de movimiento no soportado' });
+    }
+
+    // Crear movimiento y actualizar stock en una transacción
+    const resultado = await prisma.$transaction(async (prisma) => {
+      // Crear movimiento
+      const movimiento = await prisma.movimientoStockVacuna.create({
+        data: {
+          id_stock_vacuna: parseInt(id_stock_vacuna),
+          tipo_movimiento,
+          cantidad: parseInt(cantidad),
+          stock_anterior: stockAnterior,
+          stock_posterior: stockPosterior,
+          motivo,
+          observaciones: observaciones || null,
+          precio_unitario: precio_unitario ? parseFloat(precio_unitario) : null,
+          id_usuario: id_usuario
+        }
+      });
+
+      // Actualizar stock (excepto para transferencias)
+      let stockActualizado = stockActual;
+      if (tipo_movimiento !== 'transferencia') {
+        stockActualizado = await prisma.stockVacuna.update({
+          where: { id_stock_vacuna: parseInt(id_stock_vacuna) },
+          data: { 
+            stock_actual: stockPosterior,
+            updated_at: new Date(),
+            // Marcar como vencido si es un movimiento por vencimiento
+            estado_stock: tipo_movimiento === 'vencimiento' ? 'vencido' : stockActual.estado_stock
+          },
+          include: {
+            vacuna: {
+              include: {
+                proveedor: true,
+                patologia: true,
+                presentacion: true
+              }
+            }
+          }
+        });
+      }
+
+      return { movimiento, stockActualizado };
+    });
+
+    res.json({
+      success: true,
+      message: 'Movimiento registrado exitosamente',
+      data: {
+        movimiento: resultado.movimiento,
+        stock: resultado.stockActualizado
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al crear movimiento:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

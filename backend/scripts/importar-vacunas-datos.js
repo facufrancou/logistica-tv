@@ -46,21 +46,16 @@ async function importarDatos() {
     const proveedoresMap = {};
     for (const nombreProveedor of proveedoresUnicos) {
       // Verificar si ya existe
-      let proveedor = await prisma.proveedores.findFirst({
+      let proveedor = await prisma.proveedor.findFirst({
         where: { 
-          OR: [
-            { nombre: nombreProveedor },
-            { razon_social: nombreProveedor }
-          ]
+          nombre: nombreProveedor
         }
       });
 
       if (!proveedor) {
-        proveedor = await prisma.proveedores.create({
+        proveedor = await prisma.proveedor.create({
           data: {
             nombre: nombreProveedor,
-            razon_social: nombreProveedor,
-            tipo_producto: 'vacunas',
             activo: true,
             created_by: 1
           }
@@ -78,21 +73,27 @@ async function importarDatos() {
     console.log(`🦠 Creando ${patologiasUnicas.length} patologías...`);
     
     const patologiasMap = {};
-    for (const nombrePatologia of patologiasUnicas) {
-      let patologia = await prisma.patologias.findFirst({
+    for (let i = 0; i < patologiasUnicas.length; i++) {
+      const nombrePatologia = patologiasUnicas[i];
+      let patologia = await prisma.patologia.findFirst({
         where: { nombre: nombrePatologia }
       });
 
       if (!patologia) {
-        patologia = await prisma.patologias.create({
+        // Generar código único usando índice para evitar conflictos
+        const codigoBase = nombrePatologia.substring(0, 8).toUpperCase().replace(/\s+/g, '');
+        const codigo = `${codigoBase}_${String(i + 1).padStart(2, '0')}`;
+        
+        patologia = await prisma.patologia.create({
           data: {
+            codigo: codigo,
             nombre: nombrePatologia,
             descripcion: `Patología: ${nombrePatologia}`,
-            activo: true,
+            activa: true,
             created_by: 1
           }
         });
-        console.log(`   ✅ Creada patología: ${nombrePatologia}`);
+        console.log(`   ✅ Creada patología: ${nombrePatologia} (${codigo})`);
       } else {
         console.log(`   ♻️  Patología existente: ${nombrePatologia}`);
       }
@@ -105,23 +106,27 @@ async function importarDatos() {
     console.log(`💊 Creando ${presentacionesUnicas.length} presentaciones...`);
     
     const presentacionesMap = {};
-    for (const nombrePresentacion of presentacionesUnicas) {
-      let presentacion = await prisma.presentaciones.findFirst({
+    for (let i = 0; i < presentacionesUnicas.length; i++) {
+      const nombrePresentacion = presentacionesUnicas[i];
+      let presentacion = await prisma.presentacion.findFirst({
         where: { nombre: `${nombrePresentacion} dosis` }
       });
 
       if (!presentacion) {
-        presentacion = await prisma.presentaciones.create({
+        // Generar código único
+        const codigo = `DOSIS_${nombrePresentacion}_${String(i + 1).padStart(2, '0')}`;
+        
+        presentacion = await prisma.presentacion.create({
           data: {
+            codigo: codigo,
             nombre: `${nombrePresentacion} dosis`,
             descripcion: `Presentación de ${nombrePresentacion} dosis`,
             unidad_medida: 'dosis',
-            volumen_dosis: parseFloat(nombrePresentacion) || null,
-            activo: true,
+            activa: true,
             created_by: 1
           }
         });
-        console.log(`   ✅ Creada presentación: ${nombrePresentacion} dosis`);
+        console.log(`   ✅ Creada presentación: ${nombrePresentacion} dosis (${codigo})`);
       } else {
         console.log(`   ♻️  Presentación existente: ${nombrePresentacion} dosis`);
       }
@@ -134,57 +139,61 @@ async function importarDatos() {
     console.log(`💉 Creando ${viasUnicas.length} vías de aplicación...`);
     
     const viasMap = {};
-    for (const nombreVia of viasUnicas) {
-      let via = await prisma.vias_aplicacion.findFirst({
+    for (let i = 0; i < viasUnicas.length; i++) {
+      const nombreVia = viasUnicas[i];
+      let via = await prisma.viaAplicacion.findFirst({
         where: { nombre: nombreVia }
       });
 
       if (!via) {
-        // Determinar abreviación y descripción
-        let abreviacion = nombreVia;
+        // Determinar código y descripción
+        let codigo = nombreVia.replace(/\s+/g, '_').toUpperCase();
         let descripcion = nombreVia;
         
         switch(nombreVia) {
           case 'SC':
-            abreviacion = 'SC';
+            codigo = 'SC';
             descripcion = 'Subcutánea';
             break;
           case 'IM':
-            abreviacion = 'IM';
+            codigo = 'IM';
             descripcion = 'Intramuscular';
             break;
           case 'AGUA':
-            abreviacion = 'AGUA';
+            codigo = 'AGUA';
             descripcion = 'Vía oral en agua de bebida';
             break;
           case 'SPRAY':
-            abreviacion = 'SPRAY';
-            descripción = 'Aspersión/Pulverización';
+            codigo = 'SPRAY';
+            descripcion = 'Aspersión/Pulverización';
             break;
           case 'GOTA OCULAR':
-            abreviacion = 'GO';
+            codigo = 'GO';
             descripcion = 'Gota ocular';
             break;
           case 'PUNCION ALAR':
-            abreviacion = 'PA';
+            codigo = 'PA';
             descripcion = 'Punción en el ala';
             break;
           case 'AGUA/SPRAY':
-            abreviacion = 'AS';
+            codigo = 'AS';
             descripcion = 'Agua de bebida o spray';
+            break;
+          default:
+            codigo = `VIA_${String(i + 1).padStart(2, '0')}`;
             break;
         }
 
-        via = await prisma.vias_aplicacion.create({
+        via = await prisma.viaAplicacion.create({
           data: {
+            codigo: codigo,
             nombre: nombreVia,
             descripcion: descripcion,
-            abreviacion: abreviacion,
-            activo: true,
+            activa: true,
             created_by: 1
           }
         });
-        console.log(`   ✅ Creada vía: ${nombreVia}`);
+        console.log(`   ✅ Creada vía: ${nombreVia} (${codigo})`);
       } else {
         console.log(`   ♻️  Vía existente: ${nombreVia}`);
       }
@@ -200,25 +209,46 @@ async function importarDatos() {
 
     for (const vacunaData of vacunasData) {
       // Verificar si la vacuna ya existe por código
-      let vacuna = await prisma.vacunas.findFirst({
+      let vacuna = await prisma.vacuna.findFirst({
         where: { codigo: vacunaData.cod.toString() }
       });
 
       if (!vacuna) {
+        // Validar que existan las relaciones necesarias
+        if (!proveedoresMap[vacunaData.proveedor]) {
+          console.log(`   ❌ Error: Proveedor no encontrado: ${vacunaData.proveedor}`);
+          continue;
+        }
+        
+        if (!vacunaData.patologia || !patologiasMap[vacunaData.patologia]) {
+          console.log(`   ❌ Error: Patología no encontrada para vacuna ${vacunaData.cod}: ${vacunaData.patologia}`);
+          continue;
+        }
+        
+        if (!vacunaData.presentacion || !presentacionesMap[vacunaData.presentacion]) {
+          console.log(`   ❌ Error: Presentación no encontrada para vacuna ${vacunaData.cod}: ${vacunaData.presentacion}`);
+          continue;
+        }
+        
+        if (!vacunaData.via_aplicacion || !viasMap[vacunaData.via_aplicacion]) {
+          console.log(`   ❌ Error: Vía de aplicación no encontrada para vacuna ${vacunaData.cod}: ${vacunaData.via_aplicacion}`);
+          continue;
+        }
+
         const datosVacuna = {
           codigo: vacunaData.cod.toString(),
           nombre: vacunaData.detalle,
           detalle: `Vacuna ${vacunaData.detalle} - ${vacunaData.patologia}`,
           id_proveedor: proveedoresMap[vacunaData.proveedor],
-          id_patologia: vacunaData.patologia ? patologiasMap[vacunaData.patologia] : null,
-          id_presentacion: vacunaData.presentacion ? presentacionesMap[vacunaData.presentacion] : null,
-          id_via_aplicacion: vacunaData.via_aplicacion ? viasMap[vacunaData.via_aplicacion] : null,
+          id_patologia: patologiasMap[vacunaData.patologia],
+          id_presentacion: presentacionesMap[vacunaData.presentacion],
+          id_via_aplicacion: viasMap[vacunaData.via_aplicacion],
           precio_lista: vacunaData.precio,
           activa: true,
           created_by: 1
         };
 
-        vacuna = await prisma.vacunas.create({
+        vacuna = await prisma.vacuna.create({
           data: datosVacuna
         });
         

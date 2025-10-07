@@ -11,4 +11,9 @@ router.get('/:id/movimientos', validarSesion, stockVacunasController.getMovimien
 router.post('/', validarSesion, stockVacunasController.createStockVacuna);
 router.put('/:id', validarSesion, stockVacunasController.updateStockVacuna);
 
+// Rutas para movimientos de stock
+router.post('/:id/ingreso', validarSesion, stockVacunasController.registrarIngreso);
+router.post('/:id/egreso', validarSesion, stockVacunasController.registrarEgreso);
+router.post('/movimiento', validarSesion, stockVacunasController.crearMovimiento);
+
 module.exports = router;

@@ -12,6 +12,7 @@ import { AuthContext } from "../../context/AuthContext";
 import VacunasList from "../vacunas/VacunasList";
 import StockVacunas from "../vacunas/StockVacunas";
 import CatalogosVacunas from "../vacunas/CatalogosVacunas";
+import MovimientosStock from "../vacunas/MovimientosStock";
 
 function AdminVacunas() {
   const { usuario } = useContext(AuthContext);
@@ -231,6 +232,14 @@ function AdminVacunas() {
                 </div>
                 <div className="col-md-3 mb-2">
                   <button 
+                    className="btn btn-warning btn-block"
+                    onClick={() => setVistaActiva("movimientos")}
+                  >
+                    Movimientos Stock
+                  </button>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <button 
                     className="btn btn-secondary btn-block"
                     onClick={() => setVistaActiva("catalogos")}
                   >
@@ -307,6 +316,15 @@ function AdminVacunas() {
             </li>
             <li className="nav-item">
               <button
+                className={`nav-link ${vistaActiva === "movimientos" ? "active" : "text-dark"}`}
+                onClick={() => setVistaActiva("movimientos")}
+              >
+                <i className="fas fa-exchange-alt mr-1"></i>
+                Movimientos
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
                 className={`nav-link ${vistaActiva === "catalogos" ? "active" : "text-dark"}`}
                 onClick={() => setVistaActiva("catalogos")}
               >
@@ -331,6 +349,11 @@ function AdminVacunas() {
           <StockVacunas 
             stock={stockResumen}
             alertas={alertas}
+            onRefresh={cargarDatosDashboard}
+          />
+        )}
+        {vistaActiva === "movimientos" && (
+          <MovimientosStock 
             onRefresh={cargarDatosDashboard}
           />
         )}

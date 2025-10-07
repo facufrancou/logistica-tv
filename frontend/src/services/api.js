@@ -589,3 +589,64 @@ export const actualizarStockVacuna = async (id, stock) => {
   }
 };
 
+// Movimientos de Stock
+export const registrarIngresoStock = async (idStock, movimiento) => {
+  try {
+    const res = await fetch(`${API}/stock-vacunas/${idStock}/ingreso`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(movimiento),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo registrar el ingreso");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al registrar ingreso: " + err.message);
+  }
+};
+
+export const registrarEgresoStock = async (idStock, movimiento) => {
+  try {
+    const res = await fetch(`${API}/stock-vacunas/${idStock}/egreso`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(movimiento),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo registrar el egreso");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al registrar egreso: " + err.message);
+  }
+};
+
+export const crearMovimientoStock = async (movimiento) => {
+  try {
+    const res = await fetch(`${API}/stock-vacunas/movimiento`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(movimiento),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear el movimiento");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al crear movimiento: " + err.message);
+  }
+};
+
