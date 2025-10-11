@@ -354,21 +354,24 @@ const CotizacionDetalle = () => {
                 </div>
                 <div className="col-md-3">
                   <div className="text-center">
-                    <div className="text-muted small">Productos</div>
-                    <div className="fw-bold">{cotizacion.plan?.productos_plan?.length || 0}</div>
+                    <div className="text-muted small">Vacunas</div>
+                    <div className="fw-bold">
+                      {cotizacion.plan?.vacunas_plan?.length || 0}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Productos del Plan */}
-              {cotizacion.plan?.productos_plan && cotizacion.plan.productos_plan.length > 0 && (
+              {/* Vacunas del Plan */}
+              {(cotizacion.plan?.vacunas_plan && cotizacion.plan.vacunas_plan.length > 0) && (
                 <div>
-                  <h6>Productos incluidos:</h6>
+                  <h6>Vacunas incluidas:</h6>
                   <div className="table-responsive">
                     <table className="table table-sm">
                       <thead className="table-light">
                         <tr>
                           <th>Vacuna</th>
+                          <th>Tipo</th>
                           <th>Dosis/Semana</th>
                           <th>Período</th>
                           <th>Total Dosis</th>
@@ -377,30 +380,34 @@ const CotizacionDetalle = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {cotizacion.plan.productos_plan.map((pp, index) => {
-                          const totalDosis = pp.semana_fin ? 
-                            pp.dosis_por_semana * (pp.semana_fin - pp.semana_inicio + 1) :
-                            pp.dosis_por_semana * (cotizacion.plan.duracion_semanas - pp.semana_inicio + 1);
+                        {/* Vacunas del plan */}
+                        {cotizacion.plan?.vacunas_plan?.map((vp, index) => {
+                          const totalDosis = vp.semana_fin ? 
+                            vp.dosis_por_semana * (vp.semana_fin - vp.semana_inicio + 1) :
+                            vp.dosis_por_semana * (cotizacion.plan.duracion_semanas - vp.semana_inicio + 1);
                           
-                          const precioUnitario = pp.producto?.precio_actual || 0;
+                          const precioUnitario = vp.vacuna?.precio_lista || 0;
                           const subtotal = totalDosis * precioUnitario;
                           
                           return (
-                            <tr key={index}>
+                            <tr key={`vacuna-${index}`}>
                               <td>
                                 <div>
-                                  <strong>{pp.producto?.nombre || 'Vacuna no encontrada'}</strong>
-                                  {pp.producto?.descripcion && (
+                                  <strong>{vp.vacuna?.nombre || 'Vacuna no encontrada'}</strong>
+                                  {vp.vacuna?.enfermedad && (
                                     <div>
-                                      <small className="text-muted">{pp.producto.descripcion}</small>
+                                      <small className="text-muted">Contra: {vp.vacuna.enfermedad}</small>
                                     </div>
                                   )}
                                 </div>
                               </td>
-                              <td>{pp.dosis_por_semana}</td>
                               <td>
-                                Semana {pp.semana_inicio}
-                                {pp.semana_fin ? ` - ${pp.semana_fin}` : ' - final'}
+                                <span className="badge bg-success">Vacuna</span>
+                              </td>
+                              <td>{vp.dosis_por_semana}</td>
+                              <td>
+                                Semana {vp.semana_inicio}
+                                {vp.semana_fin ? ` - ${vp.semana_fin}` : ' - final'}
                               </td>
                               <td>
                                 <span className="badge bg-primary">{totalDosis}</span>

@@ -205,7 +205,7 @@ const PlanesVacunalesList = () => {
                       </td>
                       <td>
                         <span className="badge bg-primary">
-                          {plan.productos_plan?.length || 0} vacunas
+                          {plan.vacunas_plan?.length || 0} vacunas
                         </span>
                       </td>
                       <td>

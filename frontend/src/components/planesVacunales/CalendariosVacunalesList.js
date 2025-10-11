@@ -31,7 +31,7 @@ const CalendariosVacunalesList = () => {
   const [calendarios, setCalendarios] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroCliente, setFiltroCliente] = useState('');
-  const [filtroProducto, setFiltroProducto] = useState('');
+  const [filtroVacuna, setFiltroVacuna] = useState('');
   const [ordenamiento, setOrdenamiento] = useState('fecha_desc');
   
   // Estados para estadísticas
@@ -145,12 +145,12 @@ const CalendariosVacunalesList = () => {
         return false;
       }
       
-      // Filtro por producto (buscar en el calendario)
-      if (filtroProducto) {
-        const tieneProducto = calendario.calendario.some(item => 
-          item.producto?.nombre?.toLowerCase().includes(filtroProducto.toLowerCase())
+      // Filtro por vacuna (buscar en el calendario)
+      if (filtroVacuna) {
+        const tieneVacuna = calendario.calendario.some(item => 
+          item.vacuna_nombre?.toLowerCase().includes(filtroVacuna.toLowerCase())
         );
-        if (!tieneProducto) return false;
+        if (!tieneVacuna) return false;
       }
       
       return true;
@@ -318,13 +318,13 @@ const CalendariosVacunalesList = () => {
               />
             </div>
             <div className="col-md-3">
-              <label className="form-label">Producto</label>
+              <label className="form-label">Vacuna</label>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Buscar por producto..."
-                value={filtroProducto}
-                onChange={(e) => setFiltroProducto(e.target.value)}
+                placeholder="Buscar por vacuna..."
+                value={filtroVacuna}
+                onChange={(e) => setFiltroVacuna(e.target.value)}
               />
             </div>
             <div className="col-md-3">

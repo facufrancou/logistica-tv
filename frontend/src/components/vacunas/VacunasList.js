@@ -9,6 +9,7 @@ import {
 } from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import FormularioVacuna from "../planesVacunales/FormularioVacuna";
+import { FaList, FaPlus, FaCheck, FaTimes, FaEye, FaEdit, FaTrash, FaInbox } from 'react-icons/fa';
 
 function VacunasList({ vacunas: vacunasProp, onRefresh }) {
   const { usuario } = useContext(AuthContext);
@@ -137,12 +138,12 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="mb-0">📋 Lista de Vacunas</h4>
+        <h4 className="mb-0"><FaList className="mr-2" />Lista de Vacunas</h4>
         <button
           className="btn btn-success"
           onClick={() => abrirModal()}
         >
-          ➕ Nueva Vacuna
+          <FaPlus className="mr-1" />Nueva Vacuna
         </button>
       </div>
 
@@ -152,7 +153,7 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
           <input
             type="text"
             className="form-control"
-            placeholder="🔍 Buscar por nombre o código..."
+            placeholder="Buscar por nombre o código..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -238,7 +239,8 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
                 </td>
                 <td>
                   <span className={`badge ${vacuna.activa ? 'bg-success' : 'bg-secondary'} text-white`}>
-                    {vacuna.activa ? '✅ Activa' : '❌ Inactiva'}
+                    {vacuna.activa ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />}
+                    {vacuna.activa ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
                 <td>
@@ -248,21 +250,21 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
                       onClick={() => abrirModal(vacuna, "ver")}
                       title="Ver detalles"
                     >
-                      👁️
+                      <FaEye />
                     </button>
                     <button
                       className="btn btn-sm btn-outline-secondary"
                       onClick={() => abrirModal(vacuna, "editar")}
                       title="Editar"
                     >
-                      ✏️
+                      <FaEdit />
                     </button>
                     <button
                       className="btn btn-sm btn-outline-danger"
                       onClick={() => handleEliminar(vacuna.id_vacuna)}
                       title="Eliminar"
                     >
-                      🗑️
+                      <FaTrash />
                     </button>
                   </div>
                 </td>
@@ -274,12 +276,12 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
 
       {vacunasFiltradas.length === 0 && (
         <div className="text-center text-muted py-4">
-          <p>📭 No se encontraron vacunas</p>
+          <p><FaInbox className="mr-2" />No se encontraron vacunas</p>
           <button
             className="btn btn-primary"
             onClick={() => abrirModal()}
           >
-            ➕ Crear primera vacuna
+            <FaPlus className="mr-1" />Crear primera vacuna
           </button>
         </div>
       )}

@@ -28,6 +28,8 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as planesApi from '../../services/planesVacunalesApi';
+import AlertasStock from './AlertasStock';
+import ModalGestionLotes from './ModalGestionLotes';
 import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import './PlanesVacunales.css';
@@ -49,6 +51,14 @@ const CalendarioVacunacion = () => {
   const [showEntregaModal, setShowEntregaModal] = useState(false);
   const [calendarioSeleccionado, setCalendarioSeleccionado] = useState(null);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  
+  // Estados para reasignación de lotes
+  const [showReasignacionModal, setShowReasignacionModal] = useState(false);
+  const [calendarioParaReasignacion, setCalendarioParaReasignacion] = useState(null);
+  const [stocksDisponibles, setStocksDisponibles] = useState([]);
+  const [stockSeleccionado, setStockSeleccionado] = useState(null);
+  const [loadingStocks, setLoadingStocks] = useState(false);
+  const [realizandoReasignacion, setRealizandoReasignacion] = useState(false);
   
   // Estados para edición del calendario
   const [editandoFecha, setEditandoFecha] = useState(null);
@@ -73,6 +83,14 @@ const CalendarioVacunacion = () => {
 
   // Estados para exportar PDF
   const [generandoPDF, setGenerandoPDF] = useState(false);
+
+  // Estados para alertas de stock
+  const [mostrarAlertas, setMostrarAlertas] = useState(true);
+  const [hayProblemasStock, setHayProblemasStock] = useState(false);
+
+  // Estados para modal de gestión de lotes
+  const [showModalGestionLotes, setShowModalGestionLotes] = useState(false);
+  const [itemGestionLotes, setItemGestionLotes] = useState(null);
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -106,6 +124,10 @@ const CalendarioVacunacion = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProblemasDetectados = (tieneProblemas) => {
+    setHayProblemasStock(tieneProblemas);
   };
 
   const handleMarcarEntrega = async () => {
@@ -430,6 +452,122 @@ const CalendarioVacunacion = () => {
     }
   };
 
+  // ===== FUNCIONES DE REASIGNACIÓN DE LOTES =====
+
+  const handleAbrirReasignacion = async (calendarioItem) => {
+    try {
+      setCalendarioParaReasignacion(calendarioItem);
+      setLoadingStocks(true);
+      setShowReasignacionModal(true);
+
+      // Obtener stocks disponibles para esta vacuna
+      const stocksData = await planesApi.getStocksDisponibles(
+        calendarioItem.id_producto || calendarioItem.id_vacuna, 
+        calendarioItem.fecha_aplicacion_programada
+      );
+      
+      setStocksDisponibles(stocksData.data || []);
+    } catch (error) {
+      console.error('Error al cargar stocks disponibles:', error);
+      showError('Error', 'No se pudieron cargar los stocks disponibles');
+      setStocksDisponibles([]);
+    } finally {
+      setLoadingStocks(false);
+    }
+  };
+
+  const handleReasignarAutomatico = async (calendarioItem) => {
+    try {
+      setRealizandoReasignacion(true);
+      const resultado = await planesApi.reasignarLoteAutomatico(calendarioItem.id_calendario);
+      
+      if (resultado.success) {
+        if (resultado.reasignado) {
+          showSuccess('Éxito', `Lote reasignado automáticamente: ${resultado.lote_nuevo}`);
+        } else {
+          showWarning('Info', resultado.mensaje || 'El lote actual sigue siendo válido');
+        }
+      } else {
+        showWarning('Advertencia', resultado.error || 'No se pudo reasignar automáticamente');
+      }
+      
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error en reasignación automática:', error);
+      showError('Error', 'Error al reasignar lote automáticamente');
+    } finally {
+      setRealizandoReasignacion(false);
+    }
+  };
+
+  const handleAsignarLoteManual = async () => {
+    try {
+      if (!stockSeleccionado) {
+        showError('Error', 'Debe seleccionar un stock');
+        return;
+      }
+
+      setRealizandoReasignacion(true);
+      
+      await planesApi.asignarLoteManual(calendarioParaReasignacion.id_calendario, {
+        id_stock_vacuna: stockSeleccionado.id_stock_vacuna,
+        cantidad_asignar: calendarioParaReasignacion.cantidad_dosis
+      });
+
+      showSuccess('Éxito', `Lote ${stockSeleccionado.lote} asignado correctamente`);
+      setShowReasignacionModal(false);
+      setStockSeleccionado(null);
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error al asignar lote manual:', error);
+      showError('Error', error.message || 'Error al asignar lote');
+    } finally {
+      setRealizandoReasignacion(false);
+    }
+  };
+
+  const handleAsignarMultiplesLotes = async (calendarioItem) => {
+    try {
+      setRealizandoReasignacion(true);
+      const resultado = await planesApi.asignarMultiplesLotes(calendarioItem.id_calendario);
+      
+      showSuccess(
+        'Éxito', 
+        `Asignación completada con ${resultado.lotes_utilizados} lotes para ${resultado.cantidad_total} dosis`
+      );
+      
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error al asignar múltiples lotes:', error);
+      showError('Error', error.message || 'Error al asignar múltiples lotes');
+    } finally {
+      setRealizandoReasignacion(false);
+    }
+  };
+
+  const handleReasignarTodosLotes = async () => {
+    try {
+      if (!window.confirm('¿Está seguro de que desea reasignar todos los lotes de esta cotización?')) {
+        return;
+      }
+
+      setRealizandoReasignacion(true);
+      const resultado = await planesApi.reasignarTodosLotesCotizacion(cotizacionId);
+      
+      showSuccess(
+        'Reasignación completada', 
+        `${resultado.exitosos} lotes reasignados exitosamente, ${resultado.fallidos} fallidos`
+      );
+      
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error al reasignar todos los lotes:', error);
+      showError('Error', 'Error al reasignar lotes de la cotización');
+    } finally {
+      setRealizandoReasignacion(false);
+    }
+  };
+
   // Función auxiliar para cargar el logo de la empresa
   const cargarLogo = () => {
     return new Promise((resolve, reject) => {
@@ -611,9 +749,10 @@ const CalendarioVacunacion = () => {
         'DÍA', 
         'SEM', 
         'VACUNA (PRODUCTO)', 
+        'LOTE',
+        'VENCIMIENTO',
         'PATOLOGÍA', 
         'VÍA', 
-        'MARCA', 
         'FRASCOS'
       ];
       
@@ -637,9 +776,14 @@ const CalendarioVacunacion = () => {
           diffDays.toString(),
           item.semana_aplicacion.toString(),
           `${item.producto_nombre || item.vacuna_nombre} | ${item.vacuna_descripcion || item.vacuna_nombre}`,
+          item.lote_asignado || 'No asignado',
+          item.fecha_vencimiento_lote ? new Date(item.fecha_vencimiento_lote).toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: '2-digit',
+            year: '2-digit'
+          }) : 'N/A',
           'A definir',
           'IM',
-          'A definir',
           frascos.toString()
         ];
       });
@@ -843,46 +987,6 @@ const CalendarioVacunacion = () => {
         </div>
       </div>
 
-      {/* Estadísticas Generales */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card bg-primary text-white">
-            <div className="card-body text-center">
-              <FaSyringe className="mb-2" size={24} />
-              <h4>{estadoPlan.estadisticas?.total_dosis_programadas || 0}</h4>
-              <small>Dosis Programadas</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-success text-white">
-            <div className="card-body text-center">
-              <FaCheckCircle className="mb-2" size={24} />
-              <h4>{estadoPlan.estadisticas?.total_dosis_entregadas || 0}</h4>
-              <small>Dosis Entregadas</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-warning text-dark">
-            <div className="card-body text-center">
-              <FaClock className="mb-2" size={24} />
-              <h4>{estadoPlan.estadisticas?.dosis_pendientes || 0}</h4>
-              <small>Dosis Pendientes</small>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-info text-white">
-            <div className="card-body text-center">
-              <FaChartPie className="mb-2" size={24} />
-              <h4>{estadoPlan.estadisticas?.porcentaje_completado || 0}%</h4>
-              <small>Completado</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Tabs de Navegación */}
       <div className="card">
         <div className="card-header">
@@ -929,6 +1033,37 @@ const CalendarioVacunacion = () => {
             {/* Botones de Acción */}
             <div className="ms-auto">
               <button 
+                className={`btn btn-sm me-2 ${mostrarAlertas ? 'btn-warning' : 'btn-outline-warning'}`}
+                onClick={() => setMostrarAlertas(!mostrarAlertas)}
+                title={mostrarAlertas ? 'Ocultar alertas de stock' : 'Mostrar alertas de stock'}
+              >
+                <FaExclamationTriangle className="me-2" />
+                {hayProblemasStock && (
+                  <span className="badge badge-danger badge-sm me-1">!</span>
+                )}
+                Alertas
+              </button>
+              <button 
+                className="btn btn-outline-warning btn-sm me-2"
+                onClick={handleReasignarTodosLotes}
+                disabled={realizandoReasignacion}
+                title="Reasignar todos los lotes de esta cotización"
+              >
+                {realizandoReasignacion ? (
+                  <>
+                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                      <span className="visually-hidden">Reasignando...</span>
+                    </div>
+                    Reasignando...
+                  </>
+                ) : (
+                  <>
+                    <FaBoxOpen className="me-2" />
+                    Reasignar Todos los Lotes
+                  </>
+                )}
+              </button>
+              <button 
                 className="btn btn-outline-primary btn-sm"
                 onClick={handleExportarPDF}
                 disabled={generandoPDF}
@@ -953,6 +1088,16 @@ const CalendarioVacunacion = () => {
         </div>
         
         <div className="card-body">
+          {/* Alertas de Stock */}
+          {mostrarAlertas && (
+            <div className="mb-4">
+              <AlertasStock 
+                cotizacionId={cotizacionId}
+                onProblemasDetectados={handleProblemasDetectados}
+              />
+            </div>
+          )}
+          
           {/* Vista Calendario */}
           {vistaActual === 'calendario' && (
             <div className="table-responsive">
@@ -962,6 +1107,7 @@ const CalendarioVacunacion = () => {
                     <th>Semana</th>
                     <th>Fecha Programada</th>
                     <th>Producto</th>
+                    <th>Lote Asignado</th>
                     <th>Programadas</th>
                     <th>Entregadas</th>
                     <th>Estado</th>
@@ -990,6 +1136,32 @@ const CalendarioVacunacion = () => {
                               <small className="d-block text-muted">
                                 {item.vacuna_descripcion}
                               </small>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            {item.lote_asignado ? (
+                              <>
+                                <strong className="text-primary">{item.lote_asignado}</strong>
+                                {item.fecha_vencimiento_lote && (
+                                  <small className="d-block text-muted">
+                                    <FaClock className="me-1" />
+                                    Vence: {formatearFecha(item.fecha_vencimiento_lote)}
+                                  </small>
+                                )}
+                                {item.ubicacion_fisica && (
+                                  <small className="d-block text-info">
+                                    <FaBoxOpen className="me-1" />
+                                    {item.ubicacion_fisica}
+                                  </small>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-muted">
+                                <FaExclamationTriangle className="me-1" />
+                                Sin lote asignado
+                              </span>
                             )}
                           </div>
                         </td>
@@ -1038,6 +1210,20 @@ const CalendarioVacunacion = () => {
                               )}
                             </button>
                           )}
+                          
+                          {/* Botón para gestión de lotes */}
+                          <button
+                            className="btn btn-sm btn-outline-warning me-2"
+                            onClick={() => {
+                              setItemGestionLotes(item);
+                              setShowModalGestionLotes(true);
+                            }}
+                            title="Gestión de lotes"
+                            disabled={realizandoReasignacion}
+                          >
+                            <FaBoxOpen />
+                          </button>
+                          
                           <button
                             className="btn btn-sm btn-outline-info"
                             onClick={() => {
@@ -1612,6 +1798,168 @@ const CalendarioVacunacion = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Reasignación de Lotes */}
+      {showReasignacionModal && (
+        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <FaBoxOpen className="me-2" />
+                  Reasignar Lote - {calendarioParaReasignacion?.vacuna_nombre}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowReasignacionModal(false);
+                    setStockSeleccionado(null);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <strong>Aplicación:</strong> Semana {calendarioParaReasignacion?.semana_aplicacion} - {calendarioParaReasignacion?.fecha_aplicacion_programada}
+                  <br />
+                  <strong>Cantidad requerida:</strong> {calendarioParaReasignacion?.cantidad_dosis} dosis
+                  <br />
+                  <strong>Lote actual:</strong> {calendarioParaReasignacion?.lote_asignado || 'Sin asignar'}
+                </div>
+
+                {loadingStocks ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border" role="status">
+                      <span className="visually-hidden">Cargando stocks...</span>
+                    </div>
+                    <p className="mt-2">Cargando stocks disponibles...</p>
+                  </div>
+                ) : stocksDisponibles.length === 0 ? (
+                  <div className="alert alert-warning">
+                    <FaExclamationTriangle className="me-2" />
+                    No hay stocks disponibles para esta vacuna con vencimiento posterior a la fecha de aplicación.
+                  </div>
+                ) : (
+                  <div>
+                    <h6>Stocks Disponibles:</h6>
+                    <div className="table-responsive">
+                      <table className="table table-sm table-hover">
+                        <thead>
+                          <tr>
+                            <th>Seleccionar</th>
+                            <th>Lote</th>
+                            <th>Vencimiento</th>
+                            <th>Stock Disponible</th>
+                            <th>Ubicación</th>
+                            <th>Días hasta venc.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stocksDisponibles.map((stock) => (
+                            <tr 
+                              key={stock.id_stock_vacuna}
+                              className={stockSeleccionado?.id_stock_vacuna === stock.id_stock_vacuna ? 'table-active' : ''}
+                            >
+                              <td>
+                                <input
+                                  type="radio"
+                                  name="stockSelector"
+                                  value={stock.id_stock_vacuna}
+                                  checked={stockSeleccionado?.id_stock_vacuna === stock.id_stock_vacuna}
+                                  onChange={() => setStockSeleccionado(stock)}
+                                  disabled={stock.stock_actual < calendarioParaReasignacion?.cantidad_dosis}
+                                />
+                              </td>
+                              <td>
+                                <strong>{stock.lote}</strong>
+                                {stock.stock_actual < calendarioParaReasignacion?.cantidad_dosis && (
+                                  <span className="badge bg-warning ms-2">Insuficiente</span>
+                                )}
+                              </td>
+                              <td>{formatearFecha(stock.fecha_vencimiento)}</td>
+                              <td>
+                                <span className={`badge ${stock.stock_actual >= calendarioParaReasignacion?.cantidad_dosis ? 'bg-success' : 'bg-danger'}`}>
+                                  {stock.stock_actual}
+                                </span>
+                              </td>
+                              <td>{stock.ubicacion_fisica || '-'}</td>
+                              <td>
+                                <span className={`badge ${stock.dias_hasta_vencimiento < 30 ? 'bg-warning' : 'bg-info'}`}>
+                                  {stock.dias_hasta_vencimiento} días
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {stocksDisponibles.some(s => s.stock_actual < calendarioParaReasignacion?.cantidad_dosis) && (
+                      <div className="alert alert-info mt-3">
+                        <FaInfoCircle className="me-2" />
+                        Los lotes marcados como "Insuficiente" no tienen la cantidad completa requerida. 
+                        Use la opción "Asignar múltiples lotes" para combinar varios lotes.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowReasignacionModal(false);
+                    setStockSeleccionado(null);
+                  }}
+                  disabled={realizandoReasignacion}
+                >
+                  Cancelar
+                </button>
+                {stocksDisponibles.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleAsignarLoteManual}
+                    disabled={!stockSeleccionado || realizandoReasignacion}
+                  >
+                    {realizandoReasignacion ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Asignando...
+                      </>
+                    ) : (
+                      <>
+                        <FaCheck className="me-2" />
+                        Asignar Lote Seleccionado
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Gestión de Lotes */}
+      <ModalGestionLotes
+        item={itemGestionLotes}
+        isOpen={showModalGestionLotes}
+        onClose={() => {
+          setShowModalGestionLotes(false);
+          setItemGestionLotes(null);
+        }}
+        realizandoReasignacion={realizandoReasignacion}
+        onReasignarAutomatico={handleReasignarAutomatico}
+        onAsignarManual={handleAbrirReasignacion}
+        onAsignarMultiples={handleAsignarMultiplesLotes}
+        onVerStocks={(item) => {
+          // TODO: Implementar vista de stocks disponibles
+          console.log('Ver stocks para:', item);
+          showWarning('Función "Ver stocks disponibles" en desarrollo');
+        }}
+      />
     </div>
   );
 };

@@ -158,6 +158,154 @@ exports.crearRemitoDesdeCotizacion = async (req, res) => {
 };
 
 /**
+ * Crear un remito automáticamente desde el calendario de vacunación
+ */
+exports.crearRemitoDesdeCalendario = async (req, res) => {
+  const { id_cotizacion } = req.params;
+  const { ids_calendario, observaciones } = req.body;
+
+  try {
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Verificar que la cotización existe
+      const cotizacion = await tx.cotizacion.findUnique({
+        where: { id_cotizacion: parseInt(id_cotizacion) },
+        include: {
+          cliente: true
+        }
+      });
+
+      if (!cotizacion) {
+        throw new Error('Cotización no encontrada');
+      }
+
+      // Obtener elementos del calendario con información de stock
+      const calendarioItems = await tx.calendarioVacunacion.findMany({
+        where: {
+          id_calendario: {
+            in: ids_calendario.map(id => parseInt(id))
+          },
+          id_cotizacion: parseInt(id_cotizacion)
+        },
+        include: {
+          producto: true,
+          stock_vacuna: true
+        }
+      });
+
+      if (calendarioItems.length === 0) {
+        throw new Error('No se encontraron elementos del calendario válidos');
+      }
+
+      // Generar número de remito único
+      let numeroRemito;
+      let numeroExiste = true;
+      
+      while (numeroExiste) {
+        numeroRemito = generarNumeroRemito();
+        const existente = await tx.remito.findUnique({
+          where: { numero_remito: numeroRemito }
+        });
+        numeroExiste = !!existente;
+      }
+
+      // Calcular precio total (si es necesario)
+      const precioTotal = calendarioItems.reduce((total, item) => {
+        const precio = item.producto?.precio_unitario || 0;
+        return total + (precio * item.cantidad_dosis);
+      }, 0);
+
+      // Crear el remito
+      const remito = await tx.remito.create({
+        data: {
+          numero_remito: numeroRemito,
+          id_cotizacion: parseInt(id_cotizacion),
+          id_cliente: cotizacion.id_cliente,
+          fecha_emision: new Date(),
+          tipo_remito: 'plan_vacunal',
+          estado_remito: 'pendiente',
+          precio_total: precioTotal,
+          observaciones: observaciones || 'Remito generado automáticamente desde calendario de vacunación',
+          created_by: req.user?.id_usuario || null
+        }
+      });
+
+      // Crear detalles del remito con información de lotes
+      const detallesData = calendarioItems.map(item => {
+        const stockInfo = item.stock_vacuna;
+        return {
+          id_remito: remito.id_remito,
+          id_producto: item.id_producto,
+          cantidad_entregada: item.cantidad_dosis,
+          precio_unitario: item.producto?.precio_unitario || 0,
+          subtotal: (item.producto?.precio_unitario || 0) * item.cantidad_dosis,
+          lote_producto: stockInfo?.lote || item.lote_asignado || null,
+          fecha_vencimiento: stockInfo?.fecha_vencimiento || item.fecha_vencimiento_lote || null,
+          observaciones: `Semana ${item.numero_semana} - Fecha programada: ${item.fecha_programada.toISOString().split('T')[0]}`
+        };
+      });
+
+      await tx.detalleRemito.createMany({
+        data: detallesData
+      });
+
+      // Registrar movimientos de stock para cada lote
+      for (const item of calendarioItems) {
+        if (item.id_stock_vacuna) {
+          await tx.movimientoStockVacuna.create({
+            data: {
+              id_stock_vacuna: item.id_stock_vacuna,
+              tipo_movimiento: 'egreso',
+              cantidad: item.cantidad_dosis,
+              stock_anterior: item.stock_vacuna?.stock_reservado || 0,
+              stock_posterior: Math.max(0, (item.stock_vacuna?.stock_reservado || 0) - item.cantidad_dosis),
+              motivo: `Entrega por remito ${numeroRemito}`,
+              observaciones: `Calendario ID: ${item.id_calendario}, Semana: ${item.numero_semana}`,
+              id_cotizacion: parseInt(id_cotizacion),
+              id_calendario: item.id_calendario
+            }
+          });
+
+          // Actualizar stock reservado
+          await tx.stockVacuna.update({
+            where: { id_stock_vacuna: item.id_stock_vacuna },
+            data: {
+              stock_reservado: {
+                decrement: item.cantidad_dosis
+              }
+            }
+          });
+        }
+      }
+
+      return {
+        ...remito,
+        detalles: detallesData,
+        items_calendario: calendarioItems.length
+      };
+    });
+
+    // Respuesta exitosa
+    res.status(201).json({
+      success: true,
+      message: 'Remito creado exitosamente desde calendario',
+      data: {
+        id_remito: resultado.id_remito,
+        numero_remito: resultado.numero_remito,
+        estado_remito: resultado.estado_remito,
+        items_procesados: resultado.items_calendario
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al crear remito desde calendario:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error al crear el remito'
+    });
+  }
+};
+
+/**
  * Crear un remito desde una venta directa
  */
 exports.crearRemitoDesdeVentaDirecta = async (req, res) => {

@@ -23,13 +23,32 @@ exports.getPlanes = async (req, res) => {
             nombre: true
           }
         },
-        productos_plan: {
+        // Solo incluir vacunas
+        vacunas_plan: {
           include: {
-            producto: {
+            vacuna: {
               select: {
-                id_producto: true,
+                id_vacuna: true,
+                codigo: true,
                 nombre: true,
-                descripcion: true
+                detalle: true,
+                precio_lista: true,
+                proveedor: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                patologia: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                presentacion: {
+                  select: {
+                    nombre: true,
+                    unidad_medida: true
+                  }
+                }
               }
             }
           },
@@ -51,17 +70,23 @@ exports.getPlanes = async (req, res) => {
       precio_total: plan.precio_total ? parseFloat(plan.precio_total) : null,
       lista_precio_nombre: plan.lista_precio?.nombre || null,
       lista_precio_tipo: plan.lista_precio?.tipo || null,
-      productos: plan.productos_plan.map(pp => ({
-        id_plan_producto: Number(pp.id_plan_producto),
-        id_producto: Number(pp.id_producto),
-        nombre_producto: pp.producto.nombre,
-        descripcion_producto: pp.producto.descripcion,
-        cantidad_total: pp.cantidad_total,
-        dosis_por_semana: pp.dosis_por_semana,
-        semana_inicio: Number(pp.semana_inicio),
-        semana_fin: pp.semana_fin ? Number(pp.semana_fin) : null,
-        observaciones: pp.observaciones
-      }))
+      // Solo vacunas
+      vacunas: plan.vacunas_plan ? plan.vacunas_plan.map(pv => ({
+        id_plan_vacuna: Number(pv.id_plan_vacuna),
+        id_vacuna: Number(pv.id_vacuna),
+        codigo_vacuna: pv.vacuna.codigo,
+        nombre_vacuna: pv.vacuna.nombre,
+        detalle_vacuna: pv.vacuna.detalle,
+        proveedor: pv.vacuna.proveedor.nombre,
+        patologia: pv.vacuna.patologia.nombre,
+        presentacion: `${pv.vacuna.presentacion.nombre} (${pv.vacuna.presentacion.unidad_medida})`,
+        precio_lista: parseFloat(pv.vacuna.precio_lista),
+        cantidad_total: pv.cantidad_total,
+        dosis_por_semana: pv.dosis_por_semana,
+        semana_inicio: Number(pv.semana_inicio),
+        semana_fin: pv.semana_fin ? Number(pv.semana_fin) : null,
+        observaciones: pv.observaciones
+      })) : []
     }));
 
     res.json(planesFormatted);
@@ -79,13 +104,30 @@ exports.getPlanById = async (req, res) => {
       where: { id_plan: parseInt(id) },
       include: {
         lista_precio: true,
-        productos_plan: {
+        // Solo incluir vacunas
+        vacunas_plan: {
           include: {
-            producto: {
+            vacuna: {
               include: {
-                precios_por_lista: {
-                  where: {
-                    activo: true
+                proveedor: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                patologia: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                presentacion: {
+                  select: {
+                    nombre: true,
+                    unidad_medida: true
+                  }
+                },
+                via_aplicacion: {
+                  select: {
+                    nombre: true
                   }
                 }
               }
@@ -99,42 +141,19 @@ exports.getPlanById = async (req, res) => {
     });
 
     if (!plan) {
-      return res.status(404).json({ error: 'Plan vacunal no encontrado' });
+      return res.status(404).json({ message: "Plan no encontrado" });
     }
 
-    // Formatear respuesta con precios según lista
-    const planFormatted = {
-      ...plan,
-      id_plan: Number(plan.id_plan),
-      duracion_semanas: Number(plan.duracion_semanas),
-      precio_total: plan.precio_total ? parseFloat(plan.precio_total) : null,
-      productos: plan.productos_plan.map(pp => {
-        const precioPorLista = pp.producto.precios_por_lista.find(
-          precio => precio.id_lista === plan.id_lista_precio && precio.activo
-        );
-        
-        return {
-          id_plan_producto: Number(pp.id_plan_producto),
-          id_producto: Number(pp.id_producto),
-          nombre_producto: pp.producto.nombre,
-          descripcion_producto: pp.producto.descripcion,
-          cantidad_total: pp.cantidad_total,
-          dosis_por_semana: pp.dosis_por_semana,
-          semana_inicio: Number(pp.semana_inicio),
-          semana_fin: pp.semana_fin ? Number(pp.semana_fin) : null,
-          precio_unitario: precioPorLista ? parseFloat(precioPorLista.precio) : parseFloat(pp.producto.precio_unitario),
-          subtotal: precioPorLista ? 
-            parseFloat(precioPorLista.precio) * pp.cantidad_total : 
-            parseFloat(pp.producto.precio_unitario) * pp.cantidad_total,
-          observaciones: pp.observaciones
-        };
-      })
-    };
+    console.log('Plan encontrado:', {
+      id: plan.id_plan,
+      nombre: plan.nombre,
+      vacunas_plan_count: plan.vacunas_plan?.length || 0
+    });
 
-    res.json(planFormatted);
+    res.json(plan);
   } catch (error) {
-    console.error('Error al obtener plan vacunal:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Error al obtener plan:', error);
+    res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
@@ -147,7 +166,7 @@ exports.createPlan = async (req, res) => {
       estado,
       id_lista_precio, 
       observaciones,
-      productos 
+      vacunas 
     } = req.body;
 
     // Validaciones
@@ -170,17 +189,17 @@ exports.createPlan = async (req, res) => {
       });
     }
 
-    if (productos && productos.length > 0) {
-      // Validar que las semanas estén dentro del rango del plan
-      for (const producto of productos) {
-        if (producto.semana_inicio < 1 || producto.semana_inicio > duracion_semanas) {
+    // Validar vacunas si se proporcionan
+    if (vacunas && vacunas.length > 0) {
+      for (const vacuna of vacunas) {
+        if (vacuna.semana_inicio < 1 || vacuna.semana_inicio > duracion_semanas) {
           return res.status(400).json({ 
-            error: `Semana de inicio ${producto.semana_inicio} fuera del rango del plan` 
+            error: `Semana de inicio ${vacuna.semana_inicio} fuera del rango del plan` 
           });
         }
-        if (producto.semana_fin && producto.semana_fin > duracion_semanas) {
+        if (vacuna.semana_fin && vacuna.semana_fin > duracion_semanas) {
           return res.status(400).json({ 
-            error: `Semana de fin ${producto.semana_fin} fuera del rango del plan` 
+            error: `Semana de fin ${vacuna.semana_fin} fuera del rango del plan` 
           });
         }
       }
@@ -201,17 +220,18 @@ exports.createPlan = async (req, res) => {
         }
       });
 
-      // Agregar productos si se proporcionaron
-      if (productos && productos.length > 0) {
-        await tx.planProducto.createMany({
-          data: productos.map(producto => ({
+      // Agregar vacunas al plan
+      if (vacunas && vacunas.length > 0) {
+        console.log('Creando vacunas del plan:', vacunas);
+        await tx.planVacuna.createMany({
+          data: vacunas.map(vacuna => ({
             id_plan: plan.id_plan,
-            id_producto: parseInt(producto.id_producto),
-            cantidad_total: parseInt(producto.cantidad_total) || 1, // Por defecto 1 si no se especifica
-            dosis_por_semana: parseInt(producto.dosis_por_semana) || 1,
-            semana_inicio: parseInt(producto.semana_inicio),
-            semana_fin: producto.semana_fin ? parseInt(producto.semana_fin) : null,
-            observaciones: producto.observaciones || ''
+            id_vacuna: parseInt(vacuna.id_vacuna),
+            cantidad_total: parseInt(vacuna.cantidad_total) || 1,
+            dosis_por_semana: parseInt(vacuna.dosis_por_semana) || 1,
+            semana_inicio: parseInt(vacuna.semana_inicio),
+            semana_fin: vacuna.semana_fin ? parseInt(vacuna.semana_fin) : null,
+            observaciones: vacuna.observaciones || ''
           }))
         });
       }
@@ -219,14 +239,45 @@ exports.createPlan = async (req, res) => {
       return plan;
     });
 
-    res.status(201).json({
-      message: 'Plan vacunal creado exitosamente',
-      plan: {
-        ...nuevoPlan,
-        id_plan: Number(nuevoPlan.id_plan),
-        duracion_semanas: Number(nuevoPlan.duracion_semanas)
+    // Obtener el plan completo con las relaciones
+    const planCompleto = await prisma.planVacunal.findUnique({
+      where: { id_plan: nuevoPlan.id_plan },
+      include: {
+        lista_precio: true,
+        vacunas_plan: {
+          include: {
+            vacuna: {
+              include: {
+                proveedor: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                patologia: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                presentacion: {
+                  select: {
+                    nombre: true,
+                    unidad_medida: true
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     });
+
+    console.log('Plan creado exitosamente:', {
+      id: planCompleto.id_plan,
+      nombre: planCompleto.nombre,
+      vacunas_count: planCompleto.vacunas_plan?.length || 0
+    });
+
+    res.status(201).json(planCompleto);
   } catch (error) {
     console.error('Error al crear plan vacunal:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -243,8 +294,10 @@ exports.updatePlan = async (req, res) => {
       estado,
       id_lista_precio, 
       observaciones,
-      productos 
+      vacunas 
     } = req.body;
+
+    console.log('Actualizando plan:', { id, vacunas: vacunas?.length });
 
     // Verificar que el plan existe
     const planExistente = await prisma.planVacunal.findUnique({
@@ -288,25 +341,27 @@ exports.updatePlan = async (req, res) => {
         }
       });
 
-      // Si se proporcionan productos, reemplazar los existentes
-      if (productos) {
-        // Eliminar productos existentes
-        await tx.planProducto.deleteMany({
+      // Si se proporcionan vacunas, reemplazar las existentes
+      if (vacunas) {
+        // Eliminar vacunas existentes
+        await tx.planVacuna.deleteMany({
           where: { id_plan: parseInt(id) }
         });
 
-        // Agregar nuevos productos
-        if (productos.length > 0) {
-          await tx.planProducto.createMany({
-            data: productos.map(producto => ({
-              id_plan: parseInt(id),
-              id_producto: parseInt(producto.id_producto),
-              cantidad_total: parseInt(producto.cantidad_total) || 1, // Por defecto 1 si no se especifica
-              dosis_por_semana: parseInt(producto.dosis_por_semana) || 1,
-              semana_inicio: parseInt(producto.semana_inicio),
-              semana_fin: producto.semana_fin ? parseInt(producto.semana_fin) : null,
-              observaciones: producto.observaciones || ''
-            }))
+        // Crear nuevas relaciones vacuna-plan si hay vacunas
+        if (vacunas.length > 0) {
+          const vacunasData = vacunas.map(vacuna => ({
+            id_plan: parseInt(id),
+            id_vacuna: parseInt(vacuna.id_vacuna),
+            cantidad_total: vacuna.cantidad_total || 0,
+            dosis_por_semana: vacuna.dosis_por_semana || 0,
+            semana_inicio: parseInt(vacuna.semana_inicio),
+            semana_fin: vacuna.semana_fin ? parseInt(vacuna.semana_fin) : null,
+            observaciones: vacuna.observaciones || null
+          }));
+
+          await tx.planVacuna.createMany({
+            data: vacunasData
           });
         }
       }
@@ -314,16 +369,47 @@ exports.updatePlan = async (req, res) => {
       return plan;
     });
 
-    res.json({
-      message: 'Plan vacunal actualizado exitosamente',
-      plan: {
-        ...planActualizado,
-        id_plan: Number(planActualizado.id_plan),
-        duracion_semanas: Number(planActualizado.duracion_semanas)
+    // Obtener el plan actualizado con las relaciones
+    const planCompleto = await prisma.planVacunal.findUnique({
+      where: { id_plan: parseInt(id) },
+      include: {
+        lista_precio: true,
+        vacunas_plan: {
+          include: {
+            vacuna: {
+              include: {
+                proveedor: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                patologia: {
+                  select: {
+                    nombre: true
+                  }
+                },
+                presentacion: {
+                  select: {
+                    nombre: true,
+                    unidad_medida: true
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     });
+
+    console.log('Plan actualizado exitosamente:', {
+      id: planCompleto.id_plan,
+      nombre: planCompleto.nombre,
+      vacunas_count: planCompleto.vacunas_plan?.length || 0
+    });
+
+    res.json(planCompleto);
   } catch (error) {
-    console.error('Error al actualizar plan vacunal:', error);
+    console.error('Error al actualizar plan:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -341,10 +427,20 @@ exports.deletePlan = async (req, res) => {
       return res.status(404).json({ error: 'Plan vacunal no encontrado' });
     }
 
-    // Eliminar plan (esto eliminará automáticamente los productos relacionados por la cascada)
-    await prisma.planVacunal.delete({
-      where: { id_plan: parseInt(id) }
+    // Eliminar plan con transacción (primero las vacunas, luego el plan)
+    await prisma.$transaction(async (tx) => {
+      // Eliminar relaciones con vacunas
+      await tx.planVacuna.deleteMany({
+        where: { id_plan: parseInt(id) }
+      });
+
+      // Eliminar el plan
+      await tx.planVacunal.delete({
+        where: { id_plan: parseInt(id) }
+      });
     });
+
+    console.log('Plan eliminado exitosamente:', { id });
 
     res.json({ message: 'Plan vacunal eliminado exitosamente' });
   } catch (error) {
@@ -452,191 +548,262 @@ exports.updateListaPrecio = async (req, res) => {
   }
 };
 
-// ===== PRECIOS POR LISTA =====
+// ===== MÉTODOS ESPECÍFICOS PARA VACUNAS =====
 
-exports.getPreciosPorLista = async (req, res) => {
+/**
+ * Obtener vacunas disponibles para agregar a planes
+ */
+exports.getVacunasDisponibles = async (req, res) => {
   try {
-    const { id_lista, id_producto, activo } = req.query;
-    
-    let whereClause = {};
-    if (id_lista) {
-      whereClause.id_lista = parseInt(id_lista);
-    }
-    if (id_producto) {
-      whereClause.id_producto = parseInt(id_producto);
-    }
-    if (activo !== undefined) {
-      whereClause.activo = activo === 'true';
+    const { search, id_patologia, id_proveedor, activa = 'true' } = req.query;
+
+    const whereClause = {
+      activa: activa === 'true'
+    };
+
+    if (search) {
+      whereClause.OR = [
+        { codigo: { contains: search } },
+        { nombre: { contains: search } },
+        { detalle: { contains: search } }
+      ];
     }
 
-    const precios = await prisma.precioPorLista.findMany({
+    if (id_patologia) {
+      whereClause.id_patologia = parseInt(id_patologia);
+    }
+
+    if (id_proveedor) {
+      whereClause.id_proveedor = parseInt(id_proveedor);
+    }
+
+    const vacunas = await prisma.vacuna.findMany({
       where: whereClause,
       include: {
-        producto: {
+        proveedor: {
           select: {
-            nombre: true,
-            descripcion: true
+            nombre: true
           }
         },
-        lista: {
+        patologia: {
           select: {
-            tipo: true,
             nombre: true
+          }
+        },
+        presentacion: {
+          select: {
+            nombre: true,
+            unidad_medida: true
+          }
+        },
+        via_aplicacion: {
+          select: {
+            nombre: true
+          }
+        },
+        stock_vacunas: {
+          select: {
+            stock_actual: true,
+            stock_reservado: true,
+            estado_stock: true
           }
         }
       },
-      orderBy: [
-        { id_lista: 'asc' },
-        { producto: { nombre: 'asc' } }
-      ]
+      orderBy: {
+        nombre: 'asc'
+      }
     });
 
-    const preciosFormatted = precios.map(precio => ({
-      ...precio,
-      id_precio_lista: Number(precio.id_precio_lista),
-      id_producto: Number(precio.id_producto),
-      id_lista: Number(precio.id_lista),
-      precio: parseFloat(precio.precio),
-      producto_nombre: precio.producto.nombre,
-      lista_tipo: precio.lista.tipo,
-      lista_nombre: precio.lista.nombre
+    const vacunasFormatted = vacunas.map(vacuna => ({
+      id_vacuna: Number(vacuna.id_vacuna),
+      codigo: vacuna.codigo,
+      nombre: vacuna.nombre,
+      detalle: vacuna.detalle,
+      precio_lista: parseFloat(vacuna.precio_lista),
+      proveedor: vacuna.proveedor.nombre,
+      patologia: vacuna.patologia.nombre,
+      presentacion: `${vacuna.presentacion.nombre} (${vacuna.presentacion.unidad_medida})`,
+      via_aplicacion: vacuna.via_aplicacion.nombre,
+      stock_total: vacuna.stock_vacunas.reduce((total, stock) => 
+        stock.estado_stock === 'disponible' ? total + stock.stock_actual : total, 0),
+      stock_reservado: vacuna.stock_vacunas.reduce((total, stock) => 
+        total + stock.stock_reservado, 0),
+      requiere_frio: vacuna.requiere_frio,
+      dias_vencimiento: vacuna.dias_vencimiento
     }));
 
-    res.json(preciosFormatted);
+    res.json(vacunasFormatted);
   } catch (error) {
-    console.error('Error al obtener precios por lista:', error);
+    console.error('Error al obtener vacunas disponibles:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-exports.setPrecioPorLista = async (req, res) => {
+/**
+ * Agregar vacuna a un plan
+ */
+exports.agregarVacunaAPlan = async (req, res) => {
   try {
-    const { id_producto, id_lista, precio, fecha_vigencia } = req.body;
+    const { id_plan } = req.params;
+    const {
+      id_vacuna,
+      cantidad_total,
+      dosis_por_semana = 1,
+      semana_inicio,
+      semana_fin,
+      observaciones
+    } = req.body;
 
-    if (!id_producto || !id_lista || precio === undefined) {
+    // Validaciones
+    if (!id_vacuna || !cantidad_total || !semana_inicio) {
       return res.status(400).json({ 
-        error: 'Producto, lista y precio son obligatorios' 
+        error: 'id_vacuna, cantidad_total y semana_inicio son obligatorios' 
       });
     }
 
-    // Desactivar precios anteriores para este producto y lista
-    await prisma.precioPorLista.updateMany({
-      where: {
-        id_producto: parseInt(id_producto),
-        id_lista: parseInt(id_lista),
-        activo: true
-      },
-      data: {
-        activo: false,
-        updated_at: new Date()
-      }
-    });
-
-    // Crear nuevo precio
-    const nuevoPrecio = await prisma.precioPorLista.create({
-      data: {
-        id_producto: parseInt(id_producto),
-        id_lista: parseInt(id_lista),
-        precio: parseFloat(precio),
-        fecha_vigencia: fecha_vigencia ? new Date(fecha_vigencia) : new Date(),
-        created_by: req.user?.id_usuario || null
-      }
-    });
-
-    res.status(201).json({
-      message: 'Precio por lista establecido exitosamente',
-      precio: {
-        ...nuevoPrecio,
-        id_precio_lista: Number(nuevoPrecio.id_precio_lista),
-        id_producto: Number(nuevoPrecio.id_producto),
-        id_lista: Number(nuevoPrecio.id_lista),
-        precio: parseFloat(nuevoPrecio.precio)
-      }
-    });
-  } catch (error) {
-    console.error('Error al establecer precio por lista:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// ===== UTILIDADES =====
-
-exports.calcularPrecioPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { id_lista_precio } = req.query; // Nuevo: parámetro opcional
-
+    // Verificar que el plan existe
     const plan = await prisma.planVacunal.findUnique({
-      where: { id_plan: parseInt(id) },
-      include: {
-        productos_plan: {
-          include: {
-            producto: {
-              include: {
-                precios_por_lista: {
-                  where: {
-                    activo: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+      where: { id_plan: parseInt(id_plan) }
     });
 
     if (!plan) {
       return res.status(404).json({ error: 'Plan vacunal no encontrado' });
     }
 
-    let precioTotal = 0;
-    const detallePrecios = [];
+    // Verificar que la vacuna existe
+    const vacuna = await prisma.vacuna.findUnique({
+      where: { id_vacuna: parseInt(id_vacuna) }
+    });
 
-    // Determinar qué lista de precios usar (parámetro query o del plan)
-    const listaPrecios = id_lista_precio ? parseInt(id_lista_precio) : plan.id_lista_precio;
+    if (!vacuna) {
+      return res.status(404).json({ error: 'Vacuna no encontrada' });
+    }
 
-    for (const planProducto of plan.productos_plan) {
-      let precioUnitario = parseFloat(planProducto.producto.precio_unitario);
-      
-      // Si hay lista de precios definida, usar ese precio
-      if (listaPrecios) {
-        const precioPorLista = planProducto.producto.precios_por_lista.find(
-          precio => precio.id_lista === listaPrecios && precio.activo
-        );
-        if (precioPorLista) {
-          precioUnitario = parseFloat(precioPorLista.precio);
-        }
-      }
-
-      const subtotal = precioUnitario * planProducto.cantidad_total;
-      precioTotal += subtotal;
-
-      detallePrecios.push({
-        id_producto: Number(planProducto.id_producto),
-        nombre_producto: planProducto.producto.nombre,
-        cantidad: planProducto.cantidad_total,
-        precio_unitario: precioUnitario,
-        subtotal: subtotal
+    // Verificar que las semanas estén dentro del rango del plan
+    if (semana_inicio < 1 || semana_inicio > plan.duracion_semanas) {
+      return res.status(400).json({ 
+        error: `Semana de inicio ${semana_inicio} fuera del rango del plan (1-${plan.duracion_semanas})` 
       });
     }
 
-    // Actualizar precio total en el plan
-    await prisma.planVacunal.update({
-      where: { id_plan: parseInt(id) },
-      data: {
-        precio_total: precioTotal,
-        updated_at: new Date()
+    if (semana_fin && semana_fin > plan.duracion_semanas) {
+      return res.status(400).json({ 
+        error: `Semana de fin ${semana_fin} fuera del rango del plan (1-${plan.duracion_semanas})` 
+      });
+    }
+
+    // Verificar que no existe ya esa vacuna en el plan
+    const vacunaExistente = await prisma.planVacuna.findFirst({
+      where: {
+        id_plan: parseInt(id_plan),
+        id_vacuna: parseInt(id_vacuna)
       }
     });
 
-    res.json({
-      id_plan: Number(plan.id_plan),
-      nombre_plan: plan.nombre,
-      precio_total: precioTotal,
-      detalle_precios: detallePrecios
+    if (vacunaExistente) {
+      return res.status(400).json({ 
+        error: 'Esta vacuna ya está incluida en el plan' 
+      });
+    }
+
+    // Crear la relación plan-vacuna
+    const planVacuna = await prisma.planVacuna.create({
+      data: {
+        id_plan: parseInt(id_plan),
+        id_vacuna: parseInt(id_vacuna),
+        cantidad_total: parseInt(cantidad_total),
+        dosis_por_semana: parseInt(dosis_por_semana),
+        semana_inicio: parseInt(semana_inicio),
+        semana_fin: semana_fin ? parseInt(semana_fin) : null,
+        observaciones: observaciones || '',
+        created_by: req.user?.id_usuario || null
+      },
+      include: {
+        vacuna: {
+          include: {
+            proveedor: {
+              select: { nombre: true }
+            },
+            patologia: {
+              select: { nombre: true }
+            },
+            presentacion: {
+              select: { nombre: true, unidad_medida: true }
+            }
+          }
+        }
+      }
+    });
+
+    res.status(201).json({
+      message: 'Vacuna agregada al plan exitosamente',
+      plan_vacuna: {
+        id_plan_vacuna: Number(planVacuna.id_plan_vacuna),
+        id_plan: Number(planVacuna.id_plan),
+        id_vacuna: Number(planVacuna.id_vacuna),
+        codigo_vacuna: planVacuna.vacuna.codigo,
+        nombre_vacuna: planVacuna.vacuna.nombre,
+        proveedor: planVacuna.vacuna.proveedor.nombre,
+        patologia: planVacuna.vacuna.patologia.nombre,
+        presentacion: `${planVacuna.vacuna.presentacion.nombre} (${planVacuna.vacuna.presentacion.unidad_medida})`,
+        cantidad_total: planVacuna.cantidad_total,
+        dosis_por_semana: planVacuna.dosis_por_semana,
+        semana_inicio: Number(planVacuna.semana_inicio),
+        semana_fin: planVacuna.semana_fin ? Number(planVacuna.semana_fin) : null,
+        observaciones: planVacuna.observaciones,
+        created_at: planVacuna.created_at
+      }
     });
   } catch (error) {
-    console.error('Error al calcular precio del plan:', error);
+    console.error('Error al agregar vacuna al plan:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Remover vacuna de un plan
+ */
+exports.removerVacunaDePlan = async (req, res) => {
+  try {
+    const { id_plan, id_plan_vacuna } = req.params;
+
+    // Verificar que la relación existe
+    const planVacuna = await prisma.planVacuna.findUnique({
+      where: { id_plan_vacuna: parseInt(id_plan_vacuna) },
+      include: {
+        plan: true,
+        vacuna: {
+          select: {
+            codigo: true,
+            nombre: true
+          }
+        }
+      }
+    });
+
+    if (!planVacuna) {
+      return res.status(404).json({ error: 'Relación plan-vacuna no encontrada' });
+    }
+
+    if (planVacuna.id_plan !== parseInt(id_plan)) {
+      return res.status(400).json({ error: 'La vacuna no pertenece a este plan' });
+    }
+
+    // Eliminar la relación
+    await prisma.planVacuna.delete({
+      where: { id_plan_vacuna: parseInt(id_plan_vacuna) }
+    });
+
+    res.json({
+      message: 'Vacuna removida del plan exitosamente',
+      vacuna_removida: {
+        id_plan_vacuna: Number(id_plan_vacuna),
+        codigo_vacuna: planVacuna.vacuna.codigo,
+        nombre_vacuna: planVacuna.vacuna.nombre
+      }
+    });
+  } catch (error) {
+    console.error('Error al remover vacuna del plan:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

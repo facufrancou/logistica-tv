@@ -358,6 +358,45 @@ export const getEstadoPlan = async (id_cotizacion) => {
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/estado-plan`);
 };
 
+// ===== REASIGNACIÓN DE LOTES =====
+
+export const asignarLoteManual = async (id_calendario, loteData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/asignar-lote`, {
+    method: 'PUT',
+    body: JSON.stringify(loteData)
+  });
+};
+
+export const reasignarLoteAutomatico = async (id_calendario) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/reasignar-lote`, {
+    method: 'POST'
+  });
+};
+
+export const asignarMultiplesLotes = async (id_calendario) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/asignar-multilote`, {
+    method: 'POST'
+  });
+};
+
+export const getStocksDisponibles = async (id_vacuna, fecha_aplicacion = null) => {
+  const params = new URLSearchParams();
+  params.append('id_vacuna', id_vacuna);
+  if (fecha_aplicacion) params.append('fecha_aplicacion', fecha_aplicacion);
+  
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/stocks-disponibles?${params.toString()}`);
+};
+
+export const reasignarTodosLotesCotizacion = async (id_cotizacion) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/reasignar-todos-lotes`, {
+    method: 'POST'
+  });
+};
+
+export const verificarEstadoLotes = async (id_cotizacion) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/verificar-lotes`);
+};
+
 // ==========================================
 // STOCK (SPRINT 3)
 // ==========================================
@@ -671,6 +710,14 @@ export const planesVacunalesApi = {
   regenerarCalendario,
   editarFechaCalendario,
   crearDesdoblamientoDosis,
+  
+  // Reasignación de Lotes
+  asignarLoteManual,
+  reasignarLoteAutomatico,
+  asignarMultiplesLotes,
+  getStocksDisponibles,
+  reasignarTodosLotesCotizacion,
+  verificarEstadoLotes,
   
   // Control de Entregas
   marcarEntregaDosis,

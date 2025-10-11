@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
 import { useNotification } from '../../context/NotificationContext';
+import * as planesApi from '../../services/planesVacunalesApi';
 import { 
   FaFileInvoice, 
   FaEdit, 
@@ -35,13 +36,13 @@ const CotizacionDetalleOptimizado = () => {
     cotizaciones, 
     cargarCotizaciones, 
     cambiarEstadoCotizacion,
-    eliminarCotizacion,
-    loading 
+    eliminarCotizacion
   } = usePlanesVacunales();
 
   const { showError, showSuccess } = useNotification();
 
   const [cotizacion, setCotizacion] = useState(null);
+  const [localLoading, setLocalLoading] = useState(false);
   const [modalConfirmacion, setModalConfirmacion] = useState({ show: false, accion: null });
   const [modalStockInsuficiente, setModalStockInsuficiente] = useState({ 
     show: false, 
@@ -62,27 +63,29 @@ const CotizacionDetalleOptimizado = () => {
     cargarDatos();
   }, [id]);
 
-  useEffect(() => {
-    // Buscar la cotización cuando las cotizaciones se actualicen
-    if (cotizaciones.length > 0 && id) {
-      const cotizacionEncontrada = cotizaciones.find(c => c.id_cotizacion == id);
-      console.log('Buscando cotización ID:', id, 'Encontrada:', !!cotizacionEncontrada);
-      setCotizacion(cotizacionEncontrada || null);
+  const cargarDatos = async () => {
+    if (!id) return;
+    
+    try {
+      setLocalLoading(true);
+      console.log('Cargando cotización ID:', id);
       
-      // Si no se encuentra la cotización después de cargar, mostrar error
-      if (!cotizacionEncontrada) {
+      // Cargar cotización específica con datos completos
+      const cotizacionCompleta = await planesApi.getCotizacionById(id);
+      console.log('Cotización cargada:', cotizacionCompleta);
+      
+      setCotizacion(cotizacionCompleta);
+      
+      if (!cotizacionCompleta) {
         showError('Error', 'No se encontró la cotización solicitada');
         setTimeout(() => navigate('/cotizaciones'), 3000);
       }
-    }
-  }, [cotizaciones, id, navigate, showError]);
-
-  const cargarDatos = async () => {
-    try {
-      await cargarCotizaciones();
     } catch (error) {
-      console.error('Error cargando cotizaciones:', error);
+      console.error('Error cargando cotización:', error);
       showError('Error', 'No se pudo cargar la cotización');
+      setTimeout(() => navigate('/cotizaciones'), 3000);
+    } finally {
+      setLocalLoading(false);
     }
   };
 
@@ -364,25 +367,27 @@ const CotizacionDetalleOptimizado = () => {
             `$${subtotal.toLocaleString()}`
           ];
         });
-      } else if (cotizacion.plan?.productos_plan && cotizacion.plan.productos_plan.length > 0) {
-        // Fallback: usar datos del plan
-        tableData = cotizacion.plan.productos_plan.map(pp => {
-          const semanaTexto = pp.semana_fin ? 
-            `${pp.semana_inicio} - ${pp.semana_fin}` : 
-            `${pp.semana_inicio} - final`;
+      } else if (cotizacion.plan?.vacunas_plan && cotizacion.plan.vacunas_plan.length > 0) {
+        // Fallback: usar datos del plan de vacunas
+        tableData = cotizacion.plan.vacunas_plan.map(vp => {
+          const semanaTexto = vp.semana_fin ? 
+            `${vp.semana_inicio} - ${vp.semana_fin}` : 
+            `${vp.semana_inicio} - final`;
           
-          const dosisSemanales = pp.dosis_por_semana || 0;
+          const dosisSemanales = vp.dosis_por_semana || 0;
           const cantidadAnimales = cotizacion.cantidad_animales || 0;
-          const totalDosis = dosisSemanales * cantidadAnimales;
-          const precioUnitario = pp.precio_unitario || 0;
-          const subtotal = totalDosis * precioUnitario;
+          const dosisNecesarias = cantidadAnimales; // 1 dosis por animal
+          const dosisPorFrasco = vp.vacuna?.dosis_por_frasco || 1000;
+          const frascosNecesarios = Math.ceil(dosisNecesarias / dosisPorFrasco);
+          const precioUnitario = vp.vacuna?.precio_lista || 0;
+          const subtotal = frascosNecesarios * precioUnitario;
 
           return [
-            pp.producto?.nombre || 'Producto no encontrado',
+            vp.vacuna?.nombre || 'Vacuna no encontrada',
             semanaTexto,
             `${dosisSemanales} x ${cantidadAnimales.toLocaleString()}`,
-            totalDosis.toLocaleString(),
-            `$${precioUnitario.toFixed(2)}`,
+            `${dosisNecesarias.toLocaleString()} (${frascosNecesarios} frascos)`,
+            `$${precioUnitario.toFixed(2)} por frasco`,
             `$${subtotal.toLocaleString()}`
           ];
         });
@@ -475,7 +480,7 @@ const CotizacionDetalleOptimizado = () => {
     }, 100);
   };
 
-  if (loading || !cotizacion) {
+  if (localLoading || !cotizacion) {
     return (
       <div className="planes-loading">
         <div className="planes-spinner"></div>
@@ -627,13 +632,13 @@ const CotizacionDetalleOptimizado = () => {
             </div>
           </div>
 
-          {/* Productos del Plan - Tabla Compacta */}
-          {cotizacion.detalle_cotizacion && cotizacion.detalle_cotizacion.length > 0 && (
+          {/* Vacunas del Plan - Tabla Compacta */}
+          {cotizacion.detalle_productos && cotizacion.detalle_productos.length > 0 && (
             <div className="card mb-3 shadow-sm">
               <div className="card-header py-2">
                 <h6 className="mb-0">
                   <FaClipboardList className="me-2" />
-                  Productos del Plan ({cotizacion.detalle_cotizacion.length})
+                  Vacunas del Plan ({cotizacion.detalle_productos.length})
                 </h6>
               </div>
               <div className="card-body p-0">
@@ -641,23 +646,25 @@ const CotizacionDetalleOptimizado = () => {
                   <table className="table table-sm table-hover mb-0">
                     <thead className="table-light">
                       <tr>
-                        <th>Producto</th>
+                        <th>Vacuna</th>
                         <th className="text-center">Semana</th>
                         <th className="text-end">Precio</th>
                         <th className="text-end">Subtotal</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {cotizacion.detalle_cotizacion.map((detalle, index) => {
-                        const subtotal = parseFloat(detalle.subtotal) || 
-                          (parseFloat(detalle.precio_final_calculado) * parseFloat(detalle.cantidad_total));
+                      {cotizacion.detalle_productos.map((detalle, index) => {
+                        const subtotal = parseFloat(detalle.subtotal);
                         
                         return (
                           <tr key={index}>
                             <td>
                               <div>
-                                <strong className="small">{detalle.producto?.nombre}</strong>
-                                <small className="text-muted d-block">{detalle.producto?.descripcion}</small>
+                                <strong className="small">{detalle.nombre_producto}</strong>
+                                <small className="text-muted d-block">{detalle.descripcion_producto}</small>
+                                {detalle.tipo === 'vacuna' && (
+                                  <span className="badge bg-success bg-opacity-10 text-success small">Vacuna</span>
+                                )}
                               </div>
                             </td>
                             <td className="text-center">
@@ -667,7 +674,7 @@ const CotizacionDetalleOptimizado = () => {
                                   `S${detalle.semana_inicio}-${detalle.semana_fin}`}
                               </span>
                             </td>
-                            <td className="text-end small">${parseFloat(detalle.precio_final_calculado).toLocaleString()}</td>
+                            <td className="text-end small">${parseFloat(detalle.precio_unitario).toLocaleString()}</td>
                             <td className="text-end fw-bold small">${subtotal.toLocaleString()}</td>
                           </tr>
                         );

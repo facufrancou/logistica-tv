@@ -53,25 +53,25 @@ const PlanVacunalDetalle = () => {
     return badges[estado] || { class: 'badge bg-secondary', text: estado };
   };
 
-  const calcularTotalDosis = (producto) => {
-    if (!producto.semana_fin) {
-      return producto.dosis_por_semana * (plan.duracion_semanas - producto.semana_inicio + 1);
+  const calcularTotalDosis = (vacuna) => {
+    if (!vacuna.semana_fin) {
+      return vacuna.dosis_por_semana * (plan.duracion_semanas - vacuna.semana_inicio + 1);
     }
-    return producto.dosis_por_semana * (producto.semana_fin - producto.semana_inicio + 1);
+    return vacuna.dosis_por_semana * (vacuna.semana_fin - vacuna.semana_inicio + 1);
   };
 
   const generarCalendario = () => {
     const calendario = [];
     for (let semana = 1; semana <= plan.duracion_semanas; semana++) {
-      const productosEnSemana = plan.productos_plan?.filter(producto => {
-        const inicio = producto.semana_inicio;
-        const fin = producto.semana_fin || plan.duracion_semanas;
+      const vacunasEnSemana = plan.vacunas_plan?.filter(vacuna => {
+        const inicio = vacuna.semana_inicio;
+        const fin = vacuna.semana_fin || plan.duracion_semanas;
         return semana >= inicio && semana <= fin;
       }) || [];
 
       calendario.push({
         semana,
-        productos: productosEnSemana
+        vacunas: vacunasEnSemana
       });
     }
     return calendario;
@@ -156,7 +156,7 @@ const PlanVacunalDetalle = () => {
                 <div className="col-md-3">
                   <div className="text-center p-3 bg-light rounded">
                     <h4 className="text-success mb-1">
-                      {plan.productos_plan?.length || 0}
+                      {plan.vacunas_plan?.length || 0}
                     </h4>
                     <small className="text-muted">Vacunas incluidas</small>
                   </div>
@@ -164,8 +164,8 @@ const PlanVacunalDetalle = () => {
                 <div className="col-md-3">
                   <div className="text-center p-3 bg-light rounded">
                     <h4 className="text-info mb-1">
-                      {plan.productos_plan?.reduce((total, producto) => 
-                        total + calcularTotalDosis(producto), 0) || 0}
+                      {plan.vacunas_plan?.reduce((total, vacuna) => 
+                        total + calcularTotalDosis(vacuna), 0) || 0}
                     </h4>
                     <small className="text-muted">Total de dosis</small>
                   </div>
@@ -209,18 +209,20 @@ const PlanVacunalDetalle = () => {
             </div>
           </div>
 
-          {/* Productos del Plan */}
+          {/* Vacunas del Plan */}
           <div className="card mb-4">
             <div className="card-header">
               <h5 className="mb-0">Vacunas del Plan</h5>
             </div>
             <div className="card-body">
-              {plan.productos_plan && plan.productos_plan.length > 0 ? (
+              {plan.vacunas_plan && plan.vacunas_plan.length > 0 ? (
                 <div className="table-responsive">
                   <table className="table table-hover">
                     <thead className="table-light">
                       <tr>
                         <th>Vacuna</th>
+                        <th>Código</th>
+                        <th>Proveedor</th>
                         <th>Dosis/Semana</th>
                         <th>Período</th>
                         <th>Total Dosis</th>
@@ -228,34 +230,44 @@ const PlanVacunalDetalle = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {plan.productos_plan.map((producto, index) => (
+                      {plan.vacunas_plan.map((vacuna, index) => (
                         <tr key={index}>
                           <td>
                             <div>
-                              <strong>{producto.producto?.nombre}</strong>
-                              {producto.producto?.descripcion && (
+                              <strong>{vacuna.vacuna?.nombre}</strong>
+                              {vacuna.vacuna?.detalle && (
                                 <div>
-                                  <small className="text-muted">{producto.producto.descripcion}</small>
+                                  <small className="text-muted">{vacuna.vacuna.detalle}</small>
                                 </div>
                               )}
                             </div>
                           </td>
                           <td>
-                            <span className="badge bg-success">
-                              {producto.dosis_por_semana} dosis
+                            <span className="badge bg-secondary">
+                              {vacuna.vacuna?.codigo}
                             </span>
                           </td>
                           <td>
-                            Semana {producto.semana_inicio}
-                            {producto.semana_fin ? ` - ${producto.semana_fin}` : ' - final'}
+                            <small className="text-muted">
+                              {vacuna.vacuna?.proveedor?.nombre || 'N/A'}
+                            </small>
+                          </td>
+                          <td>
+                            <span className="badge bg-success">
+                              {vacuna.dosis_por_semana} dosis
+                            </span>
+                          </td>
+                          <td>
+                            Semana {vacuna.semana_inicio}
+                            {vacuna.semana_fin ? ` - ${vacuna.semana_fin}` : ' - final'}
                           </td>
                           <td>
                             <span className="badge bg-primary">
-                              {calcularTotalDosis(producto)} dosis
+                              {calcularTotalDosis(vacuna)} dosis
                             </span>
                           </td>
                           <td>
-                            {producto.observaciones || (
+                            {vacuna.observaciones || (
                               <span className="text-muted">Sin observaciones</span>
                             )}
                           </td>
@@ -286,20 +298,20 @@ const PlanVacunalDetalle = () => {
                 <div className="row g-2">
                   {calendario.map((item) => (
                     <div key={item.semana} className="col-md-2">
-                      <div className={`card h-100 ${item.productos.length > 0 ? 'border-primary' : 'border-light'}`}>
+                      <div className={`card h-100 ${item.vacunas.length > 0 ? 'border-primary' : 'border-light'}`}>
                         <div className="card-body p-2 text-center">
                           <div className="fw-bold text-primary mb-1">
                             Semana {item.semana}
                           </div>
-                          {item.productos.length > 0 ? (
+                          {item.vacunas.length > 0 ? (
                             <div>
-                              {item.productos.map((producto, idx) => (
+                              {item.vacunas.map((vacuna, idx) => (
                                 <div key={idx} className="mb-1">
-                                  <small className="d-block text-truncate" title={producto.producto?.nombre}>
-                                    {producto.producto?.nombre}
+                                  <small className="d-block text-truncate" title={vacuna.vacuna?.nombre}>
+                                    {vacuna.vacuna?.nombre}
                                   </small>
                                   <span className="badge bg-primary badge-sm">
-                                    {producto.dosis_por_semana}
+                                    {vacuna.dosis_por_semana}
                                   </span>
                                 </div>
                               ))}

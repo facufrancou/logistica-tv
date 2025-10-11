@@ -12,6 +12,12 @@ const { validarSesion } = require('../middlewares/auth');
 router.post('/cotizacion/:id_cotizacion', validarSesion, remitosController.crearRemitoDesdeCotizacion);
 
 /**
+ * POST /remitos/calendario/:id_cotizacion
+ * Crear remito automáticamente desde el calendario de vacunación
+ */
+router.post('/calendario/:id_cotizacion', validarSesion, remitosController.crearRemitoDesdeCalendario);
+
+/**
  * POST /remitos/venta-directa/:id_venta_directa
  * Crear remito desde una venta directa
  */

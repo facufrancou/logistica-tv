@@ -322,6 +322,7 @@ model PlanVacunal {
   updated_by       Int?
   cotizaciones     Cotizacion[]
   productos_plan   PlanProducto[]
+  vacunas_plan     PlanVacuna[]
   lista_precio     ListaPrecio?   @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction)
   indicadores_stock IndicadorStockPlan[]
 
@@ -349,6 +350,26 @@ model PlanProducto {
   @@index([id_producto], map: "idx_plan_productos_producto")
   @@index([semana_inicio, semana_fin], map: "idx_plan_productos_semanas")
   @@map("plan_productos")
+}
+
+model PlanVacuna {
+  id_plan_vacuna   Int         @id @default(autoincrement())
+  id_plan          Int
+  id_vacuna        Int
+  cantidad_total   Int
+  dosis_por_semana Int         @default(1)
+  semana_inicio    Int         @db.TinyInt
+  semana_fin       Int?        @db.TinyInt
+  observaciones    String?     @db.Text
+  created_at       DateTime?   @default(now()) @db.DateTime(0)
+  updated_at       DateTime?   @default(now()) @db.DateTime(0)
+  plan             PlanVacunal @relation(fields: [id_plan], references: [id_plan], onDelete: Cascade, onUpdate: NoAction)
+  vacuna           Vacuna      @relation(fields: [id_vacuna], references: [id_vacuna], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_plan], map: "idx_plan_vacunas_plan")
+  @@index([id_vacuna], map: "idx_plan_vacunas_vacuna")
+  @@index([semana_inicio, semana_fin], map: "idx_plan_vacunas_semanas")
+  @@map("plan_vacunas")
 }
 
 model PrecioPorLista {
@@ -402,6 +423,7 @@ model Cotizacion {
   detalle_cotizacion         DetalleCotizacion[]
   facturas                   Factura[]
   movimientos_stock          MovimientoStock[]
+  movimientos_stock_vacunas  MovimientoStockVacuna[]
   notificaciones_automaticas NotificacionAutomatica[]
   reservas_stock             ReservaStock[]
   retiros_campo              RetiroCampo[]
@@ -452,6 +474,7 @@ model CalendarioVacunacion {
   id_calendario              Int                      @id @default(autoincrement())
   id_cotizacion              Int
   id_producto                Int
+  id_stock_vacuna            Int?                     // Referencia al lote específico de stock
   numero_semana              Int                      @db.TinyInt
   fecha_programada           DateTime                 @db.Date
   cantidad_dosis             Int
@@ -466,13 +489,17 @@ model CalendarioVacunacion {
   es_desdoblamiento          Boolean                  @default(false)
   dosis_original_id          Int?
   numero_desdoblamiento      Int                      @default(1)
+  lote_asignado              String?                  @db.VarChar(100) // Campo para mostrar el lote sin JOIN
+  fecha_vencimiento_lote     DateTime?                @db.Date         // Campo para mostrar vencimiento sin JOIN
   created_at                 DateTime?                @default(now()) @db.DateTime(0)
   updated_at                 DateTime?                @default(now()) @db.DateTime(0)
   aplicaciones_dosis         AplicacionDosis[]
   cotizacion                 Cotizacion               @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
   producto                   Producto                 @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  stock_vacuna               StockVacuna?             @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna], onUpdate: NoAction)
   dosis_original             CalendarioVacunacion?    @relation("DesdoblamientoDosis", fields: [dosis_original_id], references: [id_calendario])
   desdoblamientos            CalendarioVacunacion[]   @relation("DesdoblamientoDosis")
+  movimientos_stock_vacunas  MovimientoStockVacuna[]
   notificaciones_automaticas NotificacionAutomatica[]
 
   @@unique([id_cotizacion, id_producto, numero_semana], map: "unique_calendario_cotizacion_producto_semana")
@@ -481,6 +508,8 @@ model CalendarioVacunacion {
   @@index([estado_dosis], map: "idx_calendario_estado")
   @@index([estado_entrega], map: "idx_calendario_estado_entrega")
   @@index([id_producto], map: "calendario_vacunacion_id_producto_fkey")
+  @@index([id_stock_vacuna], map: "idx_calendario_stock_vacuna")
+  @@index([lote_asignado], map: "idx_calendario_lote")
   @@map("calendario_vacunacion")
 }
 
@@ -1110,6 +1139,7 @@ model Vacuna {
   presentacion      Presentacion    @relation(fields: [id_presentacion], references: [id_presentacion])
   via_aplicacion    ViaAplicacion   @relation(fields: [id_via_aplicacion], references: [id_via_aplicacion])
   stock_vacunas     StockVacuna[]
+  planes_vacuna     PlanVacuna[]
   
   @@index([codigo], map: "idx_vacuna_codigo")
   @@index([nombre], map: "idx_vacuna_nombre")
@@ -1139,6 +1169,7 @@ model StockVacuna {
   
   vacuna            Vacuna          @relation(fields: [id_vacuna], references: [id_vacuna])
   movimientos_stock MovimientoStockVacuna[]
+  calendario_vacunacion CalendarioVacunacion[]
   
   @@unique([id_vacuna, lote], map: "unique_vacuna_lote")
   @@index([lote], map: "idx_stock_vacuna_lote")
@@ -1158,14 +1189,20 @@ model MovimientoStockVacuna {
   observaciones     String?                 @db.Text
   precio_unitario   Decimal?                @db.Decimal(10, 2)
   id_usuario        Int?
+  id_cotizacion     Int?                    // Para rastrear a qué cotización se asigna
+  id_calendario     Int?                    // Para rastrear la aplicación específica
   created_at        DateTime                @default(now()) @db.DateTime(0)
   
   stock_vacuna      StockVacuna             @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
   usuario           Usuario?                @relation(fields: [id_usuario], references: [id_usuario])
+  cotizacion        Cotizacion?             @relation(fields: [id_cotizacion], references: [id_cotizacion])
+  calendario        CalendarioVacunacion?   @relation(fields: [id_calendario], references: [id_calendario])
   
   @@index([id_stock_vacuna], map: "idx_movimiento_stock_vacuna")
   @@index([tipo_movimiento], map: "idx_movimiento_tipo")
   @@index([created_at], map: "idx_movimiento_fecha")
+  @@index([id_cotizacion], map: "idx_movimiento_cotizacion")
+  @@index([id_calendario], map: "idx_movimiento_calendario")
   @@map("movimientos_stock_vacunas")
 }
 

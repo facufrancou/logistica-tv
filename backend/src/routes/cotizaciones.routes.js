@@ -48,6 +48,26 @@ router.get('/:id/control-entregas', validarSesion, cotizacionesController.getCon
 // Ajustar stock de calendario por cambios externos
 router.put('/:id/calendario/:calendarioId/ajustar-stock', validarSesion, cotizacionesController.ajustarStockCalendario);
 
+// ===== RUTAS PARA REASIGNACIÓN DE LOTES =====
+
+// Asignar lote manualmente a un elemento del calendario
+router.put('/calendario/:id_calendario/asignar-lote', validarSesion, cotizacionesController.asignarLoteManual);
+
+// Reasignar lote automáticamente cuando el original no está disponible
+router.post('/calendario/:id_calendario/reasignar-lote', validarSesion, cotizacionesController.reasignarLoteAutomatico);
+
+// Asignar múltiples lotes para una aplicación
+router.post('/calendario/:id_calendario/asignar-multilote', validarSesion, cotizacionesController.asignarMultiplesLotes);
+
+// Obtener stocks disponibles para una vacuna específica
+router.get('/stocks-disponibles', validarSesion, cotizacionesController.getStocksDisponibles);
+
+// Reasignar todos los lotes de una cotización
+router.post('/:id/reasignar-todos-lotes', validarSesion, cotizacionesController.reasignarTodosLotesCotizacion);
+
+// Verificar estado de todos los lotes asignados en una cotización
+router.get('/:id/verificar-lotes', validarSesion, cotizacionesController.verificarEstadoLotes);
+
 // Finalizar plan vacunal (limpiar stock)
 router.post('/:id/finalizar-plan', validarSesion, cotizacionesController.finalizarPlan);
 

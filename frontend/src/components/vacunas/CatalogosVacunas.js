@@ -11,6 +11,7 @@ import {
   actualizarViaAplicacion
 } from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
+import { FaBook, FaVirus, FaPills, FaSyringe, FaPlus, FaCheck, FaTimes, FaEye, FaEdit, FaInbox } from 'react-icons/fa';
 
 function CatalogosVacunas() {
   const { usuario } = useContext(AuthContext);
@@ -71,7 +72,7 @@ function CatalogosVacunas() {
     switch (catalogoActivo) {
       case "patologias":
         return {
-          title: "🦠 Patologías",
+          title: "Patologías",
           singular: "patología",
           fields: [
             { key: "nombre", label: "Nombre", type: "text", required: true },
@@ -81,7 +82,7 @@ function CatalogosVacunas() {
         };
       case "presentaciones":
         return {
-          title: "💊 Presentaciones",
+          title: "Presentaciones",
           singular: "presentación",
           fields: [
             { key: "nombre", label: "Nombre", type: "text", required: true },
@@ -92,7 +93,7 @@ function CatalogosVacunas() {
         };
       case "vias":
         return {
-          title: "💉 Vías de Aplicación",
+          title: "Vías de Aplicación",
           singular: "vía de aplicación",
           fields: [
             { key: "nombre", label: "Nombre", type: "text", required: true },
@@ -212,12 +213,12 @@ function CatalogosVacunas() {
           <div className="card">
             <div className="card-header">
               <div className="d-flex justify-content-between align-items-center">
-                <h4 className="mb-0">📚 Catálogos de Vacunas</h4>
+                <h4 className="mb-0"><FaBook className="mr-2" />Catálogos de Vacunas</h4>
                 <button
                   className="btn btn-success"
                   onClick={() => abrirModal(null, "nuevo")}
                 >
-                  + Nueva {campos.singular}
+                  <FaPlus className="mr-1" />Nueva {campos.singular}
                 </button>
               </div>
               
@@ -229,7 +230,7 @@ function CatalogosVacunas() {
                       className={`nav-link ${catalogoActivo === "patologias" ? "active" : ""}`}
                       onClick={() => setCatalogoActivo("patologias")}
                     >
-                      🦠 Patologías ({patologias.length})
+                      <FaVirus className="mr-1" />Patologías ({patologias.length})
                     </button>
                   </li>
                   <li className="nav-item">
@@ -237,7 +238,7 @@ function CatalogosVacunas() {
                       className={`nav-link ${catalogoActivo === "presentaciones" ? "active" : ""}`}
                       onClick={() => setCatalogoActivo("presentaciones")}
                     >
-                      💊 Presentaciones ({presentaciones.length})
+                      <FaPills className="mr-1" />Presentaciones ({presentaciones.length})
                     </button>
                   </li>
                   <li className="nav-item">
@@ -245,7 +246,7 @@ function CatalogosVacunas() {
                       className={`nav-link ${catalogoActivo === "vias" ? "active" : ""}`}
                       onClick={() => setCatalogoActivo("vias")}
                     >
-                      💉 Vías de Aplicación ({viasAplicacion.length})
+                      <FaSyringe className="mr-1" />Vías de Aplicación ({viasAplicacion.length})
                     </button>
                   </li>
                 </ul>
@@ -259,7 +260,7 @@ function CatalogosVacunas() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder={`🔍 Buscar ${campos.singular}...`}
+                    placeholder={`Buscar ${campos.singular}...`}
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                   />
@@ -328,7 +329,8 @@ function CatalogosVacunas() {
                         )}
                         <td>
                           <span className={`badge ${item.activo ? 'bg-success' : 'bg-secondary'} text-white`}>
-                            {item.activo ? '✅ Activo' : '❌ Inactivo'}
+                            {item.activo ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />}
+                            {item.activo ? 'Activo' : 'Inactivo'}
                           </span>
                         </td>
                         <td>
@@ -343,14 +345,14 @@ function CatalogosVacunas() {
                               onClick={() => abrirModal(item, "ver")}
                               title="Ver detalles"
                             >
-                              👁️
+                              <FaEye />
                             </button>
                             <button
                               className="btn btn-sm btn-outline-secondary"
                               onClick={() => abrirModal(item, "editar")}
                               title="Editar"
                             >
-                              ✏️
+                              <FaEdit />
                             </button>
                           </div>
                         </td>
@@ -362,12 +364,12 @@ function CatalogosVacunas() {
 
               {datosFiltrados.length === 0 && (
                 <div className="text-center text-muted py-4">
-                  <p>📭 No se encontraron registros</p>
+                  <p><FaInbox className="mr-2" />No se encontraron registros</p>
                   <button
                     className="btn btn-primary"
                     onClick={() => abrirModal(null, "nuevo")}
                   >
-                    + Crear primera {campos.singular}
+                    <FaPlus className="mr-1" />Crear primera {campos.singular}
                   </button>
                 </div>
               )}
@@ -383,9 +385,21 @@ function CatalogosVacunas() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {modo === "nuevo" && `🆕 Nueva ${campos.singular}`}
-                  {modo === "editar" && `✏️ Editar ${campos.singular}`}
-                  {modo === "ver" && `👁️ Detalles de ${campos.singular}`}
+                  {modo === "nuevo" && (
+                    <>
+                      <FaPlus className="mr-2" />Nueva {campos.singular}
+                    </>
+                  )}
+                  {modo === "editar" && (
+                    <>
+                      <FaEdit className="mr-2" />Editar {campos.singular}
+                    </>
+                  )}
+                  {modo === "ver" && (
+                    <>
+                      <FaEye className="mr-2" />Detalles de {campos.singular}
+                    </>
+                  )}
                 </h5>
                 <button
                   type="button"

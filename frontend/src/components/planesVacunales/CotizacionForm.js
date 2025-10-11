@@ -198,17 +198,31 @@ const CotizacionForm = () => {
     // Calcular precio base usando las dosis (ajustadas si existen, sino originales)
     let precioBase = 0;
     
-    planSeleccionado.productos_plan.forEach(pp => {
-      const ajuste = dosisAjustadas?.[pp.id_producto];
-      const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : pp.dosis_por_semana;
+    // Procesar vacunas del plan
+    planSeleccionado.vacunas_plan?.forEach(vp => {
+      const ajuste = dosisAjustadas?.[vp.id_vacuna];
+      const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : vp.dosis_por_semana;
       
-      const totalDosis = pp.semana_fin ? 
-        dosisSemanales * (pp.semana_fin - pp.semana_inicio + 1) :
-        dosisSemanales * (planSeleccionado.duracion_semanas - pp.semana_inicio + 1);
+      const totalDosis = vp.semana_fin ? 
+        dosisSemanales * (vp.semana_fin - vp.semana_inicio + 1) :
+        dosisSemanales * (planSeleccionado.duracion_semanas - vp.semana_inicio + 1);
       
-      // Usar precio unitario base del producto (sin lista específica)
-      const precioUnitario = pp.producto?.precio_unitario || 0;
-      precioBase += totalDosis * cantidadAnimales * precioUnitario;
+      // Calcular dosis totales necesarias para todos los animales
+      const dosisNecesarias = cantidadAnimales; // Cada animal necesita 1 dosis
+      
+      // Obtener dosis por frasco de la presentación
+      const presentacion = vp.vacuna?.presentacion;
+      const dosisPorFrasco = presentacion ? 
+        parseInt(presentacion.nombre.match(/\d+/)?.[0]) || 1000 : 1000;
+      
+      // Calcular frascos necesarios
+      const frascosNecesarios = Math.ceil(dosisNecesarias / dosisPorFrasco);
+      
+      // Precio por frasco (no por dosis)
+      const precioPorFrasco = vp.vacuna?.precio_lista || 0;
+      
+      // Precio total = frascos × precio por frasco
+      precioBase += frascosNecesarios * precioPorFrasco;
     });
 
     // Aplicar porcentaje de recargo de la lista
@@ -350,21 +364,21 @@ const CotizacionForm = () => {
     // Crear dosis ajustadas para esta cotización específica (sin modificar el plan)
     const dosisAjustadasTemp = {};
     
-    planSeleccionado.productos_plan.forEach(pp => {
-      const totalDosisOriginal = pp.semana_fin ? 
-        pp.dosis_por_semana * (pp.semana_fin - pp.semana_inicio + 1) :
-        pp.dosis_por_semana * (planSeleccionado.duracion_semanas - pp.semana_inicio + 1);
+    planSeleccionado.vacunas_plan.forEach(vp => {
+      const totalDosisOriginal = vp.semana_fin ? 
+        vp.dosis_por_semana * (vp.semana_fin - vp.semana_inicio + 1) :
+        vp.dosis_por_semana * (planSeleccionado.duracion_semanas - vp.semana_inicio + 1);
       
       if (totalDosisOriginal < cantidad) {
         // Calcular nuevas dosis por semana para que alcance para la cantidad de animales
-        const semanasAplicacion = pp.semana_fin ? 
-          (pp.semana_fin - pp.semana_inicio + 1) : 
-          (planSeleccionado.duracion_semanas - pp.semana_inicio + 1);
+        const semanasAplicacion = vp.semana_fin ? 
+          (vp.semana_fin - vp.semana_inicio + 1) : 
+          (planSeleccionado.duracion_semanas - vp.semana_inicio + 1);
         
         const nuevasDosisSemanales = Math.ceil(cantidad / semanasAplicacion);
         
-        dosisAjustadasTemp[pp.id_producto] = {
-          dosis_por_semana_original: pp.dosis_por_semana,
+        dosisAjustadasTemp[vp.id_vacuna] = {
+          dosis_por_semana_original: vp.dosis_por_semana,
           dosis_por_semana_ajustada: nuevasDosisSemanales,
           total_original: totalDosisOriginal,
           total_ajustado: nuevasDosisSemanales * semanasAplicacion
@@ -532,17 +546,19 @@ const CotizacionForm = () => {
       const calcularPrecioTentativoLocal = () => {
         if (!formData.id_plan || !formData.cantidad_animales) return null;
         
-        const planPrecios = planSeleccionado.productos_plan || [];
+        const planVacunas = planSeleccionado.vacunas_plan || [];
         const cantidadAnimales = parseInt(formData.cantidad_animales);
         
         let precioBase = 0;
         
-        planPrecios.forEach(pp => {
-          const ajuste = dosisAjustadas?.[pp.id_producto];
-          const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : pp.dosis_por_semana;
-          const totalDosis = dosisSemanales * cantidadAnimales;
-          const precioUnitario = pp.precio_unitario || 0;
-          precioBase += totalDosis * precioUnitario;
+        planVacunas.forEach(vp => {
+          const ajuste = dosisAjustadas?.[vp.id_vacuna];
+          const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : vp.dosis_por_semana;
+          const dosisNecesarias = cantidadAnimales; // 1 dosis por animal en total
+          const dosisPorFrasco = vp.vacuna?.dosis_por_frasco || 1000;
+          const frascosNecesarios = Math.ceil(dosisNecesarias / dosisPorFrasco);
+          const precioPorFrasco = vp.vacuna?.precio_lista || 0;
+          precioBase += frascosNecesarios * precioPorFrasco;
         });
 
         const listaSeleccionada = formData.id_lista_precio ? 
@@ -564,23 +580,25 @@ const CotizacionForm = () => {
       const precioInfo = calcularPrecioTentativoLocal();
       const cantidadAnimales = parseInt(formData.cantidad_animales);
 
-      const tableData = planSeleccionado.productos_plan.map(pp => {
-        const ajuste = dosisAjustadas?.[pp.id_producto];
-        const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : pp.dosis_por_semana;
-        const totalDosis = dosisSemanales * cantidadAnimales;
-        const precioUnitario = pp.precio_unitario || 0;
-        const precioTotalItem = totalDosis * precioUnitario;
+      const tableData = planSeleccionado.vacunas_plan.map(vp => {
+        const ajuste = dosisAjustadas?.[vp.id_vacuna];
+        const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : vp.dosis_por_semana;
+        const dosisNecesarias = cantidadAnimales; // 1 dosis por animal en total
+        const dosisPorFrasco = vp.vacuna?.dosis_por_frasco || 1000;
+        const frascosNecesarios = Math.ceil(dosisNecesarias / dosisPorFrasco);
+        const precioPorFrasco = vp.vacuna?.precio_lista || 0;
+        const precioTotalItem = frascosNecesarios * precioPorFrasco;
         
-        const semanaTexto = pp.semana_fin ? 
-          `${pp.semana_inicio} - ${pp.semana_fin}` : 
-          `${pp.semana_inicio} - final`;
+        const semanaTexto = vp.semana_fin ? 
+          `${vp.semana_inicio} - ${vp.semana_fin}` : 
+          `${vp.semana_inicio} - final`;
 
         return [
-          pp.producto?.nombre || 'Producto no encontrado',
+          vp.vacuna?.nombre || 'Vacuna no encontrada',
           semanaTexto,
           `${dosisSemanales} x ${cantidadAnimales.toLocaleString()}`,
-          totalDosis.toLocaleString(),
-          `$${precioUnitario.toFixed(2)}`,
+          `${dosisNecesarias.toLocaleString()} (${frascosNecesarios} frascos)`,
+          `$${precioPorFrasco.toFixed(2)} por frasco`,
           `$${precioTotalItem.toLocaleString()}`
         ];
       });
@@ -856,58 +874,87 @@ const CotizacionForm = () => {
                       )}
                     </div>
                     
-                    {planSeleccionado.productos_plan && planSeleccionado.productos_plan.length > 0 && (
+                    {planSeleccionado && (
                       <div className="col-12">
-                        <h6>Productos incluidos:</h6>
+                        <h6>Vacunas incluidas:</h6>
                         <div className="table-responsive">
                           <table className="table table-sm">
                             <thead className="table-light">
                               <tr>
                                 <th>Vacuna</th>
+                                <th>Tipo</th>
                                 <th>Dosis/Semana</th>
                                 <th>Período</th>
                                 <th>Total Dosis</th>
+                                <th>Frascos Necesarios</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {planSeleccionado.productos_plan.map((pp, index) => {
+                              {/* Vacunas del plan */}
+                              {planSeleccionado.vacunas_plan?.map((vp, index) => {
                                 const cantidadAnimales = parseInt(formData.cantidad_animales) || 0;
-                                const ajuste = dosisAjustadas?.[pp.id_producto];
+                                const ajuste = dosisAjustadas?.[vp.id_vacuna];
                                 
                                 // Calcular dosis necesarias para esta cotización
-                                const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : pp.dosis_por_semana;
+                                const dosisSemanales = ajuste ? ajuste.dosis_por_semana_ajustada : vp.dosis_por_semana;
                                 
-                                // Para cotización: dosis del template × cantidad de animales
+                                // Para cotización: cada animal necesita 1 dosis (independiente del template)
                                 const totalDosis = cantidadAnimales > 0 ? 
-                                  dosisSemanales * cantidadAnimales : 
-                                  `${dosisSemanales} × cantidad de pollos`;
+                                  cantidadAnimales : 
+                                  `cantidad de pollos`;
+                                
+                                // Calcular frascos necesarios basado en la presentación de la vacuna
+                                const presentacion = vp.vacuna?.presentacion;
+                                const dosisPorFrasco = presentacion ? 
+                                  parseInt(presentacion.nombre.match(/\d+/)?.[0]) || 1000 : 1000;
+                                
+                                const frascosNecesarios = typeof totalDosis === 'number' ? 
+                                  Math.ceil(totalDosis / dosisPorFrasco) : '-';
                                 
                                 const dosisInsuficientes = false; // No validar aquí, es solo template
                                 
                                 return (
-                                  <tr key={index} className={dosisInsuficientes && !ajuste ? 'table-warning' : ajuste ? 'table-success' : ''}>
+                                  <tr key={`vacuna-${index}`} className={dosisInsuficientes && !ajuste ? 'table-warning' : ajuste ? 'table-success' : ''}>
                                     <td>
                                       <div>
-                                        <strong>{pp.producto?.nombre || 'Vacuna no encontrada'}</strong>
-                                        {pp.producto?.descripcion && (
+                                        <strong>{vp.vacuna?.nombre || 'Vacuna no encontrada'}</strong>
+                                        {vp.vacuna?.detalle && (
                                           <div>
-                                            <small className="text-muted">{pp.producto.descripcion}</small>
+                                            <small className="text-muted">{vp.vacuna.detalle}</small>
+                                          </div>
+                                        )}
+                                        {presentacion && (
+                                          <div>
+                                            <small className="text-success">
+                                              {presentacion.nombre} ({dosisPorFrasco} dosis/frasco)
+                                            </small>
                                           </div>
                                         )}
                                       </div>
+                                    </td>
+                                    <td>
+                                      <span className="badge bg-primary">Vacuna</span>
                                     </td>
                                     <td className="text-center">
                                       <span className="fw-bold">{dosisSemanales}</span>
                                     </td>
                                     <td className="text-center">
-                                      Semana {pp.semana_inicio}
-                                      {pp.semana_fin ? ` - ${pp.semana_fin}` : ' - final'}
+                                      Semana {vp.semana_inicio}
+                                      {vp.semana_fin ? ` - ${vp.semana_fin}` : ' - final'}
                                     </td>
                                     <td className="text-center">
                                       <span className="badge bg-success">
                                         {typeof totalDosis === 'number' ? 
                                           `${totalDosis.toLocaleString()} dosis` : 
                                           totalDosis
+                                        }
+                                      </span>
+                                    </td>
+                                    <td className="text-center">
+                                      <span className="badge bg-info">
+                                        {typeof frascosNecesarios === 'number' ? 
+                                          `${frascosNecesarios} frascos` : 
+                                          frascosNecesarios
                                         }
                                       </span>
                                     </td>

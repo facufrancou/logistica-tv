@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
-import { getVacunas } from '../../services/api';
+import { getVacunasNuevas } from '../../services/api';
+import * as planesVacunasApi from '../../services/planesVacunalesVacunasApi';
 import { FaSave, FaTimes, FaPlus, FaTrash, FaSyringe, FaInfoCircle } from 'react-icons/fa';
 
 const PlanVacunalForm = () => {
@@ -41,8 +42,11 @@ const PlanVacunalForm = () => {
 
   const cargarDatos = async () => {
     try {
-      const productosData = await getVacunas(); // Solo cargar vacunas para planes vacunales
-      setProductos(productosData);
+      const response = await getVacunasNuevas(); // Cargar vacunas del nuevo sistema
+      
+      // La API devuelve {success: true, data: [vacunas]}
+      const vacunasData = response.success ? response.data : response;
+      setProductos(vacunasData || []);
     } catch (error) {
       console.error('Error cargando datos:', error);
     }
@@ -58,13 +62,19 @@ const PlanVacunalForm = () => {
           duracion_semanas: plan.duracion_semanas,
           estado: plan.estado || 'borrador',
           observaciones: plan.observaciones || '',
-          productos: plan.productos_plan?.map(pp => ({
-            id_producto: pp.id_producto,
-            dosis_por_semana: pp.dosis_por_semana || 1,
-            semana_inicio: pp.semana_inicio,
-            semana_fin: pp.semana_fin || pp.semana_inicio, // Si no hay fin, usar inicio
-            observaciones: pp.observaciones || '',
-            producto: pp.producto
+          nombre: plan.nombre,
+          descripcion: plan.descripcion || '',
+          duracion_semanas: plan.duracion_semanas,
+          estado: plan.estado || 'borrador',
+          observaciones: plan.observaciones || '',
+          productos: plan.vacunas_plan?.map(vp => ({
+            id_producto: vp.id_vacuna, // Mantener compatibilidad usando id_vacuna como id_producto
+            id_vacuna: vp.id_vacuna,
+            dosis_por_semana: vp.dosis_por_semana || 1,
+            semana_inicio: vp.semana_inicio,
+            semana_fin: vp.semana_fin || vp.semana_inicio,
+            observaciones: vp.observaciones || '',
+            producto: vp.vacuna // Mapear vacuna como producto para compatibilidad
           })) || []
         });
       }
@@ -151,14 +161,21 @@ const PlanVacunalForm = () => {
     try {
       const planData = {
         ...formData,
-        productos: formData.productos.map(p => ({
-          id_producto: p.id_producto,
+        // Enviar como vacunas (sistema nuevo) en lugar de productos
+        vacunas: formData.productos.map(p => ({
+          id_vacuna: p.id_producto, // El id_producto contiene el id_vacuna
+          cantidad_total: p.cantidad_total || 1,
           dosis_por_semana: p.dosis_por_semana || 1,
           semana_inicio: p.semana_inicio,
           semana_fin: p.semana_fin || p.semana_inicio,
           observaciones: p.observaciones
         }))
       };
+
+      // Remover el campo productos del planData
+      delete planData.productos;
+
+      console.log('Enviando plan con vacunas:', planData); // Debug
 
       if (isEdit) {
         await actualizarPlan(id, planData);
@@ -340,14 +357,14 @@ const PlanVacunalForm = () => {
                               <div>
                                 <strong>
                                   {producto.producto?.nombre || 
-                                   productos.find(p => p.id_producto === producto.id_producto)?.nombre}
+                                   productos.find(v => v.id_vacuna === producto.id_producto)?.nombre}
                                 </strong>
-                                {(producto.producto?.descripcion || 
-                                  productos.find(p => p.id_producto === producto.id_producto)?.descripcion) && (
+                                {(producto.producto?.detalle || 
+                                  productos.find(v => v.id_vacuna === producto.id_producto)?.detalle) && (
                                   <div>
                                     <small className="text-muted">
-                                      {producto.producto?.descripcion || 
-                                       productos.find(p => p.id_producto === producto.id_producto)?.descripcion}
+                                      {producto.producto?.detalle || 
+                                       productos.find(v => v.id_vacuna === producto.id_producto)?.detalle}
                                     </small>
                                   </div>
                                 )}
@@ -449,10 +466,10 @@ const PlanVacunalForm = () => {
   );
 };
 
-// Modal para agregar productos
+// Modal para agregar vacunas
 const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
   const [productoData, setProductoData] = useState({
-    id_producto: '',
+    id_vacuna: '',
     semana_aplicacion: 1,
     observaciones: ''
   });
@@ -470,8 +487,8 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
   const validarProducto = () => {
     const newErrors = {};
 
-    if (!productoData.id_producto) {
-      newErrors.id_producto = 'Debe seleccionar una vacuna';
+    if (!productoData.id_vacuna) {
+      newErrors.id_vacuna = 'Debe seleccionar una vacuna';
     }
 
     if (productoData.semana_aplicacion < 1 || productoData.semana_aplicacion > duracionSemanas) {
@@ -484,13 +501,14 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
 
   const handleSave = () => {
     if (validarProducto()) {
-      const producto = productos.find(p => p.id_producto == productoData.id_producto);
+      const vacuna = productos.find(v => v.id_vacuna == productoData.id_vacuna);
       onSave({
         ...productoData,
+        id_producto: productoData.id_vacuna, // Para compatibilidad con el estado del formulario
         dosis_por_semana: 1, // Por defecto 1 dosis por animal
         semana_inicio: productoData.semana_aplicacion,
         semana_fin: productoData.semana_aplicacion, // Misma semana de inicio y fin
-        producto
+        producto: vacuna // Guardar la vacuna como "producto" para compatibilidad
       });
     }
   };
@@ -507,20 +525,20 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
             <div className="mb-3">
               <label className="form-label">Vacuna *</label>
               <select
-                className={`form-select ${errors.id_producto ? 'is-invalid' : ''}`}
-                name="id_producto"
-                value={productoData.id_producto}
+                className={`form-select ${errors.id_vacuna ? 'is-invalid' : ''}`}
+                name="id_vacuna"
+                value={productoData.id_vacuna}
                 onChange={handleInputChange}
               >
                 <option value="">Seleccionar vacuna</option>
-                {productos.map(producto => (
-                  <option key={producto.id_producto} value={producto.id_producto}>
-                    {producto.nombre} - {producto.descripcion || 'Sin descripción'}
+                {productos.map(vacuna => (
+                  <option key={vacuna.id_vacuna} value={vacuna.id_vacuna}>
+                    {vacuna.nombre} - {vacuna.detalle || 'Sin detalle'}
                   </option>
                 ))}
               </select>
-              {errors.id_producto && (
-                <div className="invalid-feedback">{errors.id_producto}</div>
+              {errors.id_vacuna && (
+                <div className="invalid-feedback">{errors.id_vacuna}</div>
               )}
             </div>
 

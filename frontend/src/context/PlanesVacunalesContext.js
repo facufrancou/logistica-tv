@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import * as planesApi from '../services/planesVacunalesApi';
+import * as planesVacunasApi from '../services/planesVacunalesVacunasApi';
 import { useNotification } from './NotificationContext';
 
 const PlanesVacunalesContext = createContext();
@@ -42,7 +43,7 @@ export const PlanesVacunalesProvider = ({ children }) => {
   const obtenerPlan = async (id) => {
     try {
       setLoading(true);
-      const data = await planesApi.getPlanById(id);
+      const data = await planesVacunasApi.getPlanVacunalById(id);
       return data;
     } catch (error) {
       setError(error.message);
