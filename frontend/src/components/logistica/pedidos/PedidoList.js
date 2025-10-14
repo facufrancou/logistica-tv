@@ -363,9 +363,9 @@ function PedidoList({ pedidos, onActualizar }) {
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: "#00000099" }}>
           <div className="modal-dialog modal-xl">
             <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header bg-light border-0">
+              <div className="modal-header">
                 <h5 className="modal-title d-flex align-items-center gap-2">
-                  <i className="bi bi-pencil-square text-primary"></i>
+                  <i className="bi bi-pencil-square me-2"></i>
                   Editar Pedido #{pedidoEditando.id_pedido}
                 </h5>
                 <button type="button" className="btn-close" onClick={() => setModalOpen(false)}></button>
@@ -524,9 +524,9 @@ function PedidoList({ pedidos, onActualizar }) {
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: "#00000099" }}>
           <div className="modal-dialog modal-xl">
             <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header bg-light border-0">
+              <div className="modal-header">
                 <h5 className="modal-title d-flex align-items-center gap-2">
-                  <i className="bi bi-receipt-cutoff text-primary"></i>
+                  <i className="bi bi-receipt-cutoff me-2"></i>
                   Pedido #{pedidoVista.id_pedido}
                 </h5>
                 <button type="button" className="btn-close" onClick={() => setPedidoVista(null)}></button>

@@ -3078,10 +3078,25 @@ exports.generarRemitoPDF = async (req, res) => {
             cliente: true
           }
         },
-        producto: true,
-        stock_vacuna: true
+        stock_vacuna: {
+          include: {
+            vacuna: true  // Incluir información de la vacuna desde stock_vacuna
+          }
+        }
       }
     });
+
+    // Si no tiene stock_vacuna pero sí id_producto, obtener la vacuna directamente
+    let vacunaInfo = null;
+    if (calendario && !calendario.stock_vacuna && calendario.id_producto) {
+      try {
+        vacunaInfo = await prisma.vacuna.findUnique({
+          where: { id_vacuna: calendario.id_producto } // id_producto contiene id_vacuna
+        });
+      } catch (error) {
+        console.log('No se pudo obtener vacuna con id_producto:', calendario.id_producto);
+      }
+    }
 
     if (!calendario) {
       return res.status(404).json({
@@ -3090,11 +3105,19 @@ exports.generarRemitoPDF = async (req, res) => {
       });
     }
 
-    // Verificar que hay datos de entrega
-    if (!calendario.dosis_entregadas || calendario.estado_entrega === 'pendiente') {
+    // Verificar que hay datos de entrega (menos estricto para permitir POST)
+    if (req.method === 'GET' && (!calendario.dosis_entregadas || calendario.estado_entrega === 'pendiente')) {
       return res.status(400).json({
         success: false,
         message: 'No hay entregas registradas para este calendario'
+      });
+    }
+
+    // Validar que tiene cotización asociada
+    if (!calendario.cotizacion) {
+      return res.status(400).json({
+        success: false,
+        message: 'El calendario no tiene una cotización asociada'
       });
     }
 
@@ -3138,43 +3161,71 @@ exports.generarRemitoPDF = async (req, res) => {
     // Preparar datos para el PDF
     const pdfData = {
       cliente: {
-        nombre: calendario.cotizacion.cliente.nombre,
-        email: calendario.cotizacion.cliente.email,
-        telefono: calendario.cotizacion.cliente.telefono,
-        direccion: calendario.cotizacion.cliente.direccion,
-        cuit: calendario.cotizacion.cliente.cuit
+        nombre: calendario.cotizacion?.cliente?.nombre || 'Cliente sin nombre',
+        email: calendario.cotizacion?.cliente?.email || '',
+        telefono: calendario.cotizacion?.cliente?.telefono || '',
+        direccion: calendario.cotizacion?.cliente?.direccion || '',
+        localidad: calendario.cotizacion?.cliente?.localidad || '',
+        cuit: calendario.cotizacion?.cliente?.cuit || ''
       },
       cotizacion: {
         numero: calendario.cotizacion.numero_cotizacion,
         fecha_inicio: calendario.cotizacion.fecha_inicio_plan
       },
+      plan: {
+        numeroCotizacion: calendario.cotizacion?.numero_cotizacion || 'SIN-NUMERO',
+        numeroSemana: calendario.numero_semana || calendario.semana_aplicacion || 'N/A',
+        fechaProgramada: calendario.fecha_programada || calendario.fecha_aplicacion_programada || new Date(),
+        cantidadAnimales: calendario.cotizacion?.cantidad_animales || 0,
+        estado: calendario.estado_entrega || 'pendiente',
+        fechaInicio: calendario.cotizacion?.fecha_inicio_plan || new Date()
+      },
       entrega: {
-        fecha: datosEntrega.fecha_entrega,
-        responsable_entrega: datosEntrega.responsable_entrega,
-        responsable_recibe: datosEntrega.responsable_recibe,
-        observaciones: datosEntrega.observaciones_entrega,
-        tipo: datosEntrega.tipo_entrega,
-        estado: datosEntrega.estado
+        fecha: datosEntrega.fecha_entrega || new Date(),
+        responsable_entrega: datosEntrega.responsable_entrega || 'Sistema',
+        responsable_recibe: datosEntrega.responsable_recibe || 'Sin especificar',
+        observaciones: datosEntrega.observaciones_entrega || '',
+        observaciones_entrega: datosEntrega.observaciones_entrega || '',
+        tipo: datosEntrega.tipo_entrega || 'completa',
+        tipoEntrega: datosEntrega.tipo_entrega || 'completa',
+        estado: datosEntrega.estado || 'entregada',
+        cantidadEntregada: datosEntrega.cantidad_entregada || 0,
+        dosisRestantes: dosisRestantes || 0,
+        tipoEntregaDisplay: datosEntrega.tipo_entrega === 'completa' ? 'COMPLETA' : `RESTANTES: ${dosisRestantes || 0} dosis`
       },
       producto: {
-        nombre: calendario.producto.nombre,
-        descripcion: calendario.producto.descripcion,
+        nombre: calendario.stock_vacuna?.vacuna?.nombre || vacunaInfo?.nombre || calendario.vacuna_nombre || 'Producto no encontrado',
+        descripcion: calendario.stock_vacuna?.vacuna?.detalle || vacunaInfo?.detalle || calendario.vacuna_descripcion || 'Sin descripción',
+        codigo: calendario.stock_vacuna?.vacuna?.codigo || vacunaInfo?.codigo || 'SIN-CODIGO',
         lote: calendario.stock_vacuna?.lote || calendario.lote_asignado || 'N/A',
-        fecha_vencimiento: calendario.stock_vacuna?.fecha_vencimiento || calendario.fecha_vencimiento_lote,
-        cantidad_programada: calendario.cantidad_dosis,
-        cantidad_entregada: datosEntrega.cantidad_entregada,
-        cantidad_restante: dosisRestantes,
-        semana: calendario.numero_semana,
-        fecha_programada: calendario.fecha_programada
+        fecha_vencimiento: calendario.stock_vacuna?.fecha_vencimiento || calendario.fecha_vencimiento_lote || null,
+        cantidad_programada: calendario.cantidad_dosis || 0,
+        cantidad_entregada: datosEntrega.cantidad_entregada || 0,
+        cantidad_restante: dosisRestantes || 0,
+        semana: calendario.numero_semana || calendario.semana_aplicacion || 'N/A',
+        fecha_programada: calendario.fecha_programada || calendario.fecha_aplicacion_programada || null,
+        // Información adicional de la vacuna
+        proveedor: calendario.stock_vacuna?.vacuna?.proveedor?.nombre || vacunaInfo?.proveedor?.nombre || 'Sin proveedor',
+        tipo_producto: 'vacuna'
       }
     };
+
+    // Debug: Log de los datos que se enviarán al PDF
+    console.log('Datos para PDF:', {
+      cliente: pdfData.cliente?.nombre || 'Sin cliente',
+      producto: pdfData.producto?.nombre || 'Sin producto',
+      codigo: pdfData.producto?.codigo || 'Sin código',
+      cantidadEntregada: pdfData.entrega?.cantidadEntregada || 'Sin cantidad'
+    });
 
     // Generar PDF
     const pdfBuffer = await pdfService.generateRemitoPDF(pdfData);
 
     // Configurar headers de respuesta
+    const nombreArchivo = `remito-entrega-${calendario.cotizacion?.numero_cotizacion || 'SIN-NUM'}-semana-${calendario.numero_semana || calendario.semana_aplicacion || 'X'}.pdf`;
+    
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="remito-entrega-${calendario.cotizacion.numero_cotizacion}-semana-${calendario.numero_semana}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     // Enviar PDF

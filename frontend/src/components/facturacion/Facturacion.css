@@ -71,7 +71,7 @@
 }
 
 .facturas-list .table thead {
-    background-color: #495057;
+    background-color: var(--color-principal);
 }
 
 .facturas-list .table thead th {
@@ -266,7 +266,7 @@
 }
 
 .notas-credito-debito .table thead {
-    background-color: #495057;
+    background-color: var(--color-principal);
 }
 
 .notas-credito-debito .table thead th {

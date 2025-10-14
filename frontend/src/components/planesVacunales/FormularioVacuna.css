@@ -1,5 +1,73 @@
 /* Estilos profesionales para FormularioVacuna - Mejoras estéticas */
 
+/* Fix para modales centrados y bien dimensionados */
+.vacuna-modal-enhanced {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.vacuna-modal-enhanced .modal-dialog {
+  margin: 0 !important;
+  width: 80% !important;
+  max-width: 80% !important;
+  min-width: 800px !important;
+}
+
+/* Asegurar que el contenido use todo el ancho disponible */
+.vacuna-modal-enhanced .modal-content {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Optimizar uso del espacio en el formulario */
+.vacuna-modal-enhanced .modal-body {
+  padding: 1.5rem !important;
+  max-width: 100% !important;
+}
+
+.vacuna-modal-enhanced .form-section-enhanced {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.vacuna-modal-enhanced .row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+.vacuna-modal-enhanced .col-md-6,
+.vacuna-modal-enhanced .col-md-4,
+.vacuna-modal-enhanced .col-md-12 {
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  max-width: 100% !important;
+}
+
+/* Responsivo para pantallas más pequeñas */
+@media (max-width: 900px) {
+  .vacuna-modal-enhanced .modal-dialog {
+    width: 95% !important;
+    max-width: 95% !important;
+    min-width: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .vacuna-modal-enhanced .modal-dialog {
+    width: 98% !important;
+    max-width: 98% !important;
+    min-width: auto !important;
+  }
+  
+  .vacuna-modal-enhanced .modal-body {
+    padding: 1rem !important;
+  }
+}
+
 /* Mejoras al modal principal */
 .vacuna-modal-enhanced .modal-content {
   border: none;
@@ -9,7 +77,8 @@
 }
 
 .vacuna-modal-enhanced .modal-header {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: var(--color-principal);
+  color: white;
   border-bottom: 1px solid #dee2e6;
   padding: 1.25rem 1.5rem;
   position: relative;
@@ -22,13 +91,30 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #007bff, #0056b3);
+  background: var(--gradiente-principal);
 }
 
 .vacuna-modal-enhanced .modal-title {
   font-size: 1.3rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: white !important;
+}
+
+.vacuna-modal-enhanced .modal-header .close {
+  color: white !important;
+  opacity: 0.8;
+  font-size: 1.5rem;
+}
+
+.vacuna-modal-enhanced .modal-header .close:hover {
+  color: white !important;
+  opacity: 1;
+}
+
+.vacuna-modal-enhanced .modal-header i,
+.vacuna-modal-enhanced .modal-header .fas,
+.vacuna-modal-enhanced .modal-title i {
+  color: white !important;
 }
 
 .vacuna-modal-enhanced .modal-body {
@@ -247,7 +333,7 @@
 
 /* Botones de agregar mejorados */
 .btn-add-enhanced {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: var(--gradiente-principal);
   border: none;
   color: white;
   width: 40px;
@@ -289,8 +375,8 @@
 }
 
 .custom-switch-enhanced .custom-control-input:checked ~ .custom-control-label::before {
-  background: #007bff;
-  border-color: #007bff;
+  background: var(--color-principal);
+  border-color: var(--color-principal);
 }
 
 .custom-switch-enhanced .custom-control-label::after {

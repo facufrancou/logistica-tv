@@ -1,5 +1,41 @@
 /* Estilos específicos para Planes Vacunales */
 
+/* Forzar color de encabezados de tabla en Planes Vacunales */
+.planes-vacunales-container .table thead th,
+.planes-vacunales-container .table > thead > tr > th,
+.planes-vacunales-container table thead th,
+.planes-vacunales-container table > thead > tr > th,
+.planes-vacunales-container .table-light thead th,
+.planes-vacunales-container .table-light > thead > tr > th,
+.planes-vacunales-container thead.table-light th,
+.planes-vacunales-container thead.table-light > tr > th,
+.container-fluid .table thead th,
+.container-fluid .table > thead > tr > th,
+.container-fluid table thead th,
+.container-fluid table > thead > tr > th,
+.container-fluid .table-light thead th,
+.container-fluid .table-light > thead > tr > th,
+.container-fluid thead.table-light th,
+.container-fluid thead.table-light > tr > th {
+  background: #3D2113 !important;
+  background: var(--color-principal) !important;
+  background-color: #3D2113 !important;
+  background-color: var(--color-principal) !important;
+  color: white !important;
+}
+
+/* Forzar estilos específicos para tablas de productos */
+.productos-table thead th,
+.productos-table > thead > tr > th,
+table.productos-table thead th,
+table.productos-table > thead > tr > th {
+  background: #3D2113 !important;
+  background: var(--color-principal) !important;
+  background-color: #3D2113 !important;
+  background-color: var(--color-principal) !important;
+  color: white !important;
+}
+
 /* Container principal */
 .planes-vacunales-container {
   max-width: 1200px;
@@ -106,7 +142,7 @@
 
 .card-header h6 {
   font-weight: 600;
-  color: var(--color-principal);
+  color: white !important;
 }
 
 /* Badges optimizados */
@@ -459,7 +495,7 @@
 }
 
 .lista-badge.l15 {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: var(--gradiente-principal);
   color: white;
 }
 
@@ -557,19 +593,19 @@
 }
 
 .stats-card.primary {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: var(--gradiente-principal);
 }
 
 .stats-card.success {
-  background: linear-gradient(135deg, #28a745, #1e7e34);
+  background: var(--gradiente-secundario);
 }
 
 .stats-card.warning {
-  background: linear-gradient(135deg, #ffc107, #e0a800);
+  background: var(--gradiente-acento);
 }
 
 .stats-card.secondary {
-  background: linear-gradient(135deg, #6c757d, #495057);
+  background: var(--gradiente-oscuro);
 }
 
 .stats-card::before {
@@ -714,5 +750,232 @@
   
   .timeline-marker {
     left: -1.5rem;
+  }
+}
+
+/* Estilos para botón de alertas */
+.btn-warning-custom {
+  background-color: #ffc107 !important;
+  border-color: #ffc107 !important;
+  color: #212529 !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-warning-custom:hover {
+  background-color: #ffb300 !important;
+  border-color: #ffb300 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4) !important;
+}
+
+/* Animación de pulso para alertas críticas */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+  }
+}
+
+/* Efecto adicional para el botón de alertas cuando hay problemas */
+.btn-warning-custom[style*="pulse"] {
+  position: relative;
+}
+
+.btn-warning-custom[style*="pulse"]::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: inherit;
+  background: linear-gradient(45deg, #ffc107, #ffb300, #ffc107, #ffb300);
+  z-index: -1;
+  animation: pulse 2s infinite;
+}
+
+/* Badge personalizado para alertas */
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.badge.bg-light {
+  background-color: #f8f9fa !important;
+  color: #495057 !important;
+  border: 1px solid #dee2e6 !important;
+}
+
+/* Modal de Alertas - Centrado y amplio */
+/* Modal de Alertas - Nuevo CSS */
+.alertas-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.alertas-modal-container {
+  width: 80vw;
+  height: 80vh;
+  max-width: 80vw;
+  max-height: 80vh;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.alertas-modal-header {
+  background: linear-gradient(135deg, var(--color-principal) 0%, #2d1810 100%) !important;
+  color: white !important;
+  padding: 2rem 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 16px 16px 0 0;
+}
+
+.alertas-modal-title {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  color: white !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.alertas-modal-title * {
+  color: white !important;
+}
+
+.alertas-modal-header h5,
+.alertas-modal-header .alertas-modal-title {
+  color: white !important;
+}
+
+.alertas-modal-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  line-height: 1;
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.alertas-modal-close:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+.alertas-modal-body {
+  padding: 2.5rem;
+  background-color: #f8f9fa;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.alertas-modal-footer {
+  padding: 2rem 2.5rem;
+  background-color: white;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  border-radius: 0 0 16px 16px;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .alertas-modal-header,
+  .alertas-modal-body,
+  .alertas-modal-footer {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .alertas-modal-overlay {
+    padding: 10px;
+  }
+  
+  .alertas-modal-container {
+    width: 95vw;
+    height: 90vh;
+  }
+  
+  .alertas-modal-header {
+    padding: 1.5rem;
+  }
+  
+  .alertas-modal-title {
+    font-size: 1.2rem;
+  }
+  
+  .alertas-modal-body {
+    padding: 1.5rem;
+  }
+  
+  .alertas-modal-footer {
+    padding: 1.5rem;
+  }
+  
+  .alertas-modal-close {
+    width: 35px;
+    height: 35px;
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .alertas-modal-container {
+    width: 98vw;
+    height: 95vh;
+  }
+  
+  .alertas-modal-header,
+  .alertas-modal-body,
+  .alertas-modal-footer {
+    padding: 1rem;
   }
 }

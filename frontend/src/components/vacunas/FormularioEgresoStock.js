@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './FormularioEgresoStock.css';
 
 function FormularioEgresoStock({ 
   lote, 
@@ -58,15 +59,15 @@ function FormularioEgresoStock({
   if (!show || !lote) return null;
 
   return (
-    <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-lg">
+    <div className="modal show d-block egreso-stock-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-xl modal-dialog-centered egreso-stock-modal">
         <div className="modal-content">
-          <div className="modal-header bg-warning text-dark">
+          <div className="modal-header">
             <h4 className="modal-title">
               <i className="fas fa-minus-circle mr-2"></i>
               Registrar Egreso de Stock
             </h4>
-            <button type="button" className="close text-dark" onClick={onClose}>
+            <button type="button" className="close" onClick={onClose}>
               <span>&times;</span>
             </button>
           </div>
@@ -91,10 +92,8 @@ function FormularioEgresoStock({
                     <div className="col-6">
                       <div className="mb-3">
                         <label className="text-muted small font-weight-bold">LOTE:</label>
-                        <div>
-                          <span className="badge badge-dark px-3 py-2 text-white font-weight-bold" style={{fontSize: '0.9em'}}>
-                            {lote.lote}
-                          </span>
+                        <div className="text-dark font-weight-bold" style={{fontSize: '1.1em'}}>
+                          {lote.lote}
                         </div>
                         <div className="mt-2">
                           <div className="text-muted small">Stock total: <strong>{lote.stock_actual}</strong></div>

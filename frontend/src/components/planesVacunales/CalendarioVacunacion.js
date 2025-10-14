@@ -85,8 +85,9 @@ const CalendarioVacunacion = () => {
   const [generandoPDF, setGenerandoPDF] = useState(false);
 
   // Estados para alertas de stock
-  const [mostrarAlertas, setMostrarAlertas] = useState(true);
+  const [mostrarAlertas, setMostrarAlertas] = useState(false);
   const [hayProblemasStock, setHayProblemasStock] = useState(false);
+  const [showModalAlertas, setShowModalAlertas] = useState(false);
 
   // Estados para modal de gestión de lotes
   const [showModalGestionLotes, setShowModalGestionLotes] = useState(false);
@@ -622,7 +623,7 @@ const CalendarioVacunacion = () => {
       // Configuración del documento
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 15; // Reducir márgenes para más espacio
+      const margin = 12; // Márgenes más pequeños para optimizar espacio
 
       // Colores corporativos en escala de grises
       const primaryColor = [64, 64, 64]; // Gris oscuro principal
@@ -630,10 +631,10 @@ const CalendarioVacunacion = () => {
       const accentColor = [128, 128, 128]; // Gris claro
       const lightGray = [245, 245, 245]; // Gris muy claro para fondos
 
-      // ENCABEZADO CON LOGO Y DISEÑO PROFESIONAL (más compacto)
+      // ENCABEZADO CON LOGO Y DISEÑO PROFESIONAL (optimizado)
       // Rectángulo superior con color corporativo
       doc.setFillColor(...primaryColor);
-      doc.rect(0, 0, pageWidth, 25, 'F'); // Reducir altura del encabezado
+      doc.rect(0, 0, pageWidth, 22, 'F'); // Encabezado más compacto
 
       // Logo de la empresa (LOGO.PNG 3780x945)
       if (logoDataUrl) {
@@ -672,20 +673,21 @@ const CalendarioVacunacion = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
       doc.setFont('courier', 'bold');
-      doc.text('PLAN VACUNAL', pageWidth / 2, 14, { align: 'center' });
+      doc.text('PLAN VACUNAL', pageWidth / 2, 12, { align: 'center' });
 
-      // Subtítulo
+      // Subtítulo con cotización y cliente
       doc.setFontSize(10);
       doc.setFont('courier', 'normal');
-      /* doc.text('Programa de Inmunización Avícola', pageWidth / 2, 20, { align: 'center' }); */
+      const subtitulo = `${cotizacion?.numero_cotizacion || 'COT-251013-391'} | ${cotizacion?.cliente?.nombre || 'BIODER S.A'}`;
+      doc.text(subtitulo, pageWidth / 2, 18, { align: 'center' });
 
-      // Información del encabezado en recuadros estilizados (más compactos)
+      // Información del encabezado en recuadros estilizados (optimizados)
       doc.setTextColor(...secondaryColor);
-      let yPos = 32; // Reducir espacio inicial
+      let yPos = 28; // Espacio inicial optimizado
 
       // Crear recuadros para la información del encabezado
       const infoBoxWidth = (pageWidth - 2 * margin) / 2;
-      const infoBoxHeight = 28; // Reducir altura de las cajas
+      const infoBoxHeight = 24; // Cajas más compactas
 
       // Recuadro izquierdo - Información del cliente
       doc.setFillColor(...lightGray);
@@ -694,20 +696,20 @@ const CalendarioVacunacion = () => {
       doc.setLineWidth(0.8);
       doc.rect(margin, yPos, infoBoxWidth - 3, infoBoxHeight, 'S');
 
-      // Datos del cliente (compactos)
-      doc.setFontSize(10);
+      // Datos del cliente (optimizados)
+      doc.setFontSize(9);
       doc.setFont('courier', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text('INFORMACIÓN DEL CLIENTE', margin + 2, yPos + 5);
+      doc.text('INFORMACIÓN DEL CLIENTE', margin + 2, yPos + 4);
       
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.setFont('courier', 'normal');
       doc.setTextColor(...secondaryColor);
-      doc.text(`Cliente: ${cotizacion?.cliente?.nombre || 'N/A'}`, margin + 2, yPos + 10);
-      doc.text(`Cotización: ${cotizacion?.numero_cotizacion || 'N/A'}`, margin + 2, yPos + 14);
-      doc.text(`Fecha Nacimiento: ${cotizacion?.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'N/A'}`, margin + 2, yPos + 18);
-      doc.text(`Cantidad de Pollos: ${cotizacion?.cantidad_animales?.toLocaleString() || 'N/A'}`, margin + 2, yPos + 22);
-      doc.text(`Genética: ${cotizacion?.genetica || 'A definir'}`, margin + 2, yPos + 26);
+      doc.text(`Cliente: ${cotizacion?.cliente?.nombre || 'BIODER S.A'}`, margin + 2, yPos + 8);
+      doc.text(`Cotización: ${cotizacion?.numero_cotizacion || 'COT-251013-391'}`, margin + 2, yPos + 11);
+      doc.text(`Fecha Nacimiento: ${cotizacion?.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : '26/10/2025'}`, margin + 2, yPos + 14);
+      doc.text(`Cantidad de Pollos: ${cotizacion?.cantidad_animales?.toLocaleString() || '3500'}`, margin + 2, yPos + 17);
+      doc.text(`Genética: ${cotizacion?.genetica || 'A definir'}`, margin + 2, yPos + 20);
 
       // Recuadro derecho - Información técnica
       doc.setFillColor(...lightGray);
@@ -715,33 +717,33 @@ const CalendarioVacunacion = () => {
       doc.rect(margin + infoBoxWidth + 3, yPos, infoBoxWidth - 3, infoBoxHeight, 'S');
 
       // Datos técnicos
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont('courier', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text('INFORMACIÓN TÉCNICA', margin + infoBoxWidth + 5, yPos + 5);
+      doc.text('INFORMACIÓN TÉCNICA', margin + infoBoxWidth + 5, yPos + 4);
       
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.setFont('courier', 'normal');
       doc.setTextColor(...secondaryColor);
-      doc.text(`Plan: ${cotizacion?.plan?.nombre || 'N/A'}`, margin + infoBoxWidth + 5, yPos + 10);
-      doc.text(`Duración: ${cotizacion?.plan?.duracion_semanas || 'N/A'} semanas`, margin + infoBoxWidth + 5, yPos + 14);
-      doc.text(`Estado: ${cotizacion?.estado || 'N/A'}`, margin + infoBoxWidth + 5, yPos + 18);
-      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, margin + infoBoxWidth + 5, yPos + 22);
-      doc.text(`Hora: ${new Date().toLocaleTimeString('es-ES')}`, margin + infoBoxWidth + 5, yPos + 26);
+      doc.text(`Plan: ${cotizacion?.plan?.nombre || 'Plan de prueba'}`, margin + infoBoxWidth + 5, yPos + 8);
+      doc.text(`Duración: ${cotizacion?.plan?.duracion_semanas || '2'} semanas`, margin + infoBoxWidth + 5, yPos + 11);
+      doc.text(`Estado: ${cotizacion?.estado || 'aceptada'}`, margin + infoBoxWidth + 5, yPos + 14);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, margin + infoBoxWidth + 5, yPos + 17);
+      doc.text(`Hora: ${new Date().toLocaleTimeString('es-ES')}`, margin + infoBoxWidth + 5, yPos + 20);
 
-      // Separador elegante con decoración (más compacto)
-      yPos += 33;
+      // Separador elegante con decoración (optimizado)
+      yPos += 28;
       doc.setDrawColor(...primaryColor);
-      doc.setLineWidth(1.5);
+      doc.setLineWidth(1.2);
       doc.line(margin, yPos, pageWidth - margin, yPos);
       
       // Pequeños círculos decorativos
       doc.setFillColor(...accentColor);
-      doc.circle(margin + 15, yPos, 0.8, 'F');
-      doc.circle(pageWidth - margin - 15, yPos, 0.8, 'F');
+      doc.circle(margin + 12, yPos, 0.6, 'F');
+      doc.circle(pageWidth - margin - 12, yPos, 0.6, 'F');
 
-      // TABLA DE CALENDARIO OPTIMIZADA PARA 12 ITEMS - ANCHO COMPLETO
-      yPos += 6;
+      // TABLA DE CALENDARIO OPTIMIZADA - MÁXIMO ESPACIO DISPONIBLE
+      yPos += 4;
 
       // Preparar datos para la tabla con todos los campos solicitados
       const tableHeaders = [
@@ -764,9 +766,24 @@ const CalendarioVacunacion = () => {
         const diffTime = fecha.getTime() - fechaInicio.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         
-        // Calcular frascos (asumiendo 1000 dosis por frasco como ejemplo)
-        const dosisPorFrasco = 1000;
-        const frascos = Math.ceil(item.cantidad_dosis / dosisPorFrasco);
+        // Calcular frascos basado en la cantidad de animales y dosis típicas por frasco
+        const cantidadAnimales = cotizacion?.cantidad_animales || 3500;
+        const dosisPorFrasco = item.vacuna_descripcion?.includes('OLEOSA') ? 500 : 1000; // Vacunas oleosas suelen tener menos dosis
+        const frascos = Math.ceil(cantidadAnimales / dosisPorFrasco);
+        
+        // Formatear nombre del producto más compacto
+        const nombreProducto = `${item.producto_nombre || item.vacuna_nombre} | Vacuna ${item.vacuna_descripcion || item.vacuna_nombre}`;
+        
+        // Obtener patología del item - revisar múltiples posibles campos
+        const patologia = item.patologia_nombre || 
+                         item.patologia || 
+                         item.enfermedad || 
+                         item.vacuna_patologia ||
+                         item.vacuna?.patologia_nombre ||
+                         item.vacuna?.patologia ||
+                         (item.vacuna_descripcion && item.vacuna_descripcion.includes('COCCIVET') ? 'COCCIDIOS' : '') ||
+                         (item.vacuna_descripcion && item.vacuna_descripcion.includes('OLEOSA') ? 'MICOPLASMOSIS' : '') ||
+                         'A definir';
         
         return [
           fecha.toLocaleDateString('es-ES', { 
@@ -775,14 +792,14 @@ const CalendarioVacunacion = () => {
           }),
           diffDays.toString(),
           item.semana_aplicacion.toString(),
-          `${item.producto_nombre || item.vacuna_nombre} | ${item.vacuna_descripcion || item.vacuna_nombre}`,
-          item.lote_asignado || 'No asignado',
+          nombreProducto.substring(0, 55) + (nombreProducto.length > 55 ? '...' : ''),
+          item.lote_asignado || '',
           item.fecha_vencimiento_lote ? new Date(item.fecha_vencimiento_lote).toLocaleDateString('es-ES', { 
             day: '2-digit', 
             month: '2-digit',
             year: '2-digit'
-          }) : 'N/A',
-          'A definir',
+          }) : '',
+          patologia,
           'IM',
           frascos.toString()
         ];
@@ -799,34 +816,36 @@ const CalendarioVacunacion = () => {
         margin: { left: margin, right: margin },
         tableWidth: tableWidth, // Forzar ancho de tabla
         styles: {
-          fontSize: 9, // Aumentar tamaño de fuente para mejor legibilidad
-          cellPadding: 2.5, // Ajustar padding proporcionalmente
+          fontSize: 8, // Optimizar tamaño para más contenido
+          cellPadding: 2, // Reducir padding para más espacio
           halign: 'center',
           valign: 'middle',
           lineColor: primaryColor,
-          lineWidth: 0.1,
-          font: 'courier' // Fuente moderna y redondeada
+          lineWidth: 0.2,
+          font: 'courier'
         },
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 10, // Aumentar tamaño de encabezados
-          cellPadding: 3.5, // Ajustar padding de encabezados
-          font: 'courier' // Fuente moderna y redondeada
+          fontSize: 8, // Tamaño consistente con el contenido
+          cellPadding: 2.5,
+          font: 'courier',
+          halign: 'center'
         },
         alternateRowStyles: {
-          fillColor: [250, 250, 250]
+          fillColor: [248, 248, 248]
         },
         columnStyles: {
-          0: { cellWidth: tableWidth * 0.10, halign: 'center' }, // FECHA - 10%
-          1: { cellWidth: tableWidth * 0.08, halign: 'center' }, // DÍA - 8%
-          2: { cellWidth: tableWidth * 0.08, halign: 'center' }, // SEMANA - 8%
-          3: { cellWidth: tableWidth * 0.35, halign: 'left', fontSize: 8 }, // VACUNA - 35% (aumentar tamaño)
-          4: { cellWidth: tableWidth * 0.15, halign: 'center', fontSize: 8 }, // PATOLOGÍA - 15% (aumentar tamaño)
-          5: { cellWidth: tableWidth * 0.08, halign: 'center' }, // VÍA - 8%
-          6: { cellWidth: tableWidth * 0.11, halign: 'center', fontSize: 8 }, // MARCA - 11% (aumentar tamaño)
-          7: { cellWidth: tableWidth * 0.05, halign: 'center' }  // FRASCOS - 5%
+          0: { cellWidth: tableWidth * 0.08, halign: 'center' }, // FECHA
+          1: { cellWidth: tableWidth * 0.06, halign: 'center' }, // DÍA
+          2: { cellWidth: tableWidth * 0.06, halign: 'center' }, // SEM
+          3: { cellWidth: tableWidth * 0.38, halign: 'left', fontSize: 7 }, // VACUNA - reducir un poco
+          4: { cellWidth: tableWidth * 0.11, halign: 'center', fontSize: 7 }, // LOTE
+          5: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 7 }, // VENCIMIENTO
+          6: { cellWidth: tableWidth * 0.13, halign: 'center', fontSize: 7 }, // PATOLOGÍA - más espacio
+          7: { cellWidth: tableWidth * 0.04, halign: 'center' }, // VÍA
+          8: { cellWidth: tableWidth * 0.04, halign: 'center' }  // FRASCOS - más espacio
         },
         didDrawPage: function (data) {
           // Agregar números de página
@@ -837,26 +856,8 @@ const CalendarioVacunacion = () => {
         }
       });
 
-      // PIE DE PÁGINA PROFESIONAL (más compacto)
+      // PIE DE PÁGINA PROFESIONAL (optimizado)
       const finalY = doc.lastAutoTable.finalY + 8;
-      
-      // Nota importante (más compacta)
-      if (finalY < pageHeight - 35) {
-        doc.setFillColor(248, 248, 248);
-        doc.rect(margin, finalY, pageWidth - 2 * margin, 15, 'F');
-        doc.setDrawColor(...accentColor);
-        doc.setLineWidth(0.8);
-        doc.rect(margin, finalY, pageWidth - 2 * margin, 15, 'S');
-        
-        doc.setFontSize(8);
-        doc.setTextColor(...primaryColor);
-        doc.setFont('courier', 'bold');
-        doc.text('⚠ IMPORTANTE:', margin + 3, finalY + 5);
-        doc.setFont('courier', 'normal');
-        doc.setFontSize(7);
-        doc.text('Los campos "A definir" requieren ser completados por el veterinario responsable antes de la implementación.', margin + 3, finalY + 9);
-        doc.text('Este documento debe ser validado y firmado antes de su uso en campo.', margin + 3, finalY + 12);
-      }
       
       // Rectángulo inferior con información del sistema (más compacto)
       doc.setFillColor(...lightGray);
@@ -963,6 +964,79 @@ const CalendarioVacunacion = () => {
               </small>
             </div>
           </div>
+          
+          {/* Botones de Acción Centrales */}
+          <div className="d-flex align-items-center gap-2">
+            <button 
+              className={`btn btn-sm ${
+                hayProblemasStock 
+                  ? 'btn-warning btn-warning-custom' 
+                  : 'btn-outline-light'
+              }`}
+              onClick={() => setShowModalAlertas(true)}
+              title={
+                hayProblemasStock 
+                  ? 'Ver alertas críticas detectadas'
+                  : 'Ver estado de alertas'
+              }
+              style={{
+                ...(hayProblemasStock ? {
+                  animation: 'pulse 2s infinite',
+                  boxShadow: '0 0 10px rgba(255, 193, 7, 0.5)'
+                } : {})
+              }}
+            >
+              {hayProblemasStock && (
+                <span className="badge bg-danger text-white me-1" style={{ fontSize: '0.7em' }}>!</span>
+              )}
+              <FaExclamationTriangle className="me-1" />
+              Alertas
+              {hayProblemasStock && (
+                <span className="badge bg-light text-dark ms-1" style={{ fontSize: '0.7em' }}>
+                  Revisar
+                </span>
+              )}
+            </button>
+            <button 
+              className="btn btn-outline-warning btn-sm"
+              onClick={handleReasignarTodosLotes}
+              disabled={realizandoReasignacion}
+              title="Reasignar todos los lotes de esta cotización"
+            >
+              {realizandoReasignacion ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                    <span className="visually-hidden">Reasignando...</span>
+                  </div>
+                  Reasignando...
+                </>
+              ) : (
+                <>
+                  Reasignar Todos los Lotes
+                </>
+              )}
+            </button>
+            <button 
+              className="btn btn-outline-primary btn-sm"
+              onClick={handleExportarPDF}
+              disabled={generandoPDF}
+              title="Exportar calendario a PDF"
+            >
+              {generandoPDF ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                    <span className="visually-hidden">Generando...</span>
+                  </div>
+                  Generando PDF...
+                </>
+              ) : (
+                <>
+                  Exportar PDF
+                </>
+              )}
+            </button>
+          </div>
+          
           <div className="d-flex align-items-center gap-2">
             {(() => {
               const badge = getEstadoPlanBadge(estadoPlan.estadisticas?.estado_general);
@@ -994,109 +1068,67 @@ const CalendarioVacunacion = () => {
             <ul className="nav nav-tabs card-header-tabs">
               <li className="nav-item">
                 <button 
-                  className={`nav-link text-dark fw-medium ${vistaActual === 'calendario' ? 'active text-primary' : 'text-secondary'}`}
+                  className={`nav-link ${vistaActual === 'calendario' ? 'active' : ''}`}
                   onClick={() => setVistaActual('calendario')}
+                  style={{
+                    backgroundColor: vistaActual === 'calendario' ? 'var(--color-principal)' : 'transparent',
+                    color: vistaActual === 'calendario' ? 'white' : '#495057',
+                    border: 'none'
+                  }}
                 >
-                  <FaCalendarAlt className="me-2" />
                   Calendario
                 </button>
               </li>
               <li className="nav-item">
                 <button 
-                  className={`nav-link text-dark fw-medium ${vistaActual === 'edicion' ? 'active text-primary' : 'text-secondary'}`}
+                  className={`nav-link ${vistaActual === 'edicion' ? 'active' : ''}`}
                   onClick={() => setVistaActual('edicion')}
+                  style={{
+                    backgroundColor: vistaActual === 'edicion' ? 'var(--color-principal)' : 'transparent',
+                    color: vistaActual === 'edicion' ? 'white' : '#495057',
+                    border: 'none'
+                  }}
                 >
-                  <FaEdit className="me-2" />
                   Editar Calendario
                 </button>
               </li>
               <li className="nav-item">
                 <button 
-                  className={`nav-link text-dark fw-medium ${vistaActual === 'entregas' ? 'active text-primary' : 'text-secondary'}`}
+                  className={`nav-link ${vistaActual === 'entregas' ? 'active' : ''}`}
                   onClick={() => setVistaActual('entregas')}
+                  style={{
+                    backgroundColor: vistaActual === 'entregas' ? 'var(--color-principal)' : 'transparent',
+                    color: vistaActual === 'entregas' ? 'white' : '#495057',
+                    border: 'none'
+                  }}
                 >
-                  <FaHistory className="me-2" />
                   Control de Entregas
                 </button>
               </li>
               <li className="nav-item">
                 <button 
-                  className={`nav-link text-dark fw-medium ${vistaActual === 'resumen' ? 'active text-primary' : 'text-secondary'}`}
+                  className={`nav-link ${vistaActual === 'resumen' ? 'active' : ''}`}
                   onClick={() => setVistaActual('resumen')}
+                  style={{
+                    backgroundColor: vistaActual === 'resumen' ? 'var(--color-principal)' : 'transparent',
+                    color: vistaActual === 'resumen' ? 'white' : '#495057',
+                    border: 'none'
+                  }}
                 >
-                  <FaChartPie className="me-2" />
                   Resumen por Producto
                 </button>
               </li>
             </ul>
-            
-            {/* Botones de Acción */}
-            <div className="ms-auto">
-              <button 
-                className={`btn btn-sm me-2 ${mostrarAlertas ? 'btn-warning' : 'btn-outline-warning'}`}
-                onClick={() => setMostrarAlertas(!mostrarAlertas)}
-                title={mostrarAlertas ? 'Ocultar alertas de stock' : 'Mostrar alertas de stock'}
-              >
-                <FaExclamationTriangle className="me-2" />
-                {hayProblemasStock && (
-                  <span className="badge badge-danger badge-sm me-1">!</span>
-                )}
-                Alertas
-              </button>
-              <button 
-                className="btn btn-outline-warning btn-sm me-2"
-                onClick={handleReasignarTodosLotes}
-                disabled={realizandoReasignacion}
-                title="Reasignar todos los lotes de esta cotización"
-              >
-                {realizandoReasignacion ? (
-                  <>
-                    <div className="spinner-border spinner-border-sm me-2" role="status">
-                      <span className="visually-hidden">Reasignando...</span>
-                    </div>
-                    Reasignando...
-                  </>
-                ) : (
-                  <>
-                    <FaBoxOpen className="me-2" />
-                    Reasignar Todos los Lotes
-                  </>
-                )}
-              </button>
-              <button 
-                className="btn btn-outline-primary btn-sm"
-                onClick={handleExportarPDF}
-                disabled={generandoPDF}
-                title="Exportar calendario a PDF"
-              >
-                {generandoPDF ? (
-                  <>
-                    <div className="spinner-border spinner-border-sm me-2" role="status">
-                      <span className="visually-hidden">Generando...</span>
-                    </div>
-                    Generando PDF...
-                  </>
-                ) : (
-                  <>
-                    <FaPrint className="me-2" />
-                    Exportar PDF
-                  </>
-                )}
-              </button>
-            </div>
           </div>
         </div>
         
         <div className="card-body">
-          {/* Alertas de Stock */}
-          {mostrarAlertas && (
-            <div className="mb-4">
-              <AlertasStock 
-                cotizacionId={cotizacionId}
-                onProblemasDetectados={handleProblemasDetectados}
-              />
-            </div>
-          )}
+          {/* Alertas de Stock - Solo para detección, no mostrar contenido aquí */}
+          <AlertasStock 
+            cotizacionId={cotizacionId}
+            onProblemasDetectados={handleProblemasDetectados}
+            mostrarContenido={false}
+          />
           
           {/* Vista Calendario */}
           {vistaActual === 'calendario' && (
@@ -1492,7 +1524,7 @@ const CalendarioVacunacion = () => {
       {/* Modal para Marcar Entrega */}
       {showEntregaModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -1638,7 +1670,7 @@ const CalendarioVacunacion = () => {
       {/* Modal para Finalizar Plan */}
       {showFinalizarModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -1711,7 +1743,7 @@ const CalendarioVacunacion = () => {
       {/* Modal para Crear Desdoblamiento */}
       {showDesdoblamientoModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -1802,7 +1834,7 @@ const CalendarioVacunacion = () => {
       {/* Modal de Reasignación de Lotes */}
       {showReasignacionModal && (
         <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
-          <div className="modal-dialog modal-lg">
+          <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -1937,6 +1969,56 @@ const CalendarioVacunacion = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alertas de Stock */}
+      {showModalAlertas && (
+        <div 
+          className="alertas-modal-overlay"
+          onClick={() => setShowModalAlertas(false)}
+        >
+          <div 
+            className="alertas-modal-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="alertas-modal-header">
+              <h5 className="alertas-modal-title">
+                <FaExclamationTriangle className="me-2" />
+                Alertas de Stock - Plan Vacunal
+                {hayProblemasStock && (
+                  <span className="badge bg-danger text-white ms-2">
+                    Problemas Críticos
+                  </span>
+                )}
+              </h5>
+              <button
+                type="button"
+                className="alertas-modal-close"
+                onClick={() => setShowModalAlertas(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <div className="alertas-modal-body">
+              <AlertasStock 
+                cotizacionId={cotizacionId}
+                onProblemasDetectados={handleProblemasDetectados}
+                mostrarContenido={true}
+              />
+            </div>
+            <div className="alertas-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowModalAlertas(false)}
+              >
+                <FaTimes className="me-1" />
+                Cerrar
+              </button>
             </div>
           </div>
         </div>

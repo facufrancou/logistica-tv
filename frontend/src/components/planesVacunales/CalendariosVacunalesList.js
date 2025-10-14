@@ -233,62 +233,6 @@ const CalendariosVacunalesList = () => {
         </div>
       </div>
 
-      {/* Estadísticas */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card bg-primary text-white">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <div>
-                  <h4 className="mb-0">{estadisticas.total}</h4>
-                  <p className="mb-0">Total Calendarios</p>
-                </div>
-                <FaCalendarAlt size={40} className="opacity-50" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-info text-white">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <div>
-                  <h4 className="mb-0">{estadisticas.activos}</h4>
-                  <p className="mb-0">En Proceso</p>
-                </div>
-                <FaPlay size={40} className="opacity-50" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-success text-white">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <div>
-                  <h4 className="mb-0">{estadisticas.completados}</h4>
-                  <p className="mb-0">Completados</p>
-                </div>
-                <FaCheckCircle size={40} className="opacity-50" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-danger text-white">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <div>
-                  <h4 className="mb-0">{estadisticas.retrasados}</h4>
-                  <p className="mb-0">Con Retrasos</p>
-                </div>
-                <FaExclamationTriangle size={40} className="opacity-50" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Filtros */}
       <div className="card mb-4">
         <div className="card-body">

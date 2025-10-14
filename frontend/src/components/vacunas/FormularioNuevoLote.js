@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import './FormularioNuevoLote.css';
+import './FormularioNuevoLote.css';
 
 function FormularioNuevoLote({ 
   vacunas, 
@@ -18,19 +20,29 @@ function FormularioNuevoLote({
     observaciones: ''
   });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState(false);
 
-  // Generar código de lote automático
+  // Generar código de lote automático con formato mejorado
   const generarCodigoLote = () => {
     const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const numeros = '0123456789';
+    const fechaActual = new Date();
+    const año = fechaActual.getFullYear().toString().slice(-2); // Últimos 2 dígitos del año
+    const mes = (fechaActual.getMonth() + 1).toString().padStart(2, '0'); // Mes con 2 dígitos
     
     let codigo = '';
-    // 2 letras
+    
+    // 2 letras aleatorias
     for (let i = 0; i < 2; i++) {
       codigo += letras.charAt(Math.floor(Math.random() * letras.length));
     }
-    // 4 números
-    for (let i = 0; i < 4; i++) {
+    
+    // Año y mes (4 dígitos)
+    codigo += año + mes;
+    
+    // 2 números aleatorios adicionales
+    for (let i = 0; i < 2; i++) {
       codigo += numeros.charAt(Math.floor(Math.random() * numeros.length));
     }
     
@@ -39,19 +51,21 @@ function FormularioNuevoLote({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
+    setSuccess(false);
     
     if (!formData.id_vacuna || !formData.lote || !formData.fecha_vencimiento || !formData.stock_inicial) {
-      alert('Por favor complete los campos obligatorios');
+      setErrors({ general: 'Por favor complete los campos obligatorios' });
       return;
     }
 
     if (parseInt(formData.stock_inicial) <= 0) {
-      alert('El stock inicial debe ser mayor a 0');
+      setErrors({ general: 'El stock inicial debe ser mayor a 0' });
       return;
     }
 
     if (new Date(formData.fecha_vencimiento) <= new Date()) {
-      alert('La fecha de vencimiento debe ser posterior a hoy');
+      setErrors({ general: 'La fecha de vencimiento debe ser posterior a hoy' });
       return;
     }
 
@@ -84,9 +98,12 @@ function FormularioNuevoLote({
         observaciones: ''
       });
       
-      onClose();
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (error) {
-      alert('Error al crear el lote: ' + error.message);
+      setErrors({ general: 'Error al crear el lote: ' + error.message });
     } finally {
       setLoading(false);
     }
@@ -95,25 +112,54 @@ function FormularioNuevoLote({
   if (!show) return null;
 
   return (
-    <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-xl">
+    <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-xl modal-dialog-centered lote-modal-enhanced">
         <div className="modal-content">
-          <div className="modal-header bg-primary text-white">
-            <h4 className="modal-title">
+          <div className="modal-header">
+            <h5 className="modal-title">
               <i className="fas fa-plus-square mr-2"></i>
               Crear Nuevo Lote de Stock
-            </h4>
-            <button type="button" className="close text-white" onClick={onClose}>
+            </h5>
+            <button
+              type="button"
+              className="close"
+              onClick={onClose}
+              onMouseEnter={(e) => e.target.style.opacity = '1'}
+              onMouseLeave={(e) => e.target.style.opacity = '0.8'}
+            >
               <span>&times;</span>
             </button>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
+              {/* Mensaje de éxito */}
+              {success && (
+                <div className="alert alert-success" role="alert">
+                  <div className="text-center">
+                    <i className="fas fa-check-circle mr-2" style={{ fontSize: '1.2em' }}></i>
+                    <strong>¡Lote creado exitosamente!</strong>
+                    <br />
+                    <small>El lote se ha guardado correctamente y está disponible en el stock.</small>
+                  </div>
+                </div>
+              )}
+
+              {/* Mensaje de error general */}
+              {errors.general && (
+                <div className="alert alert-danger" role="alert">
+                  <i className="fas fa-exclamation-triangle mr-2"></i>
+                  <strong>Error:</strong> {errors.general}
+                </div>
+              )}
+
               <div className="row">
                 <div className="col-md-6">
                   {/* Información básica */}
-                  <h6 className="text-primary mb-3">Información Básica</h6>
+                  <h6 className="mb-3" style={{color: 'var(--color-principal)'}}>
+                    <i className="fas fa-info-circle mr-2"></i>
+                    Información Básica
+                  </h6>
                   
                   <div className="form-group">
                     <label>Vacuna *</label>
@@ -140,17 +186,36 @@ function FormularioNuevoLote({
                         className="form-control"
                         value={formData.lote}
                         onChange={(e) => setFormData({...formData, lote: e.target.value.toUpperCase()})}
-                        placeholder="Ej: AB1234"
+                        placeholder="Ej: AB242501"
                         required
                       />
                       <div className="input-group-append">
                         <button
                           type="button"
-                          className="btn btn-outline-secondary"
+                          className="btn btn-outline-primary"
+                          style={{
+                            backgroundColor: 'var(--color-principal)',
+                            borderColor: 'var(--color-principal)',
+                            color: 'white',
+                            fontWeight: '600',
+                            padding: '0.75rem 1rem',
+                            transition: 'all 0.2s ease-in-out'
+                          }}
                           onClick={generarCodigoLote}
-                          title="Generar código automático"
+                          title="Generar código automático con formato: 2 letras + año/mes + 2 números (Ej: AB242501)"
+                          onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = '#2d1810';
+                            e.target.style.borderColor = '#2d1810';
+                            e.target.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = 'var(--color-principal)';
+                            e.target.style.borderColor = 'var(--color-principal)';
+                            e.target.style.transform = 'scale(1)';
+                          }}
                         >
-                          <i className="fas fa-random"></i>
+                          <i className="fas fa-dice mr-1"></i>
+                          Generar
                         </button>
                       </div>
                     </div>
@@ -196,7 +261,10 @@ function FormularioNuevoLote({
 
                 <div className="col-md-6">
                   {/* Información comercial y almacenamiento */}
-                  <h6 className="text-primary mb-3">Comercial y Almacenamiento</h6>
+                  <h6 className="mb-3" style={{color: 'var(--color-principal)'}}>
+                    <i className="fas fa-warehouse mr-2"></i>
+                    Comercial y Almacenamiento
+                  </h6>
                   
                   <div className="form-group">
                     <label>Precio de Compra</label>
@@ -257,61 +325,61 @@ function FormularioNuevoLote({
                 </div>
               </div>
 
-              {/* Resumen */}
-              {formData.id_vacuna && formData.stock_inicial && (
-                <div className="alert alert-info border-info">
-                  <h5 className="alert-heading">
-                    <i className="fas fa-clipboard-check mr-2"></i>
-                    Resumen del Lote
-                  </h5>
-                  <hr />
-                  <div className="row">
-                    <div className="col-md-6">
-                      <ul className="list-unstyled mb-0">
-                        <li><strong>Vacuna:</strong> {vacunas.find(v => v.id_vacuna === parseInt(formData.id_vacuna))?.nombre}</li>
-                        <li><strong>Lote:</strong> {formData.lote}</li>
-                      </ul>
-                    </div>
-                    <div className="col-md-6">
-                      <ul className="list-unstyled mb-0">
-                        <li><strong>Stock inicial:</strong> {formData.stock_inicial} dosis</li>
-                        <li><strong>Vencimiento:</strong> {formData.fecha_vencimiento ? new Date(formData.fecha_vencimiento).toLocaleDateString() : 'No especificado'}</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            <div className="modal-footer bg-light">
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-lg" 
-                onClick={onClose}
-                disabled={loading}
-              >
-                <i className="fas fa-times mr-2"></i>
-                Cancelar
-              </button>
-              <button 
-                type="submit" 
-                className="btn btn-primary btn-lg"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm mr-2" role="status"></span>
-                    Creando...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-plus mr-2"></i>
-                    Crear Lote
-                  </>
-                )}
-              </button>
             </div>
           </form>
+
+          <div className="modal-footer bg-light d-flex justify-content-end align-items-center">
+            {success ? (
+              // Botones cuando el lote fue creado exitosamente
+              <button 
+                type="button" 
+                className="btn btn-success btn-lg px-4" 
+                onClick={onClose}
+                style={{ minWidth: '150px' }}
+              >
+                <i className="fas fa-check mr-2"></i>
+                Finalizar
+              </button>
+            ) : (
+              // Botones normales del formulario
+              <div className="d-flex gap-3">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary btn-lg px-4" 
+                  onClick={onClose}
+                  disabled={loading}
+                  style={{ minWidth: '120px' }}
+                >
+                  <i className="fas fa-times mr-2"></i>
+                  Cancelar
+                </button>
+                <button 
+                  type="button"
+                  className="btn btn-primary btn-lg px-4"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  style={{ 
+                    minWidth: '150px',
+                    backgroundColor: 'var(--color-principal)',
+                    borderColor: 'var(--color-principal)'
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm mr-2" role="status"></span>
+                      Creando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-plus mr-2"></i>
+                      Crear Lote
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

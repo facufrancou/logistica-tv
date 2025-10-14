@@ -204,62 +204,6 @@ function AdminVacunas() {
           </div>
         </div>
       </div>
-
-      {/* Acciones rápidas */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-header">
-              <h6 className="mb-0">Acciones Rápidas</h6>
-            </div>
-            <div className="card-body">
-              <div className="row">
-                <div className="col-md-3 mb-2">
-                  <button 
-                    className="btn btn-primary btn-block"
-                    onClick={() => setVistaActiva("vacunas")}
-                  >
-                    Gestionar Vacunas
-                  </button>
-                </div>
-                <div className="col-md-3 mb-2">
-                  <button 
-                    className="btn btn-info btn-block"
-                    onClick={() => setVistaActiva("stock")}
-                  >
-                    Control de Stock
-                  </button>
-                </div>
-                <div className="col-md-3 mb-2">
-                  <button 
-                    className="btn btn-warning btn-block"
-                    onClick={() => setVistaActiva("movimientos")}
-                  >
-                    Movimientos Stock
-                  </button>
-                </div>
-                <div className="col-md-3 mb-2">
-                  <button 
-                    className="btn btn-secondary btn-block"
-                    onClick={() => setVistaActiva("catalogos")}
-                  >
-                    Catálogos
-                  </button>
-                </div>
-                <div className="col-md-3 mb-2">
-                  <button 
-                    className="btn btn-success btn-block"
-                    onClick={() => cargarDatosDashboard()}
-                    disabled={loading}
-                  >
-                    {loading ? 'Actualizando...' : 'Actualizar'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 
@@ -289,46 +233,66 @@ function AdminVacunas() {
           <ul className="nav nav-tabs card-header-tabs" role="tablist">
             <li className="nav-item">
               <button
-                className={`nav-link ${vistaActiva === "dashboard" ? "active" : "text-dark"}`}
+                className={`nav-link ${vistaActiva === "dashboard" ? "active" : ""}`}
                 onClick={() => setVistaActiva("dashboard")}
+                style={{
+                  backgroundColor: vistaActiva === "dashboard" ? "var(--color-principal)" : "transparent",
+                  color: vistaActiva === "dashboard" ? "white" : "#495057",
+                  border: "none"
+                }}
               >
-                <i className="fas fa-chart-pie mr-1"></i>
                 Dashboard
               </button>
             </li>
             <li className="nav-item">
               <button
-                className={`nav-link ${vistaActiva === "vacunas" ? "active" : "text-dark"}`}
+                className={`nav-link ${vistaActiva === "vacunas" ? "active" : ""}`}
                 onClick={() => setVistaActiva("vacunas")}
+                style={{
+                  backgroundColor: vistaActiva === "vacunas" ? "var(--color-principal)" : "transparent",
+                  color: vistaActiva === "vacunas" ? "white" : "#495057",
+                  border: "none"
+                }}
               >
-                <i className="fas fa-syringe mr-1"></i>
                 Vacunas
               </button>
             </li>
             <li className="nav-item">
               <button
-                className={`nav-link ${vistaActiva === "stock" ? "active" : "text-dark"}`}
+                className={`nav-link ${vistaActiva === "stock" ? "active" : ""}`}
                 onClick={() => setVistaActiva("stock")}
+                style={{
+                  backgroundColor: vistaActiva === "stock" ? "var(--color-principal)" : "transparent",
+                  color: vistaActiva === "stock" ? "white" : "#495057",
+                  border: "none"
+                }}
               >
-                <i className="fas fa-warehouse mr-1"></i>
                 Stock
               </button>
             </li>
             <li className="nav-item">
               <button
-                className={`nav-link ${vistaActiva === "movimientos" ? "active" : "text-dark"}`}
+                className={`nav-link ${vistaActiva === "movimientos" ? "active" : ""}`}
                 onClick={() => setVistaActiva("movimientos")}
+                style={{
+                  backgroundColor: vistaActiva === "movimientos" ? "var(--color-principal)" : "transparent",
+                  color: vistaActiva === "movimientos" ? "white" : "#495057",
+                  border: "none"
+                }}
               >
-                <i className="fas fa-exchange-alt mr-1"></i>
                 Movimientos
               </button>
             </li>
             <li className="nav-item">
               <button
-                className={`nav-link ${vistaActiva === "catalogos" ? "active" : "text-dark"}`}
+                className={`nav-link ${vistaActiva === "catalogos" ? "active" : ""}`}
                 onClick={() => setVistaActiva("catalogos")}
+                style={{
+                  backgroundColor: vistaActiva === "catalogos" ? "var(--color-principal)" : "transparent",
+                  color: vistaActiva === "catalogos" ? "white" : "#495057",
+                  border: "none"
+                }}
               >
-                <i className="fas fa-list mr-1"></i>
                 Catálogos
               </button>
             </li>

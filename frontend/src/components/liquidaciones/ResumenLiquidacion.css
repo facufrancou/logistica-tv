@@ -72,7 +72,7 @@
 }
 
 .resumen-liquidacion .badge.bg-primary {
-  background-color: #0d6efd !important;
+  background-color: var(--color-principal) !important;
 }
 
 /* Botones de acción en el header */
@@ -85,8 +85,8 @@
 }
 
 .resumen-liquidacion .btn-outline-primary:hover {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: var(--color-principal);
+  border-color: var(--color-principal);
 }
 
 .resumen-liquidacion .btn-outline-secondary:hover {

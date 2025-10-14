@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as planesVacunalesApi from '../../services/planesVacunalesApi';
 
-const AlertasStock = ({ cotizacionId, onProblemasDetectados }) => {
+const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = true }) => {
   const [alertas, setAlertas] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -149,6 +149,9 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados }) => {
   if (!alertas) return null;
 
   const { resumen, problemas, alertas: alertasPreventivas } = alertas;
+
+  // Si no debe mostrar contenido, solo retorna null pero las verificaciones ya se ejecutaron
+  if (!mostrarContenido) return null;
 
   return (
     <div className="alertas-stock">
@@ -316,10 +319,10 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados }) => {
                       <td>{new Date(alerta.fecha_programada).toLocaleDateString()}</td>
                       <td>{alerta.producto}</td>
                       <td>
-                        <span className={`badge badge-${alerta.severidad === 'warning' ? 'warning' : 'info'}`}>
+                        <div className={`text-${alerta.severidad === 'warning' ? 'warning' : 'info'} fw-bold`}>
                           <i className={getSeverityIcon(alerta.severidad)}></i>
                           <span className="ml-1">{alerta.mensaje}</span>
-                        </span>
+                        </div>
                       </td>
                     </tr>
                   ))}

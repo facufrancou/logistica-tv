@@ -190,7 +190,7 @@ function PedidoForm({ onPedidoCreado }) {
           tabIndex="-1"
           style={{ backgroundColor: "#00000099" }}
         >
-          <div className="modal-dialog" style={{ maxWidth: '800px', width: '90%' }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '800px', width: '90%' }}>
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Agregar Producto</h5>

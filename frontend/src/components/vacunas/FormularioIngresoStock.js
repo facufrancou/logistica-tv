@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './FormularioIngresoStock.css';
 
 function FormularioIngresoStock({ 
   lote, 
@@ -50,15 +51,15 @@ function FormularioIngresoStock({
   if (!show || !lote) return null;
 
   return (
-    <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-lg">
+    <div className="modal show d-block ingreso-stock-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-xl modal-dialog-centered ingreso-stock-modal">
         <div className="modal-content">
-          <div className="modal-header bg-success text-white">
+          <div className="modal-header">
             <h4 className="modal-title">
               <i className="fas fa-plus-circle mr-2"></i>
               Registrar Ingreso de Stock
             </h4>
-            <button type="button" className="close text-white" onClick={onClose}>
+            <button type="button" className="close" onClick={onClose}>
               <span>&times;</span>
             </button>
           </div>
@@ -83,10 +84,8 @@ function FormularioIngresoStock({
                     <div className="col-6">
                       <div className="mb-3">
                         <label className="text-muted small font-weight-bold">LOTE:</label>
-                        <div>
-                          <span className="badge badge-dark px-3 py-2 text-white font-weight-bold" style={{fontSize: '0.9em'}}>
-                            {lote.lote}
-                          </span>
+                        <div className="text-dark font-weight-bold" style={{fontSize: '1.1em'}}>
+                          {lote.lote}
                         </div>
                         <div className="text-muted small">Stock actual: <strong>{lote.stock_actual}</strong></div>
                       </div>

@@ -82,10 +82,35 @@ html, body, #root {
   justify-content: space-between;
 }
 
-.card-header h2, .card-header h3, .card-header h4 {
+.card-header h1, .card-header h2, .card-header h3, .card-header h4, .card-header h5, .card-header h6 {
   margin: 0;
-  color: var(--color-principal);
+  color: white !important;
   font-weight: 700;
+}
+
+.card-header,
+.card-header *,
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4,
+.card-header h5,
+.card-header h6,
+.card-header span,
+.card-header div,
+.card-header small,
+.card-header p {
+  color: white !important;
+}
+
+/* Regla específica para componentes que puedan sobrescribir */
+div[class*="card-header"] h1,
+div[class*="card-header"] h2,
+div[class*="card-header"] h3,
+div[class*="card-header"] h4,
+div[class*="card-header"] h5,
+div[class*="card-header"] h6 {
+  color: white !important;
 }
 
 .card-body {
@@ -346,16 +371,42 @@ html, body, #root {
 }
 
 .table th {
-  font-weight: 600;
-  background: linear-gradient(to right, var(--color-fondo-claro), #ffffff);
-  color: var(--color-principal) !important;
+  font-weight: 600 !important;
+  background: #3D2113 !important;
+  background: var(--color-principal) !important;
+  background-color: #3D2113 !important;
+  background-color: var(--color-principal) !important;
+  color: white !important;
+  color: var(--color-texto-claro) !important;
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--color-fondo-medio);
+  border-bottom: 2px solid var(--color-principal);
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+/* Forzar estilos para encabezados de tabla con máxima especificidad */
+.table thead th,
+.table > thead > tr > th,
+table thead th,
+table > thead > tr > th,
+.table thead > tr > th,
+.container .table thead th,
+.container .table > thead > tr > th,
+.container table thead th,
+.container table > thead > tr > th,
+.table-light thead th,
+.table-light > thead > tr > th,
+thead.table-light th,
+thead.table-light > tr > th {
+  background: #3D2113 !important;
+  background: var(--color-principal) !important;
+  background-color: #3D2113 !important;
+  background-color: var(--color-principal) !important;
+  color: white !important;
+  border-color: var(--color-principal) !important;
 }
 
 .table tr {
@@ -754,7 +805,12 @@ html, body, #root {
   }
 
   /* Ajustes de modales en mobile */
-  .modal-dialog { margin: .5rem; }
+  .modal-dialog { 
+    margin: .5rem auto !important; 
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
   .modal-content { border-radius: 16px; }
 
   /* Botones full-width contextuales */
@@ -815,4 +871,69 @@ html, body, #root {
 
 .modal-xl {
   max-width: 95% !important;
+}
+
+/* CENTRADO GLOBAL DE TODOS LOS MODALES */
+.modal {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.modal-dialog {
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: calc(100vh - 2rem) !important;
+}
+
+/* Asegurar que el contenido del modal también esté centrado */
+.modal-dialog .modal-content {
+  width: 100% !important;
+}
+
+/* Centrado específico para modal-dialog-centered */
+.modal-dialog-centered {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: calc(100vh - 2rem) !important;
+}
+
+/* ENCABEZADOS DE MODALES CON TEXTO BLANCO */
+.modal-header {
+  background: linear-gradient(135deg, var(--color-principal) 0%, #2d1810 100%) !important;
+  color: white !important;
+  border-bottom: none !important;
+}
+
+.modal-header .modal-title,
+.modal-header h1,
+.modal-header h2, 
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6 {
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%) !important;
+  opacity: 0.8 !important;
+}
+
+.modal-header .btn-close:hover {
+  opacity: 1 !important;
+}
+
+.modal-header .close {
+  color: white !important;
+  opacity: 0.8 !important;
+}
+
+.modal-header .close:hover {
+  color: white !important;
+  opacity: 1 !important;
 }

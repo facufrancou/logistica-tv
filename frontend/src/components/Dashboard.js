@@ -237,7 +237,7 @@ function Dashboard() {
         <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header bg-dark text-white border-0">
+              <div className="modal-header">
                 <h5 className="modal-title fw-bold">
                   <FaStethoscope className="me-2" />
                   ¡Bienvenido al Sistema!

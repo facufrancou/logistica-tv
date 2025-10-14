@@ -50,10 +50,15 @@ class PDFService {
   replacePlaceholders(template, data) {
     let processedTemplate = template;
 
-    // Función auxiliar para reemplazar placeholders simples
+    // Función auxiliar para reemplazar placeholders simples con validación
     const replace = (placeholder, value) => {
       const regex = new RegExp(`{{${placeholder}}}`, 'g');
-      processedTemplate = processedTemplate.replace(regex, value || '');
+      // Asegurar que value sea una string válida
+      let safeValue = '';
+      if (value !== null && value !== undefined) {
+        safeValue = typeof value === 'string' ? value : String(value);
+      }
+      processedTemplate = processedTemplate.replace(regex, safeValue);
     };
 
     // Función auxiliar para manejar condicionales {{#if}}
@@ -74,49 +79,57 @@ class PDFService {
     replace('fechaGeneracion', this.formatDate(new Date()));
     replace('horaGeneracion', this.formatTime(new Date()));
 
-    // Datos del cliente
-    replace('cliente.nombre', data.cliente?.nombre);
-    replace('cliente.email', data.cliente?.email);
-    replace('cliente.telefono', data.cliente?.telefono);
-    replace('cliente.direccion', data.cliente?.direccion);
-    replace('cliente.localidad', data.cliente?.localidad);
-    replace('cliente.cuit', data.cliente?.cuit);
+    // Datos del cliente con valores por defecto
+    replace('cliente.nombre', data.cliente?.nombre || 'Sin nombre');
+    replace('cliente.email', data.cliente?.email || '');
+    replace('cliente.telefono', data.cliente?.telefono || '');
+    replace('cliente.direccion', data.cliente?.direccion || '');
+    replace('cliente.localidad', data.cliente?.localidad || '');
+    replace('cliente.cuit', data.cliente?.cuit || '');
 
-    // Datos del plan
-    replace('plan.numeroCotizacion', data.plan?.numeroCotizacion);
-    replace('plan.numeroSemana', data.plan?.numeroSemana);
-    replace('plan.fechaProgramada', this.formatDate(data.plan?.fechaProgramada));
-    replace('plan.cantidadAnimales', data.plan?.cantidadAnimales);
-    replace('plan.estado', data.plan?.estado);
-    replace('plan.estadoBadge', this.getEstadoBadge(data.plan?.estado));
-    replace('plan.fechaInicio', this.formatDate(data.plan?.fechaInicio));
+    // Datos del plan con valores por defecto
+    replace('plan.numeroCotizacion', data.plan?.numeroCotizacion || 'SIN-NUMERO');
+    replace('plan.numeroSemana', data.plan?.numeroSemana || 'N/A');
+    replace('plan.fechaProgramada', this.formatDate(data.plan?.fechaProgramada) || '');
+    replace('plan.cantidadAnimales', data.plan?.cantidadAnimales || '0');
+    replace('plan.estado', data.plan?.estado || 'pendiente');
+    replace('plan.estadoBadge', this.getEstadoBadge(data.plan?.estado || 'pendiente'));
+    replace('plan.fechaInicio', this.formatDate(data.plan?.fechaInicio) || '');
 
-    // Datos del producto
-    replace('producto.nombre', data.producto?.nombre);
-    replace('producto.descripcion', data.producto?.descripcion);
-    replace('producto.cantidadProgramada', data.producto?.cantidadProgramada);
+    // Datos del producto/vacuna con valores por defecto
+    replace('producto.nombre', data.producto?.nombre || 'Producto sin nombre');
+    replace('producto.descripcion', data.producto?.descripcion || 'Sin descripción');
+    replace('producto.codigo', data.producto?.codigo || 'SIN-CODIGO');
+    replace('producto.lote', data.producto?.lote || 'N/A');
+    replace('producto.cantidadProgramada', data.producto?.cantidad_programada || data.producto?.cantidadProgramada || '0');
+    replace('producto.proveedor', data.producto?.proveedor || 'Sin proveedor');
 
-    // Datos de la entrega
-    replace('entrega.cantidadEntregada', data.entrega?.cantidadEntregada);
-    replace('entrega.tipoEntrega', data.entrega?.tipoEntrega);
-    replace('entrega.fechaEntrega', this.formatDate(data.entrega?.fechaEntrega));
-    replace('entrega.responsable', data.entrega?.responsable);
-    replace('entrega.responsableRecibe', data.entrega?.responsableRecibe);
-    replace('entrega.observaciones_entrega', data.entrega?.observaciones_entrega);
-    replace('entrega.estado', data.entrega?.estado);
-    replace('entrega.estadoBadge', this.getEstadoBadge(data.entrega?.estado));
-    replace('entrega.dosisRestantes', data.entrega?.dosisRestantes);
+    // Datos de la entrega con valores por defecto
+    replace('entrega.cantidadEntregada', data.entrega?.cantidadEntregada || '0');
+    replace('entrega.tipoEntrega', data.entrega?.tipoEntrega || data.entrega?.tipo || 'completa');
+    replace('entrega.fechaEntrega', this.formatDate(data.entrega?.fechaEntrega || data.entrega?.fecha) || '');
+    replace('entrega.responsable', data.entrega?.responsable || data.entrega?.responsable_entrega || 'Sistema');
+    replace('entrega.responsableRecibe', data.entrega?.responsableRecibe || data.entrega?.responsable_recibe || 'Sin especificar');
+    replace('entrega.observaciones_entrega', data.entrega?.observaciones_entrega || data.entrega?.observaciones || '');
+    replace('entrega.estado', data.entrega?.estado || 'entregada');
+    replace('entrega.estadoBadge', this.getEstadoBadge(data.entrega?.estado || 'entregada'));
+    replace('entrega.dosisRestantes', data.entrega?.dosisRestantes || '0');
     
     // Lógica para mostrar tipo de entrega en el PDF
-    const tipoEntregaDisplay = data.entrega?.tipoEntrega === 'completa' 
+    const tipoEntrega = data.entrega?.tipoEntrega || data.entrega?.tipo || 'completa';
+    const dosisRestantes = data.entrega?.dosisRestantes || 0;
+    const tipoEntregaDisplay = tipoEntrega === 'completa' 
       ? 'COMPLETA' 
-      : `RESTANTES: ${data.entrega?.dosisRestantes || 0} dosis`;
+      : `RESTANTES: ${dosisRestantes} dosis`;
     
     replace('entrega.tipoEntregaDisplay', tipoEntregaDisplay);
 
-    // Manejar condicionales
-    replaceConditional('entrega.responsable', data.entrega?.responsable);
-    replaceConditional('entrega.observaciones_entrega', data.entrega?.observaciones_entrega);
+    // Manejar condicionales con valores por defecto
+    const responsableEntrega = data.entrega?.responsable || data.entrega?.responsable_entrega || '';
+    const observacionesEntrega = data.entrega?.observaciones_entrega || data.entrega?.observaciones || '';
+    
+    replaceConditional('entrega.responsable', responsableEntrega);
+    replaceConditional('entrega.observaciones_entrega', observacionesEntrega);
     
     return processedTemplate;
   }

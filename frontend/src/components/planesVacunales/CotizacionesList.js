@@ -525,78 +525,6 @@ const CotizacionesList = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      {cotizacionesFiltradas.length > 0 && (
-        <div className="row mt-4">
-          <div className="col-md-2">
-            <div className="card stats-card primary text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="card-title">Total</h6>
-                    <h4>{cotizacionesFiltradas.length}</h4>
-                  </div>
-                  <FaFileInvoice style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card stats-card success text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="card-title">Aceptadas</h6>
-                    <h4>{cotizacionesFiltradas.filter(c => c.estado === 'aceptada').length}</h4>
-                  </div>
-                  <FaCheck style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card stats-card warning text-dark">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="card-title">Enviadas</h6>
-                    <h4>{cotizacionesFiltradas.filter(c => c.estado === 'enviada').length}</h4>
-                  </div>
-                  <FaFileInvoice style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="card stats-card secondary text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 className="card-title">En Proceso</h6>
-                    <h4>{cotizacionesFiltradas.filter(c => c.estado === 'en_proceso').length}</h4>
-                  </div>
-                  <FaEdit style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="card">
-              <div className="card-body">
-                <h6 className="card-title">Valor Total Cotizaciones</h6>
-                <h4 className="text-success">
-                  ${cotizacionesFiltradas
-                    .filter(c => c.estado === 'aceptada')
-                    .reduce((total, c) => total + (c.precio_total || 0), 0)
-                    .toLocaleString()}
-                </h4>
-                <small className="text-muted">Solo cotizaciones aceptadas</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal de confirmación para eliminar */}
       {modalEliminar.show && (
         <>
@@ -604,7 +532,7 @@ const CotizacionesList = () => {
           <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content">
-                <div className="modal-header bg-danger text-white">
+                <div className="modal-header">
                   <h5 className="modal-title">
                     <FaTrash className="me-2" />
                     Confirmar Eliminación
@@ -664,7 +592,7 @@ const CotizacionesList = () => {
           <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content">
-                <div className="modal-header bg-primary text-white">
+                <div className="modal-header">
                   <h5 className="modal-title">
                     <FaUndo className="me-2" />
                     Reactivar Cotización
@@ -736,7 +664,7 @@ const CotizacionesList = () => {
           <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
             <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content">
-                <div className="modal-header bg-warning text-dark">
+                <div className="modal-header">
                   <h5 className="modal-title">
                     <i className="bi bi-exclamation-triangle-fill me-2"></i>
                     Stock Insuficiente
@@ -831,7 +759,7 @@ const CotizacionesList = () => {
           <div className="modal fade show" style={{ display: 'block', zIndex: 1050 }} tabIndex="-1">
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content">
-                <div className="modal-header bg-info text-white">
+                <div className="modal-header">
                   <h5 className="modal-title">
                     <i className="bi bi-question-circle-fill me-2"></i>
                     Confirmar Cambio de Estado

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remito de Venta Directa - Vacunas</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 10px;
+        line-height: 1.2;
+        color: #000;
+        background: white;
+        margin: 10px;
+        min-height: calc(297mm - 20mm); /* A4 height minus margins */
+        display: flex;
+        flex-direction: column;
+      }
+
+      .content-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .main-content {
+        flex: 1;
+      }
+
+      .header {
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo-section {
+        flex: 1;
+      }
+
+      .logo {
+        width: 80px;
+        height: auto;
+        margin-bottom: 5px;
+      }
+
+      .company-info {
+        color: #000;
+        font-weight: bold;
+      }
+
+      .company-name {
+        font-size: 14px;
+        color: #000;
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
+
+      .document-info {
+        text-align: right;
+        flex: 1;
+      }
+
+      .document-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 8px;
+      }
+
+      .document-subtitle {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: normal;
+      }
+
+      .document-number {
+        font-size: 12px;
+        font-weight: bold;
+        background: #f8f9fa;
+        padding: 6px 10px;
+        border-radius: 4px;
+        border: 1px solid #000;
+      }
+
+      .info-section {
+        margin-bottom: 12px;
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #000;
+      }
+
+      .section-title {
+        font-size: 12px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 6px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 2px;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .info-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3px;
+        font-size: 9px;
+      }
+
+      .info-label {
+        font-weight: bold;
+        color: #333;
+      }
+
+      .info-value {
+        color: #000;
+      }
+
+      .productos-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+      }
+
+      .productos-table th,
+      .productos-table td {
+        border: 1px solid #000;
+        padding: 6px 4px;
+        text-align: left;
+        font-size: 9px;
+      }
+
+      .productos-table th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+        font-size: 10px;
+      }
+
+      .productos-table td {
+        vertical-align: top;
+      }
+
+      .productos-table .cantidad {
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .productos-table .precio {
+        text-align: right;
+        font-family: monospace;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        background: #28a745;
+        color: white;
+      }
+
+      .totales-section {
+        margin-top: 15px;
+        border-top: 2px solid #000;
+        padding-top: 8px;
+      }
+
+      .totales-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 15px;
+        align-items: start;
+      }
+
+      .total-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+
+      .total-final {
+        font-size: 14px;
+        font-weight: bold;
+        border-top: 1px solid #000;
+        padding-top: 4px;
+        margin-top: 6px;
+      }
+
+      .firmas-section {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+      }
+
+      .firma-box {
+        border: 1px solid #000;
+        padding: 15px;
+        text-align: center;
+        min-height: 60px;
+        background: #f9f9f9;
+      }
+
+      .firma-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 10px;
+      }
+
+      .firma-line {
+        border-top: 1px solid #000;
+        margin-top: 25px;
+        font-size: 8px;
+        padding-top: 3px;
+      }
+
+      .footer {
+        margin-top: auto;
+        padding-top: 15px;
+        border-top: 1px solid #ccc;
+        font-size: 8px;
+        color: #666;
+        text-align: center;
+      }
+
+      /* Estilos específicos para venta directa */
+      .venta-directa-badge {
+        background: #17a2b8;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 10px;
+      }
+
+      .stock-info {
+        font-size: 8px;
+        color: #666;
+        font-style: italic;
+      }
+
+      .precio-destacado {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000;
+      }
+
+      @media print {
+        body {
+          margin: 0;
+        }
+        .info-section {
+          break-inside: avoid;
+        }
+        .productos-table {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="content-wrapper">
+      <div class="main-content">
+        <!-- ENCABEZADO -->
+        <div class="header">
+          <div class="logo-section">
+            <!-- Logo de la empresa se puede agregar aquí -->
+            <div class="company-info">
+              <div class="company-name">TIERRA VOLGA</div>
+              
+              <div style="font-size: 8px; color: #666;">
+                Planes Vacunales y Logística
+              </div>
+            </div>
+          </div>
+          <div class="document-info">
+            <div class="document-title">REMITO DE ENTREGA</div>
+            <div class="document-subtitle">VENTA DIRECTA DE VACUNAS <span class="venta-directa-badge">FUERA DE PLAN</span></div>
+            <div class="document-number">N° {{numeroRemito}}</div>
+            <div style="font-size: 9px; margin-top: 4px;">
+              <div>Fecha: {{fechaEmision}}</div>
+              <div>Hora: {{horaEmision}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INFORMACIÓN DEL CLIENTE -->
+        <div class="info-section">
+          <div class="section-title">INFORMACIÓN DEL CLIENTE</div>
+          <div class="info-grid">
+            <div>
+              <div class="info-item">
+                <span class="info-label">Cliente:</span>
+                <span class="info-value">{{cliente.nombre}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">CUIT:</span>
+                <span class="info-value">{{cliente.cuit}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Email:</span>
+                <span class="info-value">{{cliente.email}}</span>
+              </div>
+            </div>
+            <div>
+              <div class="info-item">
+                <span class="info-label">Teléfono:</span>
+                <span class="info-value">{{cliente.telefono}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Dirección:</span>
+                <span class="info-value">{{cliente.direccion}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Localidad:</span>
+                <span class="info-value">{{cliente.localidad}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INFORMACIÓN DE LA VENTA -->
+        <div class="info-section">
+          <div class="section-title">INFORMACIÓN DE LA VENTA DIRECTA</div>
+          <div class="info-grid">
+            <div>
+              <div class="info-item">
+                <span class="info-label">N° Venta:</span>
+                <span class="info-value">{{venta.numeroVenta}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Fecha Venta:</span>
+                <span class="info-value">{{venta.fechaVenta}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Estado:</span>
+                <span class="info-value">{{venta.estado}}</span>
+              </div>
+              <div class="info-item" >
+                <span class="info-label">Lista Precio:</span>
+                <span class="info-value">{{venta.listaPrecio}}</span>
+              </div>
+            </div>
+            <div>
+              <div class="info-item">
+                <span class="info-label">Tipo:</span>
+                <span class="info-value">Venta Directa</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Responsable Entrega:</span>
+                <span class="info-value">{{entrega.responsableEntrega}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Responsable Recibe:</span>
+                <span class="info-value">{{entrega.responsableRecibe}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VACUNAS ENTREGADAS -->
+        <div class="info-section">
+          <div class="section-title">VACUNAS ENTREGADAS</div>
+          <table class="productos-table">
+            <thead>
+              <tr>
+                <th>Vacuna</th>
+                <th>Código</th>
+                <th>Lote</th>
+                <th>Vencimiento</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each vacunas}}
+              <tr>
+                <td>
+                  <strong>{{this.nombre}}</strong>
+                  <br><small>{{this.descripcion}}</small>
+                  <br><span class="stock-info">Proveedor: {{this.proveedor}}</span>
+                </td>
+                <td><strong>{{this.codigo}}</strong></td>
+                <td>{{this.lote}}</td>
+                <td>{{this.fechaVencimiento}}</td>
+                <td class="cantidad">{{this.cantidad}}</td>
+                <td class="precio">$ {{this.precioUnitario}}</td>
+                <td class="precio precio-destacado">$ {{this.subtotal}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- OBSERVACIONES -->
+        <div class="info-section" >
+          <div class="section-title">OBSERVACIONES</div>
+          <div style="font-size: 9px; line-height: 1.3;">
+            {{venta.observaciones}}
+          </div>
+        </div>
+
+        <!-- TOTALES -->
+        <div class="totales-section">
+          <div class="totales-grid">
+            <div>
+              <div style="font-size: 10px; font-weight: bold;">RESUMEN DE LA VENTA</div>
+              <div style="font-size: 9px; margin-top: 4px;">
+                <div>Total de productos: {{totales.cantidadItems}}</div>
+                <div>Cantidad total de dosis: {{totales.dosisTotal}}</div>
+                <div>Tipo de venta: Directa (Sin plan previo)</div>
+              </div>
+            </div>
+            <div>
+              <div class="total-item">
+                <span>Subtotal:</span>
+                <span>$ {{totales.subtotal}}</span>
+              </div>
+              {{#if totales.mostrarIva}}
+              <div class="total-item">
+                <span>IVA ({{totales.porcentajeIva}}%):</span>
+                <span>$ {{totales.iva}}</span>
+              </div>
+              {{/if}}
+              <div class="total-item total-final">
+                <span>TOTAL:</span>
+                <span>$ {{totales.total}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FIRMAS -->
+        <div class="firmas-section">
+          <div class="firma-box">
+            <div class="firma-title">ENTREGA</div>
+            <div class="firma-line">
+              {{entrega.responsableEntrega}}
+              <br>Firma y Aclaración
+            </div>
+          </div>
+          <div class="firma-box">
+            <div class="firma-title">RECIBE</div>
+            <div class="firma-line">
+              {{entrega.responsableRecibe}}
+              <br>Firma y Aclaración
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIE DE PÁGINA -->
+      <div class="footer">
+        <div>
+          <p style="font-size: 10px; color: #000">
+          Documento generado automáticamente por Tierra Volga - Sistema de
+          Gestión Veterinaria
+        </p>
+        </div>
+        <div style="margin-top: 2px;">
+          Documento generado el {{fechaGeneracion}} a las {{horaGeneracion}}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

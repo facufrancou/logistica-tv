@@ -227,8 +227,8 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
   return (
     <>
       {/* Modal principal */}
-      <div className="modal show d-block" tabIndex="-1">
-        <div className="modal-dialog modal-lg vacuna-modal-enhanced">
+      <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog modal-xl modal-dialog-centered vacuna-modal-enhanced" style={{ maxWidth: '80%', width: '80%', minWidth: '800px' }}>
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">
@@ -639,8 +639,8 @@ function CreacionRapidaModal({ tipo, campos, onClose, onSave }) {
   };
 
   return (
-    <div className="modal show d-block" tabIndex="-1" style={{ zIndex: 1060 }}>
-      <div className="modal-dialog modal-dialog-centered vacuna-modal-enhanced">
+    <div className="modal show d-block" tabIndex="-1" style={{ zIndex: 1060, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      <div className="modal-dialog modal-dialog-centered vacuna-modal-enhanced" style={{ maxWidth: '500px', width: '90%' }}>
         <div className="modal-content">
           <div className="modal-header">
             <h6 className="modal-title">

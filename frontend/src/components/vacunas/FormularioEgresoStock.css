@@ -1,0 +1,141 @@
+/* Estilos para FormularioEgresoStock - Consistente con FormularioNuevoLote */
+
+/* Modal container */
+.egreso-stock-modal {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+/* Modal responsive y bien dimensionado */
+.modal-xl.egreso-stock-modal {
+  margin: 1rem auto !important;
+  max-width: 80% !important;
+  width: 80% !important;
+  min-width: 700px !important;
+  max-height: calc(100vh - 2rem) !important;
+}
+
+/* Modal content structure */
+.egreso-stock-modal .modal-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: calc(100vh - 2rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Modal body */
+.egreso-stock-modal .modal-body {
+  padding: 1.5rem !important;
+  overflow-y: auto !important;
+  flex: 1 !important;
+  padding-bottom: 2rem !important;
+}
+
+/* Header styling */
+.egreso-stock-modal .modal-header {
+  flex-shrink: 0 !important;
+  border-radius: 12px 12px 0 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2 !important;
+}
+
+/* Footer styling - Siempre visible */
+.egreso-stock-modal .modal-footer {
+  padding: 1.5rem 2rem !important;
+  border-top: 1px solid #e9ecef !important;
+  border-radius: 0 0 12px 12px !important;
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  background: white !important;
+  z-index: 1 !important;
+}
+
+/* Botones del footer */
+.egreso-stock-modal .modal-footer .btn {
+  font-size: 0.95rem !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease-in-out !important;
+  min-width: 120px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .modal-xl.egreso-stock-modal {
+    max-width: 90% !important;
+    width: 90% !important;
+    min-width: 600px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .egreso-stock-modal {
+    padding: 0.5rem;
+  }
+  
+  .modal-xl.egreso-stock-modal {
+    max-width: 95% !important;
+    width: 95% !important;
+    min-width: auto !important;
+    margin: 0.5rem auto !important;
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .egreso-stock-modal .modal-content {
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .egreso-stock-modal .modal-body {
+    padding: 1rem !important;
+  }
+  
+  .egreso-stock-modal .modal-footer {
+    padding: 1rem 1.5rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .egreso-stock-modal {
+    padding: 0.25rem;
+  }
+  
+  .modal-xl.egreso-stock-modal {
+    margin: 0.25rem auto !important;
+    width: 98% !important;
+    max-width: 98% !important;
+  }
+  
+  .egreso-stock-modal .modal-body {
+    padding: 0.75rem !important;
+  }
+  
+  .egreso-stock-modal .modal-footer {
+    padding: 0.75rem !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .egreso-stock-modal .modal-footer .btn {
+    width: 100% !important;
+  }
+}
+
+@media (max-height: 700px) {
+  .modal-xl.egreso-stock-modal {
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .egreso-stock-modal .modal-content {
+    max-height: calc(100vh - 1rem) !important;
+  }
+}

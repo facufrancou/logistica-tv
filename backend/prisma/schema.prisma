@@ -303,6 +303,7 @@ model ListaPrecio {
   historial_precios HistorialPrecio[]
   planes_vacunales  PlanVacunal[]
   precios_por_lista PrecioPorLista[]
+  ventas_directas   VentaDirecta[]
 
   @@map("listas_precios")
 }
@@ -969,21 +970,26 @@ model VentaDirecta {
   id_venta_directa    Int      @id @default(autoincrement())
   numero_venta        String   @unique @db.VarChar(50)
   id_cliente          Int
+  id_lista_precio     Int?
   fecha_venta         DateTime @db.DateTime(0)
   precio_total        Decimal  @db.Decimal(10, 2)
   estado_venta        EstadoVenta @default(pendiente)
+  responsable_entrega String?  @db.VarChar(255)
+  responsable_recibe  String?  @db.VarChar(255)
   observaciones       String?  @db.Text
   created_by          Int?
   created_at          DateTime @default(now()) @db.DateTime(0)
   updated_at          DateTime @updatedAt @db.DateTime(0)
   
   cliente             Cliente @relation(fields: [id_cliente], references: [id_cliente])
+  listaPrecio         ListaPrecio? @relation(fields: [id_lista_precio], references: [id_lista])
   detalle_venta       DetalleVentaDirecta[]
   remitos             Remito[]
   
   @@index([numero_venta], map: "idx_venta_directa_numero")
   @@index([fecha_venta], map: "idx_venta_directa_fecha")
   @@index([estado_venta], map: "idx_venta_directa_estado")
+  @@index([id_lista_precio], map: "idx_venta_directa_lista_precio")
   @@map("ventas_directas")
 }
 
@@ -1048,6 +1054,7 @@ enum EstadoVenta {
   confirmada
   preparando
   entregada
+  completada
   cancelada
 }
 

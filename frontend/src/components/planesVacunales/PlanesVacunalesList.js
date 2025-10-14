@@ -241,64 +241,6 @@ const PlanesVacunalesList = () => {
           )}
         </div>
       </div>
-
-      {/* Stats Card */}
-      {planesFiltrados.length > 0 && (
-        <div className="row mt-4">
-          <div className="col-md-3">
-            <div className="card bg-primary text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h6 className="card-title">Total Planes</h6>
-                    <h4>{planesFiltrados.length}</h4>
-                  </div>
-                  <FaSyringe style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card bg-success text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h6 className="card-title">Activos</h6>
-                    <h4>{planesFiltrados.filter(p => p.estado === 'activo').length}</h4>
-                  </div>
-                  <FaSyringe style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card bg-warning text-dark">
-              <div className="card-body">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h6 className="card-title">Borradores</h6>
-                    <h4>{planesFiltrados.filter(p => p.estado === 'borrador').length}</h4>
-                  </div>
-                  <FaSyringe style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card bg-secondary text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h6 className="card-title">Inactivos</h6>
-                    <h4>{planesFiltrados.filter(p => p.estado === 'inactivo').length}</h4>
-                  </div>
-                  <FaSyringe style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

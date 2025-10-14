@@ -229,24 +229,39 @@ function CatalogosVacunas() {
                     <button
                       className={`nav-link ${catalogoActivo === "patologias" ? "active" : ""}`}
                       onClick={() => setCatalogoActivo("patologias")}
+                      style={{
+                        backgroundColor: catalogoActivo === "patologias" ? "var(--color-principal)" : "transparent",
+                        color: catalogoActivo === "patologias" ? "white" : "#495057",
+                        border: "none"
+                      }}
                     >
-                      <FaVirus className="mr-1" />Patologías ({patologias.length})
+                      Patologías ({patologias.length})
                     </button>
                   </li>
                   <li className="nav-item">
                     <button
                       className={`nav-link ${catalogoActivo === "presentaciones" ? "active" : ""}`}
                       onClick={() => setCatalogoActivo("presentaciones")}
+                      style={{
+                        backgroundColor: catalogoActivo === "presentaciones" ? "var(--color-principal)" : "transparent",
+                        color: catalogoActivo === "presentaciones" ? "white" : "#495057",
+                        border: "none"
+                      }}
                     >
-                      <FaPills className="mr-1" />Presentaciones ({presentaciones.length})
+                      Presentaciones ({presentaciones.length})
                     </button>
                   </li>
                   <li className="nav-item">
                     <button
                       className={`nav-link ${catalogoActivo === "vias" ? "active" : ""}`}
                       onClick={() => setCatalogoActivo("vias")}
+                      style={{
+                        backgroundColor: catalogoActivo === "vias" ? "var(--color-principal)" : "transparent",
+                        color: catalogoActivo === "vias" ? "white" : "#495057",
+                        border: "none"
+                      }}
                     >
-                      <FaSyringe className="mr-1" />Vías de Aplicación ({viasAplicacion.length})
+                      Vías de Aplicación ({viasAplicacion.length})
                     </button>
                   </li>
                 </ul>

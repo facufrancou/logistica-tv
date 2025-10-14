@@ -2,6 +2,50 @@ const prisma = require('../lib/prisma');
 
 // ===== FUNCIONES AUXILIARES =====
 
+/**
+ * Enriquecer detalles del remito con información de vacunas
+ */
+async function enriquecerConDatosVacuna(detallesRemito) {
+  const detallesEnriquecidos = [];
+  
+  for (const detalle of detallesRemito) {
+    const detalleEnriquecido = { ...detalle };
+    
+    // Intentar obtener información de vacuna usando id_producto como id_vacuna
+    try {
+      const vacuna = await prisma.vacuna.findUnique({
+        where: { id_vacuna: detalle.id_producto },
+        include: {
+          proveedor: {
+            select: { nombre: true }
+          },
+          patologia: {
+            select: { nombre: true }
+          }
+        }
+      });
+      
+      if (vacuna) {
+        detalleEnriquecido.vacuna_info = {
+          id_vacuna: vacuna.id_vacuna,
+          codigo: vacuna.codigo,
+          nombre: vacuna.nombre,
+          detalle: vacuna.detalle,
+          proveedor: vacuna.proveedor?.nombre,
+          patologia: vacuna.patologia?.nombre,
+          precio_lista: vacuna.precio_lista
+        };
+      }
+    } catch (error) {
+      console.log(`No se pudo obtener info de vacuna para producto ${detalle.id_producto}:`, error.message);
+    }
+    
+    detallesEnriquecidos.push(detalleEnriquecido);
+  }
+  
+  return detallesEnriquecidos;
+}
+
 function generarNumeroRemito() {
   const fecha = new Date();
   const year = fecha.getFullYear().toString().slice(-2);
@@ -11,46 +55,83 @@ function generarNumeroRemito() {
   return `REM-${year}${month}${day}-${random}`;
 }
 
-async function validarStock(productos, tx = prisma) {
-  for (const item of productos) {
-    const producto = await tx.producto.findUnique({
-      where: { id_producto: item.id_producto },
-      select: { stock: true, nombre: true, requiere_control_stock: true }
-    });
-
-    if (!producto) {
-      throw new Error(`Producto con ID ${item.id_producto} no encontrado`);
-    }
-
-    if (producto.requiere_control_stock && producto.stock < item.cantidad_entregada) {
-      throw new Error(`Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}, Solicitado: ${item.cantidad_entregada}`);
-    }
-  }
-}
-
-async function actualizarStock(productos, tx = prisma) {
-  for (const item of productos) {
-    await tx.producto.update({
-      where: { id_producto: item.id_producto },
-      data: {
-        stock: {
-          decrement: item.cantidad_entregada
+async function validarStock(vacunas, tx = prisma) {
+  for (const item of vacunas) {
+    const stockVacuna = await tx.stockVacuna.findMany({
+      where: { 
+        id_vacuna: item.id_vacuna,
+        estado_stock: 'disponible'
+      },
+      include: {
+        vacuna: {
+          select: { nombre: true }
         }
       }
     });
 
-    // Registrar movimiento de stock
-    await tx.movimientoStock.create({
-      data: {
-        id_producto: item.id_producto,
-        tipo_movimiento: 'salida',
-        cantidad: item.cantidad_entregada,
-        motivo: `Entrega por remito`,
-        stock_anterior: 0, // Se calculará en el trigger o mediante consulta
-        stock_nuevo: 0,    // Se calculará en el trigger o mediante consulta
-        observaciones: `Remito generado automaticamente`
+    if (stockVacuna.length === 0) {
+      throw new Error(`Vacuna con ID ${item.id_vacuna} no encontrada o sin stock`);
+    }
+
+    const stockDisponible = stockVacuna.reduce((total, stock) => total + stock.stock_actual, 0);
+    
+    if (stockDisponible < item.cantidad_entregada) {
+      const nombreVacuna = stockVacuna[0].vacuna.nombre;
+      throw new Error(`Stock insuficiente para ${nombreVacuna}. Disponible: ${stockDisponible}, Solicitado: ${item.cantidad_entregada}`);
+    }
+  }
+}
+
+async function actualizarStock(vacunas, tx = prisma) {
+  for (const item of vacunas) {
+    // Buscar stocks disponibles para esta vacuna con lógica FIFO
+    const stocksDisponibles = await tx.stockVacuna.findMany({
+      where: { 
+        id_vacuna: item.id_vacuna,
+        estado_stock: 'disponible',
+        stock_actual: { gt: 0 }
+      },
+      orderBy: {
+        fecha_vencimiento: 'asc'
       }
     });
+
+    let cantidadRestante = item.cantidad_entregada;
+
+    for (const stock of stocksDisponibles) {
+      if (cantidadRestante <= 0) break;
+
+      const cantidadUsar = Math.min(cantidadRestante, stock.stock_actual);
+
+      // Actualizar stock
+      await tx.stockVacuna.update({
+        where: { id_stock_vacuna: stock.id_stock_vacuna },
+        data: {
+          stock_actual: {
+            decrement: cantidadUsar
+          }
+        }
+      });
+
+      // Registrar movimiento de stock
+      await tx.movimientoStockVacuna.create({
+        data: {
+          id_stock_vacuna: stock.id_stock_vacuna,
+          tipo_movimiento: 'salida',
+          cantidad: cantidadUsar,
+          stock_anterior: stock.stock_actual,
+          stock_posterior: stock.stock_actual - cantidadUsar,
+          motivo: `Entrega por remito`,
+          observaciones: `Remito generado automaticamente`
+        }
+      });
+
+      cantidadRestante -= cantidadUsar;
+    }
+
+    if (cantidadRestante > 0) {
+      throw new Error(`No hay suficiente stock disponible para la vacuna ID ${item.id_vacuna}`);
+    }
   }
 }
 
@@ -61,7 +142,7 @@ async function actualizarStock(productos, tx = prisma) {
  */
 exports.crearRemitoDesdeCotizacion = async (req, res) => {
   const { id_cotizacion } = req.params;
-  const { observaciones, productos } = req.body;
+  const { observaciones, vacunas } = req.body;
 
   try {
     const resultado = await prisma.$transaction(async (tx) => {
@@ -71,7 +152,13 @@ exports.crearRemitoDesdeCotizacion = async (req, res) => {
         include: {
           cliente: true,
           calendario_vacunacion: {
-            include: { producto: true }
+            include: { 
+              stock_vacuna: {
+                include: {
+                  vacuna: true
+                }
+              }
+            }
           }
         }
       });
@@ -80,13 +167,13 @@ exports.crearRemitoDesdeCotizacion = async (req, res) => {
         throw new Error('Cotización no encontrada');
       }
 
-      // Validar que hay productos para entregar
-      if (!productos || productos.length === 0) {
-        throw new Error('Debe especificar al menos un producto para el remito');
+      // Validar que hay vacunas para entregar
+      if (!vacunas || vacunas.length === 0) {
+        throw new Error('Debe especificar al menos una vacuna para el remito');
       }
 
       // Validar stock disponible
-      await validarStock(productos, tx);
+      await validarStock(vacunas, tx);
 
       // Generar número de remito único
       let numeroRemito;
@@ -109,30 +196,30 @@ exports.crearRemitoDesdeCotizacion = async (req, res) => {
           fecha_emision: new Date(),
           tipo_remito: 'plan_vacunal',
           estado_remito: 'pendiente',
-          precio_total: productos.reduce((total, p) => total + (p.precio_unitario || 0) * p.cantidad_entregada, 0),
+          precio_total: vacunas.reduce((total, v) => total + (v.precio_unitario || 0) * v.cantidad_entregada, 0),
           observaciones,
           created_by: req.user?.id_usuario || null
         }
       });
 
       // Crear detalles del remito
-      const detallesData = productos.map(producto => ({
+      const detallesData = vacunas.map(vacuna => ({
         id_remito: remito.id_remito,
-        id_producto: producto.id_producto,
-        cantidad_entregada: producto.cantidad_entregada,
-        precio_unitario: producto.precio_unitario || 0,
-        subtotal: (producto.precio_unitario || 0) * producto.cantidad_entregada,
-        lote_producto: producto.lote_producto || null,
-        fecha_vencimiento: producto.fecha_vencimiento ? new Date(producto.fecha_vencimiento) : null,
-        observaciones: producto.observaciones || null
+        id_producto: vacuna.id_vacuna, // Usar id_vacuna como id_producto para compatibilidad
+        cantidad_entregada: vacuna.cantidad_entregada,
+        precio_unitario: vacuna.precio_unitario || 0,
+        subtotal: (vacuna.precio_unitario || 0) * vacuna.cantidad_entregada,
+        lote_producto: vacuna.lote_vacuna || null,
+        fecha_vencimiento: vacuna.fecha_vencimiento ? new Date(vacuna.fecha_vencimiento) : null,
+        observaciones: vacuna.observaciones || null
       }));
 
       await tx.detalleRemito.createMany({
         data: detallesData
       });
 
-      // Actualizar stock de productos
-      await actualizarStock(productos, tx);
+      // Actualizar stock de vacunas
+      await actualizarStock(vacunas, tx);
 
       return remito;
     });
@@ -187,8 +274,11 @@ exports.crearRemitoDesdeCalendario = async (req, res) => {
           id_cotizacion: parseInt(id_cotizacion)
         },
         include: {
-          producto: true,
-          stock_vacuna: true
+          stock_vacuna: {
+            include: {
+              vacuna: true
+            }
+          }
         }
       });
 
@@ -210,7 +300,7 @@ exports.crearRemitoDesdeCalendario = async (req, res) => {
 
       // Calcular precio total (si es necesario)
       const precioTotal = calendarioItems.reduce((total, item) => {
-        const precio = item.producto?.precio_unitario || 0;
+        const precio = item.stock_vacuna?.vacuna?.precio_lista || 0;
         return total + (precio * item.cantidad_dosis);
       }, 0);
 
@@ -234,10 +324,10 @@ exports.crearRemitoDesdeCalendario = async (req, res) => {
         const stockInfo = item.stock_vacuna;
         return {
           id_remito: remito.id_remito,
-          id_producto: item.id_producto,
+          id_producto: item.id_producto, // En calendario, id_producto contiene id_vacuna
           cantidad_entregada: item.cantidad_dosis,
-          precio_unitario: item.producto?.precio_unitario || 0,
-          subtotal: (item.producto?.precio_unitario || 0) * item.cantidad_dosis,
+          precio_unitario: item.stock_vacuna?.vacuna?.precio_lista || 0,
+          subtotal: (item.stock_vacuna?.vacuna?.precio_lista || 0) * item.cantidad_dosis,
           lote_producto: stockInfo?.lote || item.lote_asignado || null,
           fecha_vencimiento: stockInfo?.fecha_vencimiento || item.fecha_vencimiento_lote || null,
           observaciones: `Semana ${item.numero_semana} - Fecha programada: ${item.fecha_programada.toISOString().split('T')[0]}`
@@ -320,7 +410,9 @@ exports.crearRemitoDesdeVentaDirecta = async (req, res) => {
         include: {
           cliente: true,
           detalle_venta: {
-            include: { producto: true }
+            include: { 
+              vacuna: true 
+            }
           }
         }
       });
@@ -338,15 +430,15 @@ exports.crearRemitoDesdeVentaDirecta = async (req, res) => {
         throw new Error('Esta venta directa ya tiene un remito generado');
       }
 
-      // Preparar productos para validación
-      const productos = ventaDirecta.detalle_venta.map(detalle => ({
-        id_producto: detalle.id_producto,
+      // Preparar vacunas para validación (id_producto contiene id_vacuna en sistema migrado)
+      const vacunas = ventaDirecta.detalle_venta.map(detalle => ({
+        id_vacuna: detalle.id_producto, // En sistema migrado, id_producto contiene id_vacuna
         cantidad_entregada: detalle.cantidad,
         precio_unitario: detalle.precio_unitario
       }));
 
       // Validar stock disponible
-      await validarStock(productos, tx);
+      await validarStock(vacunas, tx);
 
       // Generar número de remito único
       let numeroRemito;
@@ -378,7 +470,7 @@ exports.crearRemitoDesdeVentaDirecta = async (req, res) => {
       // Crear detalles del remito desde la venta directa
       const detallesData = ventaDirecta.detalle_venta.map(detalle => ({
         id_remito: remito.id_remito,
-        id_producto: detalle.id_producto,
+        id_producto: detalle.id_producto, // DetalleVentaDirecta ya usa id_producto
         cantidad_entregada: detalle.cantidad,
         precio_unitario: detalle.precio_unitario,
         subtotal: detalle.subtotal,
@@ -389,8 +481,8 @@ exports.crearRemitoDesdeVentaDirecta = async (req, res) => {
         data: detallesData
       });
 
-      // Actualizar stock de productos
-      await actualizarStock(productos, tx);
+      // Actualizar stock de vacunas
+      await actualizarStock(vacunas, tx);
 
       return remito;
     });
@@ -490,10 +582,20 @@ exports.obtenerRemitos = async (req, res) => {
       prisma.remito.count({ where })
     ]);
 
+    // Enriquecer remitos con datos de vacunas
+    const remitosEnriquecidos = [];
+    for (const remito of remitos) {
+      const detallesEnriquecidos = await enriquecerConDatosVacuna(remito.detalle_remito);
+      remitosEnriquecidos.push({
+        ...remito,
+        detalle_remito: detallesEnriquecidos
+      });
+    }
+
     res.json({
       success: true,
       data: {
-        remitos,
+        remitos: remitosEnriquecidos,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -556,9 +658,15 @@ exports.obtenerRemitoPorId = async (req, res) => {
       });
     }
 
+    // Enriquecer con datos de vacunas
+    const detallesEnriquecidos = await enriquecerConDatosVacuna(remito.detalle_remito);
+    
     res.json({
       success: true,
-      data: remito
+      data: {
+        ...remito,
+        detalle_remito: detallesEnriquecidos
+      }
     });
 
   } catch (error) {
@@ -672,10 +780,20 @@ exports.obtenerRemitosPorCliente = async (req, res) => {
       })
     ]);
 
+    // Enriquecer remitos con datos de vacunas
+    const remitosEnriquecidos = [];
+    for (const remito of remitos) {
+      const detallesEnriquecidos = await enriquecerConDatosVacuna(remito.detalle_remito);
+      remitosEnriquecidos.push({
+        ...remito,
+        detalle_remito: detallesEnriquecidos
+      });
+    }
+
     res.json({
       success: true,
       data: {
-        remitos,
+        remitos: remitosEnriquecidos,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -727,13 +845,19 @@ exports.generarPDFRemito = async (req, res) => {
       });
     }
 
+    // Enriquecer con datos de vacunas
+    const detallesEnriquecidos = await enriquecerConDatosVacuna(remito.detalle_remito);
+
     // TODO: Implementar generación de PDF con puppeteer o similar
     // Por ahora devolvemos los datos estructurados para el PDF
     res.json({
       success: true,
       message: 'Datos del remito para PDF',
       data: {
-        remito,
+        remito: {
+          ...remito,
+          detalle_remito: detallesEnriquecidos
+        },
         // Estructura para template PDF
         header: {
           empresa: 'Logística TV',
@@ -742,9 +866,9 @@ exports.generarPDFRemito = async (req, res) => {
           fecha: remito.fecha_emision
         },
         cliente: remito.cliente,
-        detalle: remito.detalle_remito,
+        detalle: detallesEnriquecidos,
         totales: {
-          cantidad_items: remito.detalle_remito.length,
+          cantidad_items: detallesEnriquecidos.length,
           precio_total: remito.precio_total
         }
       }

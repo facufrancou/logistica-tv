@@ -12,7 +12,7 @@
   width: 3rem;
   height: 3rem;
   border: 0.3em solid transparent;
-  border-top: 0.3em solid #007bff;
+  border-top: 0.3em solid var(--color-principal);
   border-radius: 50%;
   animation: ventas-spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -92,7 +92,8 @@
 
 .modal-header {
   border-bottom: 1px solid #dee2e6;
-  background-color: #f8f9fa;
+  background-color: var(--color-principal);
+  color: white;
 }
 
 .modal-footer {
@@ -174,7 +175,8 @@
 }
 
 .card-header {
-  background-color: #f8f9fa;
+  background-color: var(--color-principal);
+  color: white;
   border-bottom: 1px solid #dee2e6;
   font-weight: 500;
 }
@@ -182,7 +184,7 @@
 .card-header h3,
 .card-header h5,
 .card-header h6 {
-  color: #495057;
+  color: white !important;
   margin-bottom: 0;
 }
 
@@ -288,7 +290,10 @@
   }
   
   .modal-dialog {
-    margin: 0.5rem;
+    margin: 0.5rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .card-header .d-flex {

@@ -747,7 +747,7 @@ const CotizacionDetalle = () => {
           <div className="modal-backdrop fade show"></div>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header bg-warning text-dark">
+              <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-exclamation-triangle-fill me-2"></i>
                   Stock Insuficiente

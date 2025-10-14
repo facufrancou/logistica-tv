@@ -414,8 +414,9 @@
           <table class="productos-table">
             <thead>
               <tr>
-                <th>Producto</th>
-                <th>Descripción</th>
+                <th>Vacuna</th>
+                <th>Código</th>
+                <th>Lote</th>
                 <th>Cantidad Programada</th>
                 <th>Cantidad Entregada</th>
                 <th>Tipo Entrega</th>
@@ -423,8 +424,12 @@
             </thead>
             <tbody>
               <tr>
-                <td><strong>{{producto.nombre}}</strong></td>
-                <td>{{producto.descripcion}}</td>
+                <td>
+                  <strong>{{producto.nombre}}</strong>
+                  <br><small>{{producto.descripcion}}</small>
+                </td>
+                <td>{{producto.codigo}}</td>
+                <td>{{producto.lote}}</td>
                 <td class="cantidad">{{producto.cantidadProgramada}}</td>
                 <td class="cantidad">{{entrega.cantidadEntregada}}</td>
                 <td style="text-align: center">

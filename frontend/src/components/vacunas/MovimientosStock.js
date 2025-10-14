@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import {
   getStockVacunas,
   getVacunasNuevas,
@@ -10,6 +10,12 @@ import {
 import FormularioIngresoStock from './FormularioIngresoStock';
 import FormularioEgresoStock from './FormularioEgresoStock';
 import FormularioNuevoLote from './FormularioNuevoLote';
+import { 
+  FaChevronDown, 
+  FaChevronRight, 
+  FaChevronUp, 
+  FaEye 
+} from 'react-icons/fa';
 
 function MovimientosStock({ onRefresh }) {
   const [vistaActiva, setVistaActiva] = useState('lotes');
@@ -21,6 +27,9 @@ function MovimientosStock({ onRefresh }) {
     estado: 'todos',
     proximosVencer: false
   });
+  
+  // Estado para manejo de expansión de vacunas
+  const [vacunasExpandidas, setVacunasExpandidas] = useState(new Set());
 
   // Estados para formularios
   const [mostrarFormIngreso, setMostrarFormIngreso] = useState(false);
@@ -139,6 +148,85 @@ function MovimientosStock({ onRefresh }) {
     return dias;
   };
 
+  const agruparPorVacuna = (lotes) => {
+    const stockAgrupado = lotes.reduce((grupos, item) => {
+      const nombreVacuna = item.vacuna?.nombre || 'Vacuna sin nombre';
+      
+      if (!grupos[nombreVacuna]) {
+        grupos[nombreVacuna] = {
+          nombre: nombreVacuna,
+          codigo: item.vacuna?.codigo,
+          lotes: [],
+          stockTotal: 0,
+          stockReservadoTotal: 0,
+          estadoGeneral: 'success'
+        };
+      }
+      
+      grupos[nombreVacuna].lotes.push(item);
+      grupos[nombreVacuna].stockTotal += item.stock_actual || 0;
+      grupos[nombreVacuna].stockReservadoTotal += item.stock_reservado || 0;
+      
+      // Determinar el estado general de la vacuna (el más crítico de todos sus lotes)
+      const estadoLote = getEstadoStock(item);
+      if (estadoLote.clase === 'danger' || grupos[nombreVacuna].estadoGeneral === 'danger') {
+        grupos[nombreVacuna].estadoGeneral = 'danger';
+      } else if (estadoLote.clase === 'warning' && grupos[nombreVacuna].estadoGeneral !== 'danger') {
+        grupos[nombreVacuna].estadoGeneral = 'warning';
+      } else if (estadoLote.clase === 'info' && grupos[nombreVacuna].estadoGeneral === 'success') {
+        grupos[nombreVacuna].estadoGeneral = 'info';
+      }
+      
+      return grupos;
+    }, {});
+
+    return Object.values(stockAgrupado);
+  };
+
+  const getEstadoStock = (lote) => {
+    const diasVencimiento = obtenerDiasVencimiento(lote.fecha_vencimiento);
+    const stockDisponible = lote.stock_actual - lote.stock_reservado;
+    
+    if (diasVencimiento < 0) {
+      return { clase: "danger", texto: "Vencido", icono: "⚠️" };
+    } else if (diasVencimiento <= 7) {
+      return { clase: "danger", texto: "Por vencer", icono: "⚠️" };
+    } else if (diasVencimiento <= 30) {
+      return { clase: "warning", texto: "Próximo a vencer", icono: "⚠️" };
+    } else if (stockDisponible <= 0) {
+      return { clase: "warning", texto: "Sin stock", icono: "📦" };
+    } else {
+      return { clase: "success", texto: "Disponible", icono: "✅" };
+    }
+  };
+
+  const getEstadoVacunaGeneral = (estadoGeneral) => {
+    switch (estadoGeneral) {
+      case 'danger':
+        return { clase: "danger", texto: "Crítico", icono: "⚠️" };
+      case 'warning':
+        return { clase: "warning", texto: "Alerta", icono: "⚠️" };
+      case 'info':
+        return { clase: "info", texto: "Próximo a vencer", icono: "🔔" };
+      default:
+        return { clase: "success", texto: "OK", icono: "✅" };
+    }
+  };
+
+  const toggleVacunaExpansion = (nombreVacuna) => {
+    const nuevasExpandidas = new Set(vacunasExpandidas);
+    if (nuevasExpandidas.has(nombreVacuna)) {
+      nuevasExpandidas.delete(nombreVacuna);
+    } else {
+      nuevasExpandidas.add(nombreVacuna);
+    }
+    setVacunasExpandidas(nuevasExpandidas);
+  };
+
+  const formatearFecha = (fecha) => {
+    return new Date(fecha).toLocaleDateString('es-AR');
+  };
+
   const renderTablaLotes = () => {
     const lotesFiltrados = filtrarLotes();
 
@@ -147,7 +235,7 @@ function MovimientosStock({ onRefresh }) {
         <div className="card-header d-flex justify-content-between align-items-center bg-white">
           <h5 className="mb-0 text-dark">
             <i className="fas fa-boxes mr-2 text-primary"></i>
-            Gestión de Lotes ({lotesFiltrados.length})
+            Gestión de Lotes ({agruparPorVacuna(lotesFiltrados).length} vacunas)
           </h5>
           <button
             className="btn btn-primary"
@@ -208,95 +296,155 @@ function MovimientosStock({ onRefresh }) {
           </div>
 
           <div className="table-responsive">
-            <table className="table table-hover">
+            <table className="table table-striped table-hover">
               <thead className="thead-light">
                 <tr>
-                  <th>Vacuna</th>
-                  <th>Lote</th>
-                  <th>Stock</th>
-                  <th>Reservado</th>
-                  <th>Disponible</th>
-                  <th>Vencimiento</th>
-                  <th>Estado</th>
-                  <th>Ubicación</th>
-                  <th>Acciones</th>
+                  <th className="text-dark" style={{width: '30px'}}></th>
+                  <th className="text-dark">Vacuna</th>
+                  <th className="text-dark">Stock Total</th>
+                  <th className="text-dark">Reservado Total</th>
+                  <th className="text-dark">Lotes</th>
+                  <th className="text-dark">Estado General</th>
+                  <th className="text-dark">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {lotesFiltrados.map(lote => {
-                  const diasVencimiento = obtenerDiasVencimiento(lote.fecha_vencimiento);
-                  const stockDisponible = lote.stock_actual - lote.stock_reservado;
+                {agruparPorVacuna(lotesFiltrados).map((vacunaGroup) => {
+                  const estadoGeneral = getEstadoVacunaGeneral(vacunaGroup.estadoGeneral);
+                  const estaExpandida = vacunasExpandidas.has(vacunaGroup.nombre);
+                  const stockDisponibleTotal = vacunaGroup.stockTotal - vacunaGroup.stockReservadoTotal;
                   
                   return (
-                    <tr key={lote.id_stock_vacuna}>
-                      <td>
-                        <div>
-                          <strong className="text-dark">{lote.vacuna?.codigo}</strong>
+                    <Fragment key={vacunaGroup.nombre}>
+                      {/* Fila principal con totales */}
+                      <tr 
+                        className={`${estadoGeneral.clase === "danger" ? "table-danger" : ""}`}
+                        style={{
+                          backgroundColor: estaExpandida ? '#f8f9fa' : 'inherit',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        onClick={() => toggleVacunaExpansion(vacunaGroup.nombre)}
+                      >
+                        <td>
+                          <button
+                            className="btn btn-sm btn-link p-0"
+                            onClick={() => toggleVacunaExpansion(vacunaGroup.nombre)}
+                            style={{textDecoration: 'none'}}
+                          >
+                            {estaExpandida ? <FaChevronDown /> : <FaChevronRight />}
+                          </button>
+                        </td>
+                        <td>
+                          <strong>{vacunaGroup.nombre}</strong>
                           <br />
-                          <small className="text-muted">{lote.vacuna?.nombre}</small>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="text-dark font-weight-bold">
-                          {lote.lote}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="font-weight-bold text-dark">{lote.stock_actual}</span>
-                      </td>
-                      <td>
-                        <span className="text-warning font-weight-bold">{lote.stock_reservado}</span>
-                      </td>
-                      <td>
-                        <span className={`font-weight-bold ${stockDisponible > 0 ? 'text-success' : 'text-danger'}`}>
-                          {stockDisponible}
-                        </span>
-                      </td>
-                      <td>
-                        <div>
-                          <span className="text-dark">{new Date(lote.fecha_vencimiento).toLocaleDateString()}</span>
-                          <br />
-                          <small className={`${diasVencimiento <= 30 ? 'text-warning' : diasVencimiento <= 7 ? 'text-danger' : 'text-muted'}`}>
-                            {diasVencimiento > 0 ? `${diasVencimiento} días` : `Vencido hace ${Math.abs(diasVencimiento)} días`}
+                          <small className="text-muted">
+                            {vacunaGroup.codigo} • {vacunaGroup.lotes.length} lote{vacunaGroup.lotes.length !== 1 ? 's' : ''}
                           </small>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="text-dark font-weight-bold">
-                          {lote.estado_stock}
-                        </span>
-                      </td>
-                      <td>
-                        <small className="text-muted">{lote.ubicacion_fisica || 'N/A'}</small>
-                      </td>
-                      <td>
-                        <div className="btn-group">
-                          <button
-                            className="btn btn-success"
-                            onClick={() => {
-                              setLoteSeleccionado(lote);
-                              setMostrarFormIngreso(true);
-                            }}
-                            title="Registrar Ingreso"
+                        </td>
+                        <td>
+                          <span className="badge bg-primary text-white fs-6">
+                            {vacunaGroup.stockTotal.toLocaleString()}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge bg-warning text-dark">
+                            {vacunaGroup.stockReservadoTotal.toLocaleString()}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge bg-info text-white">
+                            {vacunaGroup.lotes.length}
+                          </span>
+                          <br />
+                          <small className="text-muted">
+                            Disp: <span className={stockDisponibleTotal > 0 ? 'text-success' : 'text-danger'}>
+                              {stockDisponibleTotal}
+                            </span>
+                          </small>
+                        </td>
+                        <td>
+                          <span className={`badge bg-${estadoGeneral.clase} text-white`}>
+                            {estadoGeneral.icono} {estadoGeneral.texto}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => toggleVacunaExpansion(vacunaGroup.nombre)}
                           >
-                            <i className="fas fa-plus mr-1"></i>
-                            INGRESO
+                            {estaExpandida ? <FaChevronUp className="mr-1" /> : <FaChevronDown className="mr-1" />}
+                            {estaExpandida ? 'Contraer' : 'Expandir'}
                           </button>
-                          <button
-                            className="btn btn-warning"
-                            onClick={() => {
-                              setLoteSeleccionado(lote);
-                              setMostrarFormEgreso(true);
-                            }}
-                            disabled={stockDisponible <= 0}
-                            title="Registrar Egreso"
+                        </td>
+                      </tr>
+                      
+                      {/* Filas de detalle de lotes (si está expandida) */}
+                      {estaExpandida && vacunaGroup.lotes.map((lote, index) => {
+                        const estado = getEstadoStock(lote);
+                        const stockDisponible = lote.stock_actual - lote.stock_reservado;
+                        
+                        return (
+                          <tr 
+                            key={`${vacunaGroup.nombre}-${lote.lote}-${index}`}
+                            className="bg-light"
+                            style={{borderLeft: '4px solid #007bff'}}
                           >
-                            <i className="fas fa-minus mr-1"></i>
-                            EGRESO
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            <td></td>
+                            <td style={{paddingLeft: '2rem'}}>
+                              <small className="text-muted">Lote:</small>
+                              <br />
+                              <code>{lote.lote}</code>
+                            </td>
+                            <td>
+                              <span className="badge bg-dark text-white">{lote.stock_actual}</span>
+                            </td>
+                            <td>
+                              <span className="badge bg-warning text-dark">{lote.stock_reservado}</span>
+                            </td>
+                            <td>
+                              <small>
+                                <strong>Venc:</strong> {formatearFecha(lote.fecha_vencimiento)}
+                                <br />
+                                <strong>Disp:</strong> <span className={stockDisponible > 0 ? 'text-success' : 'text-danger'}>
+                                  {stockDisponible}
+                                </span>
+                              </small>
+                            </td>
+                            <td>
+                              <span className={`badge bg-${estado.clase} text-white`}>
+                                {estado.icono} {estado.texto}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="btn-group">
+                                <button
+                                  className="btn btn-success btn-sm"
+                                  onClick={() => {
+                                    setLoteSeleccionado(lote);
+                                    setMostrarFormIngreso(true);
+                                  }}
+                                  title="Registrar Ingreso"
+                                >
+                                  INGRESO
+                                </button>
+                                <button
+                                  className="btn btn-warning btn-sm"
+                                  onClick={() => {
+                                    setLoteSeleccionado(lote);
+                                    setMostrarFormEgreso(true);
+                                  }}
+                                  disabled={stockDisponible <= 0}
+                                  title="Registrar Egreso"
+                                >
+                                  EGRESO
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -338,19 +486,27 @@ function MovimientosStock({ onRefresh }) {
               <ul className="nav nav-tabs card-header-tabs">
                 <li className="nav-item">
                   <button
-                    className={`nav-link ${vistaActiva === 'lotes' ? 'active' : 'text-dark'}`}
+                    className={`nav-link ${vistaActiva === 'lotes' ? 'active' : ''}`}
                     onClick={() => setVistaActiva('lotes')}
+                    style={{
+                      backgroundColor: vistaActiva === 'lotes' ? 'var(--color-principal)' : 'transparent',
+                      color: vistaActiva === 'lotes' ? 'white' : '#495057',
+                      border: 'none'
+                    }}
                   >
-                    <i className="fas fa-boxes mr-2"></i>
                     Gestión de Lotes
                   </button>
                 </li>
                 <li className="nav-item">
                   <button
-                    className={`nav-link ${vistaActiva === 'movimientos' ? 'active' : 'text-dark'}`}
+                    className={`nav-link ${vistaActiva === 'movimientos' ? 'active' : ''}`}
                     onClick={() => setVistaActiva('movimientos')}
+                    style={{
+                      backgroundColor: vistaActiva === 'movimientos' ? 'var(--color-principal)' : 'transparent',
+                      color: vistaActiva === 'movimientos' ? 'white' : '#495057',
+                      border: 'none'
+                    }}
                   >
-                    <i className="fas fa-exchange-alt mr-2"></i>
                     Historial Movimientos
                   </button>
                 </li>
@@ -366,7 +522,6 @@ function MovimientosStock({ onRefresh }) {
         <div className="card">
           <div className="card-header bg-white">
             <h5 className="mb-0 text-dark">
-              <i className="fas fa-clock mr-2 text-info"></i>
               Historial de Movimientos
             </h5>
           </div>

@@ -198,58 +198,6 @@ const ListasPreciosList = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      {listasPrecios.length > 0 && (
-        <div className="row mt-4">
-          <div className="col-md-3">
-            <div className="card bg-primary text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h6 className="card-title">Total Listas</h6>
-                    <h4>{listasPrecios.length}</h4>
-                  </div>
-                  <FaClipboardList style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card bg-success text-white">
-              <div className="card-body">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <h6 className="card-title">Activas</h6>
-                    <h4>{listasPrecios.filter(l => l.activa).length}</h4>
-                  </div>
-                  <FaClipboardList style={{ fontSize: '2rem', opacity: 0.7 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-6">
-            <div className="card">
-              <div className="card-body">
-                <h6 className="card-title">Tipos Disponibles</h6>
-                <div className="d-flex flex-wrap gap-2">
-                  {['L15', 'L18', 'L20', 'L25', 'L30'].map(tipo => {
-                    const existe = listasPrecios.some(l => l.tipo === tipo);
-                    return (
-                      <span 
-                        key={tipo} 
-                        className={`badge ${existe ? 'bg-success' : 'bg-light text-dark border'}`}
-                      >
-                        {tipo} {existe ? '✓' : '○'}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal */}
       {showModal && (
         <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>

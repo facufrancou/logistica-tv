@@ -97,6 +97,7 @@ const ReportesFacturacion = ReportesView; // Temporal - usar reportes existente
 // Nuevos componentes desarrollados
 import RemitosGenerator from "./components/remitos/RemitosGenerator";
 import VentasDirectasView from "./components/ventas-directas/VentasDirectasView";
+import VentasDirectasVacunasView from "./components/ventas-directas/VentasDirectasVacunasView";
 import IndicadoresStockPlan from "./components/indicadores-stock/IndicadoresStockPlan";
 
 // Componentes del Sistema de Vacunas
@@ -198,8 +199,9 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> <strong>Administrar Vacunas</strong></Link></li>
                 <li><hr className="dropdown-divider" /></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/remitos/generar"><FaFileInvoice className="me-2" /> Generar Remitos</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/indicadores-stock"><FaChartBar className="me-2" /> Indicadores Stock</Link></li>
+                {/* <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li> */}
+                <li><Link className="dropdown-item d-flex align-items-center" to="/entregas-fuera-de-plan"><FaSyringe className="me-2" /> Entregas Fuera de Plan</Link></li>
+                {/* <li><Link className="dropdown-item d-flex align-items-center" to="/indicadores-stock"><FaChartBar className="me-2" /> Indicadores Stock</Link></li> */}
               </ul>
             </li>
 
@@ -529,6 +531,14 @@ function MainRoutes() {
           element={
             <RutaPrivada>
               <VentasDirectasView />
+            </RutaPrivada>
+          }
+        />
+        <Route
+          path="/entregas-fuera-de-plan"
+          element={
+            <RutaPrivada>
+              <VentasDirectasVacunasView />
             </RutaPrivada>
           }
         />

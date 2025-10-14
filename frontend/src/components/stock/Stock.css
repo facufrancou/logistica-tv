@@ -37,7 +37,7 @@
 }
 
 .stats-card.primary {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: var(--gradiente-principal);
 }
 
 .stats-card.danger {
@@ -138,14 +138,14 @@
 
 /* Encabezados de cards */
 .card-header {
-  background-color: #f8f9fa !important;
+  background-color: var(--color-principal) !important;
   border-bottom: 1px solid #dee2e6;
-  color: #495057 !important;
+  color: white !important;
 }
 
 .card-header h3,
 .card-header h5 {
-  color: #495057 !important;
+  color: white !important;
   margin-bottom: 0;
 }
 

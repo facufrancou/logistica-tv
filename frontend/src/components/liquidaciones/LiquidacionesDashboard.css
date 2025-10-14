@@ -16,15 +16,15 @@
 
 /* Cards de estadísticas con gradientes */
 .liquidaciones-dashboard .card.bg-primary {
-  background: linear-gradient(135deg, #007bff, #0056b3) !important;
+  background: var(--gradiente-principal) !important;
 }
 
 .liquidaciones-dashboard .card.bg-dark {
-  background: linear-gradient(135deg, #343a40, #212529) !important;
+  background: var(--gradiente-oscuro) !important;
 }
 
 .liquidaciones-dashboard .card.bg-secondary {
-  background: linear-gradient(135deg, #6c757d, #495057) !important;
+  background: var(--gradiente-secundario) !important;
 }
 
 .liquidaciones-dashboard .card.bg-info {
@@ -74,7 +74,7 @@
 }
 
 .liquidaciones-dashboard .badge.bg-primary {
-  background-color: #0d6efd !important;
+  background-color: var(--color-principal) !important;
 }
 
 .liquidaciones-dashboard .badge.bg-dark {
@@ -95,8 +95,8 @@
 }
 
 .liquidaciones-dashboard .btn-outline-primary:hover {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: var(--color-principal);
+  border-color: var(--color-principal);
 }
 
 .liquidaciones-dashboard .btn-outline-success:hover {

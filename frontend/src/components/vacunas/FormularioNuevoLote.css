@@ -1,0 +1,342 @@
+/* Estilos para el modal de Formulario Nuevo Lote - Copiando exactamente de FormularioVacuna */
+
+/* Fix para modales centrados y bien dimensionados - Optimizado para visibilidad completa */
+.lote-modal-enhanced {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.lote-modal-enhanced .modal-dialog {
+  margin: 1rem auto !important;
+  width: 80% !important;
+  max-width: 900px !important;
+  min-width: 700px !important;
+  max-height: calc(100vh - 2rem) !important;
+}
+
+/* Asegurar que el contenido use todo el ancho disponible */
+.lote-modal-enhanced .modal-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: calc(100vh - 2rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Optimizar uso del espacio en el formulario */
+.lote-modal-enhanced .modal-body {
+  padding: 1.5rem !important;
+  max-width: 100% !important;
+  overflow-y: auto !important;
+  flex: 1 !important;
+}
+
+.lote-modal-enhanced .row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+.lote-modal-enhanced .col-md-6 {
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  max-width: 100% !important;
+}
+
+/* Backup para modal-dialog-centered por si no funciona la clase custom */
+.modal-dialog-centered {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+/* Modal content styling */
+.modal-content {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  background: linear-gradient(135deg, var(--color-principal) 0%, #2d1810 100%);
+  color: white;
+  border-radius: 15px 15px 0 0;
+  padding: 1.5rem;
+  border-bottom: none;
+}
+
+.modal-header .modal-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: white;
+}
+
+.modal-header .close {
+  color: white;
+  opacity: 0.8;
+  font-size: 1.5rem;
+  text-shadow: none;
+}
+
+.modal-header .close:hover {
+  color: white;
+  opacity: 1;
+}
+
+/* Form styling */
+.form-group label {
+  font-weight: 600;
+  color: var(--color-principal);
+  margin-bottom: 0.5rem;
+}
+
+.form-control {
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  padding: 0.75rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.form-control:focus {
+  border-color: var(--color-principal);
+  box-shadow: 0 0 0 0.2rem rgba(61, 33, 19, 0.15);
+}
+
+/* Section headers */
+.modal-body h6 {
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f8f9fa;
+  margin-bottom: 1.5rem;
+}
+
+/* Button enhancements */
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Modal footer - Siempre visible */
+.lote-modal-enhanced .modal-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e9ecef;
+  border-radius: 0 0 15px 15px;
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  background: white !important;
+  z-index: 1 !important;
+}
+
+/* Alert styling */
+.alert {
+  border-radius: 10px;
+  border: none;
+  margin-bottom: 1.5rem;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+/* Input group styling */
+.input-group-text {
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-right: none;
+  font-weight: 600;
+  color: var(--color-principal);
+}
+
+.input-group .form-control {
+  border-left: none;
+}
+
+.input-group .form-control:focus {
+  border-left: 2px solid var(--color-principal);
+}
+
+/* Botón generar código mejorado */
+.input-group-append .btn {
+  border-radius: 0 8px 8px 0 !important;
+  border-left: none !important;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.input-group-append .btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.input-group-append .btn i {
+  margin-right: 0.25rem;
+}
+
+/* Small text styling */
+.form-text {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .lote-modal-enhanced .modal-dialog {
+    width: 90% !important;
+    max-width: 800px !important;
+    min-width: 600px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .lote-modal-enhanced {
+    padding: 0.5rem;
+  }
+  
+  .lote-modal-enhanced .modal-dialog {
+    width: 95% !important;
+    max-width: 95% !important;
+    min-width: auto !important;
+    margin: 0.5rem auto !important;
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .lote-modal-enhanced .modal-content {
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .lote-modal-enhanced .modal-body {
+    padding: 1rem !important;
+  }
+  
+  .lote-modal-enhanced .modal-footer {
+    padding: 1rem 1.5rem !important;
+  }
+}
+
+@media (max-height: 700px) {
+  .lote-modal-enhanced .modal-dialog {
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .lote-modal-enhanced .modal-content {
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .lote-modal-enhanced .modal-body {
+    padding: 1rem !important;
+  }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 576px) {
+  .lote-modal-enhanced {
+    padding: 0.25rem;
+  }
+  
+  .lote-modal-enhanced .modal-dialog {
+    margin: 0.25rem auto !important;
+    width: 98% !important;
+    max-width: 98% !important;
+  }
+  
+  .lote-modal-enhanced .modal-body {
+    padding: 0.75rem !important;
+  }
+  
+  .lote-modal-enhanced .modal-footer {
+    padding: 0.75rem !important;
+  }
+  
+  .lote-modal-enhanced .modal-footer .d-flex.gap-3 {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+  
+  .lote-modal-enhanced .modal-footer .btn {
+    width: 100% !important;
+  }
+}
+
+/* Loading state */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Estilos adicionales para botones del modal */
+.lote-modal-enhanced .modal-footer .btn {
+  font-size: 0.95rem !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Gap entre botones */
+.lote-modal-enhanced .modal-footer .d-flex.gap-3 {
+  gap: 0.75rem !important;
+}
+
+/* Evitar que el contenido se superponga con el footer */
+.lote-modal-enhanced .modal-body {
+  margin-bottom: 0 !important;
+  padding-bottom: 2rem !important;
+}
+
+
+
+/* Asegurar que el header no se mueva y tenga el color correcto */
+.lote-modal-enhanced .modal-header {
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2 !important;
+  background: linear-gradient(135deg, var(--color-principal) 0%, #2d1810 100%) !important;
+  color: white !important;
+}
+
+.lote-modal-enhanced .modal-header .modal-title {
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.lote-modal-enhanced .modal-header .modal-title i {
+  color: white !important;
+}
+
+.lote-modal-enhanced .modal-header .close {
+  color: white !important;
+  opacity: 0.8 !important;
+  text-shadow: none !important;
+}
+
+.lote-modal-enhanced .modal-header .close:hover {
+  opacity: 1 !important;
+  color: white !important;
+}
