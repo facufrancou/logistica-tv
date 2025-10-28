@@ -533,7 +533,7 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
                 <option value="">Seleccionar vacuna</option>
                 {productos.map(vacuna => (
                   <option key={vacuna.id_vacuna} value={vacuna.id_vacuna}>
-                    {vacuna.nombre} - {vacuna.detalle || 'Sin detalle'}
+                    {vacuna.nombre} - ({vacuna.presentacion?.nombre || 'Sin presentación'})
                   </option>
                 ))}
               </select>

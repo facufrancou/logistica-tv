@@ -805,7 +805,6 @@ const CotizacionForm = () => {
                       name="fecha_inicio_plan"
                       value={formData.fecha_inicio_plan}
                       onChange={handleInputChange}
-                      min={new Date().toISOString().split('T')[0]}
                     />
                     {errors.fecha_inicio_plan && (
                       <div className="invalid-feedback">{errors.fecha_inicio_plan}</div>
