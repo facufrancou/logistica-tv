@@ -1,0 +1,373 @@
+/* Modal de Asignación de Lotes - Estilos completos */
+
+/* IMPORTANTE: Sobrescribir estilos de Bootstrap */
+.modal-asignacion-lotes {
+  padding: 0 !important;
+}
+
+.modal-asignacion-lotes-dialog {
+  width: 80% !important;
+  max-width: 80% !important;
+  min-width: 80% !important;
+  margin: 0 auto !important;
+}
+
+.modal-asignacion-lotes-content {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.modal-asignacion-lotes-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-asignacion-lotes-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1;
+}
+
+.modal-asignacion-lotes-container {
+  position: relative;
+  z-index: 2;
+  width: 80% !important;
+  max-width: 80% !important;
+  min-width: 80% !important;
+  max-height: 95vh;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-asignacion-lotes-header {
+  background: linear-gradient(135deg, #4a2c2a 0%, #6d4c41 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-asignacion-lotes-header h4 {
+  margin: 0;
+  font-size: 1.1rem !important;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.modal-asignacion-lotes-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-asignacion-lotes-footer {
+  padding: 1.5rem 2rem;
+  border-top: 2px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: #f8f9fa;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Info Cards */
+.info-cards-container {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-card {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  text-align: center;
+  background: white;
+}
+
+.info-card small {
+  display: block;
+  color: #666;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.info-card h5 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.info-card h3 {
+  margin: 0.25rem 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #198754;
+}
+
+.info-card span {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.info-card-primary {
+  border-color: #198754;
+  background: #f0f9f4;
+}
+
+/* Mode Buttons */
+.mode-buttons-container {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 2px solid #4a2c2a;
+  background: white;
+  color: #4a2c2a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.mode-button:hover {
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.mode-button.active {
+  background: #4a2c2a;
+  color: white;
+  box-shadow: 0 4px 12px rgba(74, 44, 42, 0.3);
+}
+
+/* Loading */
+.loading-container {
+  text-align: center;
+  padding: 4rem;
+}
+
+.loading-container p {
+  margin-top: 1rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Stocks Header */
+.stocks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.stocks-header h5 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.stocks-header .badge {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+}
+
+/* Stocks Table */
+.stocks-table-container {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.stocks-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.stocks-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #4a2c2a;
+  color: white;
+}
+
+.stocks-table thead th {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: none;
+}
+
+.stocks-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stocks-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.stocks-table tbody tr.selected {
+  background: #e7f3ff;
+}
+
+.stocks-table tbody tr.selected-multiple {
+  background: #d1f4e0;
+}
+
+.stocks-table tbody td {
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.stocks-table .form-check-input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.stocks-table .badge-stock {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.6rem;
+  min-width: 70px;
+  display: inline-block;
+}
+
+/* Summary Card */
+.summary-card {
+  margin-top: 2rem;
+  border: 2px solid #198754;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.summary-header {
+  background: #198754;
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-header h6 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.summary-body {
+  padding: 1.5rem;
+  background: white;
+}
+
+.summary-totals {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-total-item {
+  flex: 1;
+  padding: 1.25rem;
+  border-radius: 8px;
+  text-align: center;
+  background: #f8f9fa;
+  border: 2px solid #dee2e6;
+}
+
+.summary-total-item small {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.summary-total-item h4 {
+  margin: 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.summary-total-item.complete {
+  background: #198754;
+  border-color: #198754;
+  color: white;
+}
+
+.summary-total-item.complete small,
+.summary-total-item.complete h4 {
+  color: white;
+}
+
+.summary-total-item.incomplete {
+  background: #ffc107;
+  border-color: #ffc107;
+}
+
+/* Selected Lotes List */
+.selected-lotes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.selected-lote-item {
+  padding: 1rem;
+  border: 2px solid #198754;
+  border-radius: 8px;
+  background: rgba(25, 135, 84, 0.05);
+}
+
+.selected-lote-item.error {
+  border-color: #dc3545;
+  background: rgba(220, 53, 69, 0.05);
+}
+
+.selected-lote-item .badge {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+}

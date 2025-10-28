@@ -5,6 +5,10 @@ const { validarSesion } = require('../middlewares/auth');
 
 // ===== RUTAS PARA COTIZACIONES =====
 
+// IMPORTANTE: Rutas específicas ANTES de rutas con parámetros dinámicos
+// Obtener stocks disponibles para una vacuna específica (DEBE IR ANTES DE /:id)
+router.get('/stocks-disponibles', validarSesion, cotizacionesController.getStocksDisponibles);
+
 // Obtener todas las cotizaciones
 router.get('/', validarSesion, cotizacionesController.getCotizaciones);
 
@@ -59,8 +63,8 @@ router.post('/calendario/:id_calendario/reasignar-lote', validarSesion, cotizaci
 // Asignar múltiples lotes para una aplicación
 router.post('/calendario/:id_calendario/asignar-multilote', validarSesion, cotizacionesController.asignarMultiplesLotes);
 
-// Obtener stocks disponibles para una vacuna específica
-router.get('/stocks-disponibles', validarSesion, cotizacionesController.getStocksDisponibles);
+// Asignar múltiples lotes manualmente seleccionados por el usuario
+router.post('/calendario/:id_calendario/asignar-multilote-manual', validarSesion, cotizacionesController.asignarMultiplesLotesManual);
 
 // Reasignar todos los lotes de una cotización
 router.post('/:id/reasignar-todos-lotes', validarSesion, cotizacionesController.reasignarTodosLotesCotizacion);

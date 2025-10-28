@@ -15,6 +15,9 @@ const authHeaders = {
 
 // Función reutilizable para fetch con sesión - NUEVA API (Planes Vacunales)
 const fetchConSesion = async (url, options = {}) => {
+  console.log('🌐 fetchConSesion - URL:', url);
+  console.log('🌐 fetchConSesion - Options:', options);
+  
   const config = {
     ...options,
     credentials: 'include', // IMPORTANTE: Incluir cookies de sesión
@@ -24,25 +27,40 @@ const fetchConSesion = async (url, options = {}) => {
     }
   };
 
-  const res = await fetch(url, config);
-  
-  if (!res.ok) {
-    if (res.status === 401) {
-      throw new Error('No autorizado - Sesión expirada');
-    } else if (res.status === 400) {
-      const errorData = await res.json();
-      // Crear un error que preserve toda la información del backend
-      const error = new Error(errorData.message || errorData.error || 'Datos inválidos');
-      error.response = { data: errorData };
-      throw error;
-    } else if (res.status === 404) {
-      throw new Error('Recurso no encontrado');
-    } else {
-      throw new Error('Error interno del servidor');
+  console.log('🌐 fetchConSesion - Config:', config);
+
+  try {
+    const res = await fetch(url, config);
+    
+    console.log('🌐 fetchConSesion - Response status:', res.status);
+    console.log('🌐 fetchConSesion - Response ok:', res.ok);
+    
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('No autorizado - Sesión expirada');
+      } else if (res.status === 400) {
+        const errorData = await res.json();
+        console.error('🌐 Error 400 data:', errorData);
+        // Crear un error que preserve toda la información del backend
+        const error = new Error(errorData.message || errorData.error || 'Datos inválidos');
+        error.response = { data: errorData };
+        throw error;
+      } else if (res.status === 404) {
+        throw new Error('Recurso no encontrado');
+      } else {
+        const errorText = await res.text();
+        console.error('🌐 Error response text:', errorText);
+        throw new Error('Error interno del servidor');
+      }
     }
+    
+    const jsonData = await res.json();
+    console.log('🌐 fetchConSesion - JSON data:', jsonData);
+    return jsonData;
+  } catch (error) {
+    console.error('🌐 fetchConSesion - Error capturado:', error);
+    throw error;
   }
-  
-  return await res.json();
 };
 
 // Función para la API antigua de pedidos
@@ -379,12 +397,36 @@ export const asignarMultiplesLotes = async (id_calendario) => {
   });
 };
 
+export const asignarMultiplesLotesManual = async (id_calendario, data) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/asignar-multilote-manual`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+};
+
 export const getStocksDisponibles = async (id_vacuna, fecha_aplicacion = null) => {
-  const params = new URLSearchParams();
-  params.append('id_vacuna', id_vacuna);
-  if (fecha_aplicacion) params.append('fecha_aplicacion', fecha_aplicacion);
-  
-  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/stocks-disponibles?${params.toString()}`);
+  try {
+    console.log('🔵 getStocksDisponibles - Inicio');
+    console.log('  ID Vacuna:', id_vacuna, 'Tipo:', typeof id_vacuna);
+    console.log('  Fecha aplicación:', fecha_aplicacion);
+    
+    const params = new URLSearchParams();
+    params.append('id_vacuna', id_vacuna);
+    if (fecha_aplicacion) params.append('fecha_aplicacion', fecha_aplicacion);
+    
+    const url = `${API_BASE_URL}/cotizaciones/stocks-disponibles?${params.toString()}`;
+    console.log('  URL completa:', url);
+    
+    const response = await fetchConSesion(url);
+    
+    console.log('  Respuesta recibida:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Error en getStocksDisponibles:', error);
+    console.error('  Mensaje:', error.message);
+    console.error('  Stack:', error.stack);
+    throw error;
+  }
 };
 
 export const reasignarTodosLotesCotizacion = async (id_cotizacion) => {
@@ -715,6 +757,7 @@ export const planesVacunalesApi = {
   asignarLoteManual,
   reasignarLoteAutomatico,
   asignarMultiplesLotes,
+  asignarMultiplesLotesManual,
   getStocksDisponibles,
   reasignarTodosLotesCotizacion,
   verificarEstadoLotes,

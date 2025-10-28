@@ -805,13 +805,34 @@ thead.table-light > tr > th {
   }
 
   /* Ajustes de modales en mobile */
-  .modal-dialog { 
-    margin: .5rem auto !important; 
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+  .modal { 
+    padding: 0.5rem !important;
   }
-  .modal-content { border-radius: 16px; }
+  
+  .modal-dialog { 
+    margin: 0.5rem auto !important; 
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .modal-content { 
+    border-radius: 16px;
+    max-height: calc(100vh - 1rem) !important;
+  }
+  
+  .modal-body {
+    max-height: calc(100vh - 150px) !important;
+    padding: 1rem !important;
+  }
+  
+  .modal-footer {
+    padding: 0.75rem 1rem !important;
+    flex-wrap: wrap !important;
+  }
+  
+  .modal-footer > * {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+  }
 
   /* Botones full-width contextuales */
   .btn-group.btn-group-sm, .acciones-grid-mobile { 
@@ -873,24 +894,54 @@ thead.table-light > tr > th {
   max-width: 95% !important;
 }
 
-/* CENTRADO GLOBAL DE TODOS LOS MODALES */
+/* Media queries para modales en pantallas medianas */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .modal-lg {
+    max-width: 85% !important;
+  }
+  
+  .modal-xl {
+    max-width: 90% !important;
+  }
+  
+  .modal-body {
+    max-height: calc(100vh - 180px) !important;
+  }
+}
+
+/* Media queries para modales en pantallas grandes */
+@media (min-width: 1200px) {
+  .modal-body {
+    max-height: calc(100vh - 220px) !important;
+  }
+}
+
+/* CENTRADO GLOBAL DE TODOS LOS MODALES CON ADAPTACIÓN RESPONSIVA */
 .modal {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  padding: 1rem !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 
 .modal-dialog {
-  margin: 0 auto !important;
+  margin: 1rem auto !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: center !important;
-  min-height: calc(100vh - 2rem) !important;
+  max-height: calc(100vh - 2rem) !important;
+  width: 100% !important;
 }
 
-/* Asegurar que el contenido del modal también esté centrado */
+/* Asegurar que el contenido del modal también esté centrado y permita scroll */
 .modal-dialog .modal-content {
   width: 100% !important;
+  max-height: calc(100vh - 2rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 /* Centrado específico para modal-dialog-centered */
@@ -898,7 +949,24 @@ thead.table-light > tr > th {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-height: calc(100vh - 2rem) !important;
+  min-height: auto !important;
+  max-height: calc(100vh - 2rem) !important;
+}
+
+/* CONTROL DE SCROLL EN BODY DEL MODAL */
+.modal-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: calc(100vh - 200px) !important;
+  flex: 1 1 auto !important;
+  padding: 1.5rem !important;
+}
+
+/* Footer fijo al final del modal */
+.modal-footer {
+  flex-shrink: 0 !important;
+  border-top: 1px solid #dee2e6 !important;
+  padding: 1rem 1.5rem !important;
 }
 
 /* ENCABEZADOS DE MODALES CON TEXTO BLANCO */
@@ -936,4 +1004,466 @@ thead.table-light > tr > th {
 .modal-header .close:hover {
   color: white !important;
   opacity: 1 !important;
+}
+
+/* ESTILOS MEJORADOS PARA BOTÓN DE CIERRE (X) DE MODALES */
+.modal-header .close,
+.modal-header .btn-close {
+  color: white !important;
+  opacity: 1 !important;
+  font-size: 1.8rem;
+  font-weight: 300;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  padding: 0;
+  margin: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+}
+
+.modal-header .close:hover,
+.modal-header .btn-close:hover {
+  color: white !important;
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  filter: none !important;
+}
+
+.modal-header .close:focus,
+.modal-header .btn-close:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.modal-header .close:active,
+.modal-header .btn-close:active {
+  transform: rotate(90deg) scale(0.95);
+}
+
+/* ESTILOS PARA CONTENIDO DENTRO DE MODALES */
+/* Asegurar que tablas dentro de modales sean scrolleables */
+.modal-body .table-responsive {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Asegurar que formularios dentro de modales no desborden */
+.modal-body form {
+  max-width: 100% !important;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+  max-width: 100% !important;
+}
+
+/* Mejorar scroll en dispositivos táctiles */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--color-principal);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #2d1810;
+}
+
+/* Asegurar que imágenes dentro de modales sean responsivas */
+.modal-body img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Estilos para modales con contenido muy grande */
+.modal-body.modal-body-large {
+  max-height: calc(100vh - 250px) !important;
+}
+
+/* Asegurar que los botones del footer no se desborden en mobile */
+@media (max-width: 576px) {
+  .modal-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .modal-footer .btn {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
+/* Modal de Asignación de Lotes - Ancho completo */
+.modal-asignacion-lotes-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 1050 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.modal-asignacion-lotes-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  z-index: 1 !important;
+}
+
+.modal-asignacion-lotes-container {
+  position: relative !important;
+  z-index: 2 !important;
+  width: 95% !important;
+  max-width: 95% !important;
+  max-height: 95vh !important;
+  background: white !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.modal-asignacion-lotes-header {
+  background: linear-gradient(135deg, #4a2c2a 0%, #6d4c41 100%) !important;
+  color: white !important;
+  padding: 1.5rem 2rem !important;
+  border-radius: 12px 12px 0 0 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.modal-asignacion-lotes-header h4 {
+  margin: 0 !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.modal-asignacion-lotes-body {
+  padding: 2rem !important;
+  overflow-y: auto !important;
+  flex: 1 !important;
+}
+
+.modal-asignacion-lotes-footer {
+  padding: 1.5rem 2rem !important;
+  border-top: 2px solid #dee2e6 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 1rem !important;
+  background: #f8f9fa !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+/* Info Cards */
+.info-cards-container {
+  display: flex !important;
+  gap: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.info-card {
+  flex: 1 !important;
+  padding: 1.5rem !important;
+  border: 2px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  text-align: center !important;
+  background: white !important;
+}
+
+.info-card small {
+  display: block !important;
+  color: #666 !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.info-card h5 {
+  margin: 0.5rem 0 !important;
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+}
+
+.info-card h3 {
+  margin: 0.5rem 0 !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: #198754 !important;
+}
+
+.info-card span {
+  color: #666 !important;
+  font-size: 0.9rem !important;
+}
+
+.info-card-primary {
+  border-color: #198754 !important;
+  background: #f0f9f4 !important;
+}
+
+/* Mode Buttons */
+.mode-buttons-container {
+  display: flex !important;
+  gap: 1rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.mode-button {
+  flex: 1 !important;
+  padding: 1rem 2rem !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  border: 2px solid #4a2c2a !important;
+  background: white !important;
+  color: #4a2c2a !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+}
+
+.mode-button:hover {
+  background: #f8f9fa !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+.mode-button.active {
+  background: #4a2c2a !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(74, 44, 42, 0.3) !important;
+}
+
+/* Loading */
+.loading-container {
+  text-align: center !important;
+  padding: 4rem !important;
+}
+
+.loading-container p {
+  margin-top: 1rem !important;
+  color: #666 !important;
+  font-size: 1.1rem !important;
+}
+
+/* Stocks Header */
+.stocks-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 1.5rem !important;
+  background: #f8f9fa !important;
+  border-radius: 8px !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.stocks-header h5 {
+  margin: 0 !important;
+  font-size: 1.3rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.stocks-header .badge {
+  font-size: 1rem !important;
+  padding: 0.5rem 1rem !important;
+}
+
+/* Stocks Table */
+.stocks-table-container {
+  border: 2px solid #dee2e6 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  max-height: 500px !important;
+  overflow-y: auto !important;
+}
+
+.stocks-table {
+  width: 100% !important;
+  margin: 0 !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+}
+
+.stocks-table thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: #4a2c2a !important;
+  color: white !important;
+}
+
+.stocks-table thead th {
+  padding: 1rem !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  border-bottom: none !important;
+}
+
+.stocks-table tbody tr {
+  border-bottom: 1px solid #e0e0e0 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.stocks-table tbody tr:hover {
+  background: #f8f9fa !important;
+}
+
+.stocks-table tbody tr.selected {
+  background: #e7f3ff !important;
+}
+
+.stocks-table tbody tr.selected-multiple {
+  background: #d1f4e0 !important;
+}
+
+.stocks-table tbody td {
+  padding: 1rem !important;
+  vertical-align: middle !important;
+}
+
+.stocks-table .form-check-input {
+  width: 20px !important;
+  height: 20px !important;
+  cursor: pointer !important;
+}
+
+.stocks-table .badge-stock {
+  font-size: 1.1rem !important;
+  padding: 0.5rem 0.75rem !important;
+  min-width: 80px !important;
+  display: inline-block !important;
+}
+
+/* Summary Card */
+.summary-card {
+  margin-top: 2rem !important;
+  border: 2px solid #198754 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.summary-header {
+  background: #198754 !important;
+  color: white !important;
+  padding: 1rem 1.5rem !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.summary-header h6 {
+  margin: 0 !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.summary-body {
+  padding: 1.5rem !important;
+  background: white !important;
+}
+
+.summary-totals {
+  display: flex !important;
+  gap: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.summary-total-item {
+  flex: 1 !important;
+  padding: 1.5rem !important;
+  border-radius: 8px !important;
+  text-align: center !important;
+  background: #f8f9fa !important;
+  border: 2px solid #dee2e6 !important;
+}
+
+.summary-total-item small {
+  display: block !important;
+  font-size: 0.85rem !important;
+  color: #666 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.summary-total-item h4 {
+  margin: 0.5rem 0 !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+}
+
+.summary-total-item.complete {
+  background: #198754 !important;
+  border-color: #198754 !important;
+  color: white !important;
+}
+
+.summary-total-item.complete small,
+.summary-total-item.complete h4 {
+  color: white !important;
+}
+
+.summary-total-item.incomplete {
+  background: #ffc107 !important;
+  border-color: #ffc107 !important;
+}
+
+/* Selected Lotes List */
+.selected-lotes-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
+}
+
+.selected-lote-item {
+  padding: 1rem !important;
+  border: 2px solid #198754 !important;
+  border-radius: 8px !important;
+  background: rgba(25, 135, 84, 0.05) !important;
+}
+
+.selected-lote-item.error {
+  border-color: #dc3545 !important;
+  background: rgba(220, 53, 69, 0.05) !important;
+}
+
+.selected-lote-item .badge {
+  font-size: 1.1rem !important;
+  padding: 0.5rem 1rem !important;
 }

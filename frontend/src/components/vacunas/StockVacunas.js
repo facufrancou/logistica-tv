@@ -90,7 +90,7 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
       item.id_vacuna?.toString() === filtros.vacuna;
     
     const cumpleUbicacion = !filtros.ubicacion || 
-      item.ubicacion?.toLowerCase().includes(filtros.ubicacion.toLowerCase());
+      item.ubicacion_fisica?.toLowerCase().includes(filtros.ubicacion.toLowerCase());
 
     const cumpleEstado = !filtros.estado || 
       (filtros.estado === "critico" && item.stock_actual <= item.stock_minimo) ||
@@ -373,7 +373,7 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                             <small>
                               <strong>Venc:</strong> {formatearFecha(item.fecha_vencimiento)}
                               <br />
-                              <strong>Ubic:</strong> {item.ubicacion || '—'}
+                              <strong>Ubic:</strong> {item.ubicacion_fisica || '—'}
                             </small>
                           </td>
                           <td>

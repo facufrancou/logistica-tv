@@ -23,12 +23,20 @@ import {
   FaSave,
   FaTimes,
   FaInfoCircle,
-  FaCut
+  FaCut,
+  FaBoxes,
+  FaBarcode,
+  FaMapMarkerAlt,
+  FaWarehouse,
+  FaLock,
+  FaCheckSquare,
+  FaCircle
 } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as planesApi from '../../services/planesVacunalesApi';
 import AlertasStock from './AlertasStock';
+import './ModalAsignacionLotes.css';
 import ModalGestionLotes from './ModalGestionLotes';
 import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -57,6 +65,8 @@ const CalendarioVacunacion = () => {
   const [calendarioParaReasignacion, setCalendarioParaReasignacion] = useState(null);
   const [stocksDisponibles, setStocksDisponibles] = useState([]);
   const [stockSeleccionado, setStockSeleccionado] = useState(null);
+  const [lotesSeleccionados, setLotesSeleccionados] = useState([]); // Para selección múltiple
+  const [modoSeleccion, setModoSeleccion] = useState('simple'); // 'simple' o 'multiple'
   const [loadingStocks, setLoadingStocks] = useState(false);
   const [realizandoReasignacion, setRealizandoReasignacion] = useState(false);
   
@@ -113,6 +123,18 @@ const CalendarioVacunacion = () => {
         planesApi.getControlEntregas(cotizacionId),
         planesApi.getCotizacionById(cotizacionId)
       ]);
+
+      console.log('=== CALENDARIO CARGADO ===');
+      console.log('Total items calendario:', calendarioData?.length);
+      if (calendarioData && calendarioData.length > 0) {
+        console.log('Primer item del calendario:', calendarioData[0]);
+        console.log('Campos del primer item:');
+        console.log('  - id_calendario:', calendarioData[0].id_calendario);
+        console.log('  - id_producto:', calendarioData[0].id_producto);
+        console.log('  - id_vacuna:', calendarioData[0].id_vacuna);
+        console.log('  - vacuna_nombre:', calendarioData[0].vacuna_nombre);
+        console.log('  - fecha_aplicacion_programada:', calendarioData[0].fecha_aplicacion_programada);
+      }
 
       setCalendario(calendarioData);
       setEstadoPlan(estadoData);
@@ -455,22 +477,58 @@ const CalendarioVacunacion = () => {
 
   // ===== FUNCIONES DE REASIGNACIÓN DE LOTES =====
 
-  const handleAbrirReasignacion = async (calendarioItem) => {
+  const handleAbrirReasignacion = async (calendarioItem, modo = 'simple') => {
     try {
+      console.log('=== INICIO handleAbrirReasignacion ===');
+      console.log('CalendarioItem completo:', calendarioItem);
+      console.log('Modo selección:', modo);
+      
       setCalendarioParaReasignacion(calendarioItem);
+      setModoSeleccion(modo);
+      setLotesSeleccionados([]);
+      setStockSeleccionado(null);
       setLoadingStocks(true);
       setShowReasignacionModal(true);
 
+      // IMPORTANTE: El campo id_producto del calendario contiene el ID de la vacuna
+      // El backend espera id_vacuna o id_producto como query param
+      const idVacuna = calendarioItem.id_vacuna || calendarioItem.id_producto;
+      
+      console.log('ID Vacuna extraído:', idVacuna);
+      console.log('  - calendarioItem.id_vacuna:', calendarioItem.id_vacuna);
+      console.log('  - calendarioItem.id_producto:', calendarioItem.id_producto);
+      console.log('Fecha de aplicación:', calendarioItem.fecha_aplicacion_programada);
+      
+      if (!idVacuna) {
+        console.error('ERROR: No se encontró id_vacuna ni id_producto en calendarioItem');
+        throw new Error('No se pudo obtener el ID de la vacuna. Faltan campos id_vacuna o id_producto en el calendario.');
+      }
+
+      console.log('Llamando a getStocksDisponibles con:', {
+        id_vacuna: idVacuna,
+        fecha_aplicacion: calendarioItem.fecha_aplicacion_programada
+      });
+
       // Obtener stocks disponibles para esta vacuna
       const stocksData = await planesApi.getStocksDisponibles(
-        calendarioItem.id_producto || calendarioItem.id_vacuna, 
+        idVacuna, 
         calendarioItem.fecha_aplicacion_programada
       );
       
+      console.log('Respuesta de getStocksDisponibles:', stocksData);
+      console.log('Stocks recibidos (data):', stocksData.data);
+      console.log('Cantidad de stocks:', stocksData.data?.length || 0);
+      
       setStocksDisponibles(stocksData.data || []);
+      console.log('=== FIN handleAbrirReasignacion (ÉXITO) ===');
     } catch (error) {
-      console.error('Error al cargar stocks disponibles:', error);
-      showError('Error', 'No se pudieron cargar los stocks disponibles');
+      console.error('=== ERROR en handleAbrirReasignacion ===');
+      console.error('Tipo de error:', error.constructor.name);
+      console.error('Mensaje:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('Error completo:', error);
+      
+      showError('Error', 'No se pudieron cargar los stocks disponibles: ' + (error.message || 'Error desconocido'));
       setStocksDisponibles([]);
     } finally {
       setLoadingStocks(false);
@@ -503,21 +561,49 @@ const CalendarioVacunacion = () => {
 
   const handleAsignarLoteManual = async () => {
     try {
-      if (!stockSeleccionado) {
-        showError('Error', 'Debe seleccionar un stock');
-        return;
+      if (modoSeleccion === 'simple') {
+        // Modo simple: un solo lote
+        if (!stockSeleccionado) {
+          showError('Error', 'Debe seleccionar un stock');
+          return;
+        }
+
+        setRealizandoReasignacion(true);
+        
+        await planesApi.asignarLoteManual(calendarioParaReasignacion.id_calendario, {
+          id_stock_vacuna: stockSeleccionado.id_stock_vacuna,
+          cantidad_asignar: calendarioParaReasignacion.cantidad_dosis
+        });
+
+        showSuccess('Éxito', `Lote ${stockSeleccionado.lote} asignado correctamente`);
+      } else {
+        // Modo múltiple: varios lotes
+        if (lotesSeleccionados.length === 0) {
+          showError('Error', 'Debe seleccionar al menos un lote');
+          return;
+        }
+
+        const cantidadTotal = lotesSeleccionados.reduce((sum, lote) => sum + lote.cantidad, 0);
+        if (cantidadTotal < calendarioParaReasignacion.cantidad_dosis) {
+          showError('Error', `La cantidad total seleccionada (${cantidadTotal}) es menor a la requerida (${calendarioParaReasignacion.cantidad_dosis})`);
+          return;
+        }
+
+        setRealizandoReasignacion(true);
+        
+        await planesApi.asignarMultiplesLotesManual(calendarioParaReasignacion.id_calendario, {
+          lotes: lotesSeleccionados.map(l => ({
+            id_stock_vacuna: l.id_stock_vacuna,
+            cantidad: l.cantidad
+          }))
+        });
+
+        showSuccess('Éxito', `${lotesSeleccionados.length} lote(s) asignados correctamente`);
       }
-
-      setRealizandoReasignacion(true);
       
-      await planesApi.asignarLoteManual(calendarioParaReasignacion.id_calendario, {
-        id_stock_vacuna: stockSeleccionado.id_stock_vacuna,
-        cantidad_asignar: calendarioParaReasignacion.cantidad_dosis
-      });
-
-      showSuccess('Éxito', `Lote ${stockSeleccionado.lote} asignado correctamente`);
       setShowReasignacionModal(false);
       setStockSeleccionado(null);
+      setLotesSeleccionados([]);
       await cargarDatosIniciales();
     } catch (error) {
       console.error('Error al asignar lote manual:', error);
@@ -525,6 +611,39 @@ const CalendarioVacunacion = () => {
     } finally {
       setRealizandoReasignacion(false);
     }
+  };
+
+  const handleToggleLoteMultiple = (stock) => {
+    const index = lotesSeleccionados.findIndex(l => l.id_stock_vacuna === stock.id_stock_vacuna);
+    
+    if (index >= 0) {
+      // Ya está seleccionado, remover
+      setLotesSeleccionados(lotesSeleccionados.filter((_, i) => i !== index));
+    } else {
+      // Agregar nuevo lote
+      const cantidadRestante = calendarioParaReasignacion.cantidad_dosis - 
+        lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0);
+      
+      const cantidadPorDefecto = Math.min(stock.stock_actual, cantidadRestante);
+      
+      setLotesSeleccionados([...lotesSeleccionados, {
+        id_stock_vacuna: stock.id_stock_vacuna,
+        lote: stock.lote,
+        stock_disponible: stock.stock_actual,
+        cantidad: cantidadPorDefecto,
+        vencimiento: stock.fecha_vencimiento
+      }]);
+    }
+  };
+
+  const handleCambiarCantidadLote = (idStockVacuna, nuevaCantidad) => {
+    setLotesSeleccionados(lotesSeleccionados.map(lote => {
+      if (lote.id_stock_vacuna === idStockVacuna) {
+        const cantidad = Math.max(1, Math.min(parseInt(nuevaCantidad) || 0, lote.stock_disponible));
+        return { ...lote, cantidad };
+      }
+      return lote;
+    }));
   };
 
   const handleAsignarMultiplesLotes = async (calendarioItem) => {
@@ -1833,104 +1952,419 @@ const CalendarioVacunacion = () => {
 
       {/* Modal de Reasignación de Lotes */}
       {showReasignacionModal && (
-        <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <FaBoxOpen className="me-2" />
-                  Reasignar Lote - {calendarioParaReasignacion?.vacuna_nombre}
-                </h5>
+        <>
+          {/* Backdrop oscuro */}
+          <div 
+            className="modal-backdrop fade show" 
+            style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 1040
+            }}
+            onClick={() => {
+              setShowReasignacionModal(false);
+              setStockSeleccionado(null);
+              setLotesSeleccionados([]);
+            }}
+          ></div>
+          
+          {/* Modal */}
+          <div className="modal fade show modal-asignacion-lotes" tabIndex="-1" style={{ padding: 0 }}>
+            <div className="modal-asignacion-lotes-dialog" style={{ width: '80%', maxWidth: '80%', minWidth: '80%', margin: '0 auto' }}>
+              <div className="modal-content modal-asignacion-lotes-content" style={{ width: '100%', maxWidth: 'none' }}>
+              <div className="modal-header" style={{ padding: '1rem 1.5rem' }}>
+                <h4 className="modal-title mb-0" style={{ fontSize: '1.1rem' }}>
+                  <FaBoxOpen className="me-2" size={18} />
+                  {modoSeleccion === 'simple' ? 'Asignar Lote' : 'Asignar Múltiples Lotes'} - {calendarioParaReasignacion?.vacuna_nombre}
+                </h4>
                 <button
                   type="button"
                   className="btn-close"
                   onClick={() => {
                     setShowReasignacionModal(false);
                     setStockSeleccionado(null);
+                    setLotesSeleccionados([]);
                   }}
                 ></button>
               </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <strong>Aplicación:</strong> Semana {calendarioParaReasignacion?.semana_aplicacion} - {calendarioParaReasignacion?.fecha_aplicacion_programada}
-                  <br />
-                  <strong>Cantidad requerida:</strong> {calendarioParaReasignacion?.cantidad_dosis} dosis
-                  <br />
-                  <strong>Lote actual:</strong> {calendarioParaReasignacion?.lote_asignado || 'Sin asignar'}
+              <div className="modal-body modal-asignacion-lotes-body">
+                {/* Info Header - Layout horizontal compacto */}
+                <div className="d-flex gap-2 mb-3">
+                  <div className="flex-fill">
+                    <div className="card h-100 border-primary">
+                      <div className="card-body p-2 text-center">
+                        <small className="text-muted d-block mb-1" style={{ fontSize: '0.75rem' }}>Aplicación</small>
+                        <h5 className="mb-0" style={{ fontSize: '1rem' }}>Semana {calendarioParaReasignacion?.semana_aplicacion}</h5>
+                        <small className="text-muted" style={{ fontSize: '0.8rem' }}>{calendarioParaReasignacion?.fecha_aplicacion_programada}</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-fill">
+                    <div className="card h-100 border-info">
+                      <div className="card-body p-2 text-center">
+                        <small className="text-muted d-block mb-1" style={{ fontSize: '0.75rem' }}>Lote actual</small>
+                        <h5 className="mb-0" style={{ fontSize: '1rem' }}>{calendarioParaReasignacion?.lote_asignado || 'Sin asignar'}</h5>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-fill">
+                    <div className="card h-100 border-success">
+                      <div className="card-body p-2 text-center">
+                        <small className="text-muted d-block mb-1" style={{ fontSize: '0.75rem' }}>Cantidad requerida</small>
+                        <h3 className="mb-0 text-primary" style={{ fontSize: '1.4rem' }}>{calendarioParaReasignacion?.cantidad_dosis?.toLocaleString()} dosis</h3>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones de modo */}
+                <div className="btn-group mb-3 w-100 shadow-sm" role="group" style={{ height: '45px' }}>
+                  <button
+                    type="button"
+                    className={`btn btn-lg ${modoSeleccion === 'simple' ? 'btn-dark' : 'btn-outline-dark'}`}
+                    style={{ fontSize: '0.95rem' }}
+                    onClick={() => {
+                      setModoSeleccion('simple');
+                      setLotesSeleccionados([]);
+                    }}
+                  >
+                    <FaBoxOpen className="me-2" size={16} />
+                    Lote Único
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-lg ${modoSeleccion === 'multiple' ? 'btn-dark' : 'btn-outline-dark'}`}
+                    style={{ fontSize: '0.95rem' }}
+                    onClick={() => {
+                      setModoSeleccion('multiple');
+                      setStockSeleccionado(null);
+                    }}
+                  >
+                    <FaPlus className="me-2" size={16} />
+                    Múltiples Lotes
+                  </button>
                 </div>
 
                 {loadingStocks ? (
-                  <div className="text-center py-4">
-                    <div className="spinner-border" role="status">
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
                       <span className="visually-hidden">Cargando stocks...</span>
                     </div>
-                    <p className="mt-2">Cargando stocks disponibles...</p>
+                    <p className="mt-3 text-muted">Cargando stocks disponibles...</p>
                   </div>
                 ) : stocksDisponibles.length === 0 ? (
-                  <div className="alert alert-warning">
-                    <FaExclamationTriangle className="me-2" />
-                    No hay stocks disponibles para esta vacuna con vencimiento posterior a la fecha de aplicación.
+                  <div className="alert alert-warning d-flex align-items-center" role="alert">
+                    <FaExclamationTriangle className="me-3" size={24} />
+                    <div>
+                      <strong>No hay stocks disponibles</strong>
+                      <p className="mb-0 mt-1">No se encontraron lotes para esta vacuna con vencimiento posterior a la fecha de aplicación.</p>
+                    </div>
                   </div>
                 ) : (
                   <div>
-                    <h6>Stocks Disponibles:</h6>
-                    <div className="table-responsive">
-                      <table className="table table-sm table-hover">
-                        <thead>
+                    {/* Header de la tabla */}
+                    <div className="d-flex align-items-center justify-content-between mb-3 p-3 bg-light rounded">
+                      <h5 className="mb-0">
+                        <FaBoxes className="me-2 text-primary" />
+                        Lotes Disponibles <span className="badge bg-primary ms-2">{stocksDisponibles.length}</span>
+                      </h5>
+                      <span className="badge bg-success fs-6 px-3 py-2">
+                        Total: {stocksDisponibles.reduce((sum, s) => sum + s.stock_actual, 0).toLocaleString()} dosis
+                      </span>
+                    </div>
+
+                    {/* Tabla con diseño mejorado */}
+                    <div style={{ 
+                      maxHeight: '500px', 
+                      overflowY: 'auto', 
+                      border: '2px solid #dee2e6', 
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                      fontSize: '0.85rem'
+                    }}>
+                      <table className="table table-hover mb-0" style={{ fontSize: '0.85rem', tableLayout: 'fixed', width: '100%' }}>
+                        <thead style={{ 
+                          position: 'sticky', 
+                          top: 0, 
+                          zIndex: 10, 
+                          backgroundColor: '#343a40',
+                          color: 'white',
+                          fontSize: '0.85rem'
+                        }}>
                           <tr>
-                            <th>Seleccionar</th>
-                            <th>Lote</th>
-                            <th>Vencimiento</th>
-                            <th>Stock Disponible</th>
-                            <th>Ubicación</th>
-                            <th>Días hasta venc.</th>
+                            <th style={{ width: '5%', textAlign: 'center', padding: '0.6rem' }}>
+                              {modoSeleccion === 'simple' ? (
+                                <FaCircle size={14} />
+                              ) : (
+                                <FaCheckSquare size={16} />
+                              )}
+                            </th>
+                            <th style={{ padding: '0.5rem 0.75rem', width: '20%' }}>
+                              <FaBarcode className="me-2" size={16} />
+                              Lote
+                            </th>
+                            <th style={{ padding: '0.5rem 0.75rem', width: '18%' }}>
+                              <FaCalendarAlt className="me-2" size={16} />
+                              Vencimiento
+                            </th>
+                            <th className="text-center" style={{ padding: '0.5rem 0.75rem', width: '15%' }}>
+                              <FaBoxOpen className="me-2" size={16} />
+                              Stock
+                            </th>
+                            <th style={{ padding: '0.5rem 0.75rem', width: modoSeleccion === 'multiple' ? '27%' : '42%' }}>
+                              <FaMapMarkerAlt className="me-2" size={16} />
+                              Ubicación
+                            </th>
+                            {modoSeleccion === 'multiple' && (
+                              <th style={{ width: '15%', padding: '0.5rem 0.75rem' }}>
+                                <FaEdit className="me-2" size={16} />
+                                Cantidad
+                              </th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
-                          {stocksDisponibles.map((stock) => (
-                            <tr 
-                              key={stock.id_stock_vacuna}
-                              className={stockSeleccionado?.id_stock_vacuna === stock.id_stock_vacuna ? 'table-active' : ''}
-                            >
-                              <td>
-                                <input
-                                  type="radio"
-                                  name="stockSelector"
-                                  value={stock.id_stock_vacuna}
-                                  checked={stockSeleccionado?.id_stock_vacuna === stock.id_stock_vacuna}
-                                  onChange={() => setStockSeleccionado(stock)}
-                                  disabled={stock.stock_actual < calendarioParaReasignacion?.cantidad_dosis}
-                                />
-                              </td>
-                              <td>
-                                <strong>{stock.lote}</strong>
-                                {stock.stock_actual < calendarioParaReasignacion?.cantidad_dosis && (
-                                  <span className="badge bg-warning ms-2">Insuficiente</span>
+                          {stocksDisponibles.map((stock) => {
+                            const estaSeleccionadoMultiple = lotesSeleccionados.find(l => l.id_stock_vacuna === stock.id_stock_vacuna);
+                            const cantidadSeleccionada = estaSeleccionadoMultiple?.cantidad || 0;
+                            const esInsuficiente = stock.stock_actual < calendarioParaReasignacion?.cantidad_dosis;
+                            
+                            return (
+                              <tr 
+                                key={stock.id_stock_vacuna}
+                                className={
+                                  modoSeleccion === 'simple' && stockSeleccionado?.id_stock_vacuna === stock.id_stock_vacuna 
+                                    ? 'table-active' 
+                                    : estaSeleccionadoMultiple 
+                                    ? 'table-success' 
+                                    : ''
+                                }
+                                style={{ 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={() => {
+                                  if (modoSeleccion === 'simple' && !esInsuficiente) {
+                                    setStockSeleccionado(stock);
+                                  }
+                                }}
+                              >
+                                <td className="text-center" style={{ padding: '0.5rem 0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                                  {modoSeleccion === 'simple' ? (
+                                    <input
+                                      type="radio"
+                                      name="stockSelector"
+                                      className="form-check-input"
+                                      style={{ 
+                                        cursor: esInsuficiente ? 'not-allowed' : 'pointer',
+                                        width: '20px',
+                                        height: '20px'
+                                      }}
+                                      value={stock.id_stock_vacuna}
+                                      checked={stockSeleccionado?.id_stock_vacuna === stock.id_stock_vacuna}
+                                      onChange={() => setStockSeleccionado(stock)}
+                                      disabled={esInsuficiente}
+                                    />
+                                  ) : (
+                                    <input
+                                      type="checkbox"
+                                      className="form-check-input"
+                                      style={{ 
+                                        cursor: stock.stock_actual === 0 ? 'not-allowed' : 'pointer',
+                                        width: '20px',
+                                        height: '20px'
+                                      }}
+                                      checked={!!estaSeleccionadoMultiple}
+                                      onChange={() => handleToggleLoteMultiple(stock)}
+                                      disabled={stock.stock_actual === 0}
+                                    />
+                                  )}
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                  <div>
+                                    <strong style={{ fontSize: '0.9rem' }}>{stock.lote}</strong>
+                                    {modoSeleccion === 'simple' && esInsuficiente && (
+                                      <span className="badge bg-warning text-dark ms-2" style={{ fontSize: '0.75rem' }}>
+                                        <FaExclamationTriangle size={10} className="me-1" />
+                                        Insuficiente
+                                      </span>
+                                    )}
+                                  </div>
+                                  {stock.vacuna_codigo && (
+                                    <small className="text-muted d-block mt-1">Código: {stock.vacuna_codigo}</small>
+                                  )}
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                  <div>
+                                    <div className="mb-1">{formatearFecha(stock.fecha_vencimiento)}</div>
+                                    {stock.dias_hasta_vencimiento !== undefined && (
+                                      <span className={`badge ${
+                                        stock.dias_hasta_vencimiento < 30 ? 'bg-danger' : 
+                                        stock.dias_hasta_vencimiento < 90 ? 'bg-warning text-dark' : 
+                                        'bg-success'
+                                      }`} style={{ fontSize: '0.75rem' }}>
+                                        {stock.dias_hasta_vencimiento} días
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="text-center" style={{ padding: '0.5rem 0.75rem' }}>
+                                  <div>
+                                    <span className={`badge d-block mb-2 ${
+                                      stock.stock_actual >= calendarioParaReasignacion?.cantidad_dosis 
+                                        ? 'bg-success' 
+                                        : stock.stock_actual > 0 
+                                        ? 'bg-warning text-dark' 
+                                        : 'bg-danger'
+                                    }`} style={{ fontSize: '1.1rem', padding: '8px 12px' }}>
+                                      {stock.stock_actual.toLocaleString()}
+                                    </span>
+                                    {stock.stock_reservado > 0 && (
+                                      <small className="text-muted d-block">
+                                        <FaLock size={10} className="me-1" />
+                                        {stock.stock_reservado} reservado
+                                      </small>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>
+                                  <div className="d-flex align-items-center">
+                                    {stock.ubicacion_fisica ? (
+                                      <>
+                                        <FaWarehouse className="me-2 text-muted" size={16} />
+                                        <span>{stock.ubicacion_fisica}</span>
+                                      </>
+                                    ) : (
+                                      <span className="text-muted fst-italic">Sin ubicación</span>
+                                    )}
+                                  </div>
+                                </td>
+                                {modoSeleccion === 'multiple' && (
+                                  <td style={{ padding: '0.5rem 0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                                    {estaSeleccionadoMultiple ? (
+                                      <input
+                                        type="number"
+                                        className="form-control"
+                                        min="1"
+                                        max={stock.stock_actual}
+                                        value={cantidadSeleccionada}
+                                        onChange={(e) => handleCambiarCantidadLote(stock.id_stock_vacuna, e.target.value)}
+                                        style={{ fontSize: '1rem', padding: '8px' }}
+                                      />
+                                    ) : (
+                                      <span className="text-muted text-center d-block">-</span>
+                                    )}
+                                  </td>
                                 )}
-                              </td>
-                              <td>{formatearFecha(stock.fecha_vencimiento)}</td>
-                              <td>
-                                <span className={`badge ${stock.stock_actual >= calendarioParaReasignacion?.cantidad_dosis ? 'bg-success' : 'bg-danger'}`}>
-                                  {stock.stock_actual}
-                                </span>
-                              </td>
-                              <td>{stock.ubicacion_fisica || '-'}</td>
-                              <td>
-                                <span className={`badge ${stock.dias_hasta_vencimiento < 30 ? 'bg-warning' : 'bg-info'}`}>
-                                  {stock.dias_hasta_vencimiento} días
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                     
-                    {stocksDisponibles.some(s => s.stock_actual < calendarioParaReasignacion?.cantidad_dosis) && (
-                      <div className="alert alert-info mt-3">
-                        <FaInfoCircle className="me-2" />
-                        Los lotes marcados como "Insuficiente" no tienen la cantidad completa requerida. 
-                        Use la opción "Asignar múltiples lotes" para combinar varios lotes.
+                    {modoSeleccion === 'simple' && stocksDisponibles.some(s => s.stock_actual < calendarioParaReasignacion?.cantidad_dosis) && (
+                      <div className="alert alert-info mt-4 d-flex align-items-start shadow-sm" role="alert" style={{ borderLeft: '4px solid #0dcaf0' }}>
+                        <FaInfoCircle className="me-3 mt-1" size={24} />
+                        <div>
+                          <h6 className="alert-heading">Lotes con stock insuficiente</h6>
+                          <p className="mb-0">
+                            Algunos lotes no tienen la cantidad completa requerida ({calendarioParaReasignacion?.cantidad_dosis.toLocaleString()} dosis). 
+                            Cambie a <strong>"Múltiples Lotes"</strong> para combinar varios lotes y completar la cantidad necesaria.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {modoSeleccion === 'multiple' && lotesSeleccionados.length > 0 && (
+                      <div className="card mt-4 shadow-sm" style={{ borderLeft: '4px solid #198754' }}>
+                        <div className="card-header bg-success text-white d-flex align-items-center justify-content-between" style={{ padding: '1rem 1.5rem' }}>
+                          <h6 className="mb-0">
+                            <FaCheckCircle className="me-2" />
+                            Resumen de Selección
+                          </h6>
+                          <span className="badge bg-light text-success fs-6">
+                            {lotesSeleccionados.length} lote{lotesSeleccionados.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="card-body" style={{ padding: '1.5rem' }}>
+                          <div className="row g-3 mb-3">
+                            <div className="col-6">
+                              <div className="p-3 bg-light rounded text-center">
+                                <small className="text-muted d-block mb-1">Requerido</small>
+                                <h4 className="mb-0 text-primary">{calendarioParaReasignacion?.cantidad_dosis.toLocaleString()}</h4>
+                                <small className="text-muted">dosis</small>
+                              </div>
+                            </div>
+                            <div className="col-6">
+                              <div className={`p-3 rounded text-center ${
+                                lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0) >= calendarioParaReasignacion?.cantidad_dosis 
+                                  ? 'bg-success text-white' 
+                                  : 'bg-warning'
+                              }`}>
+                                <small className={`d-block mb-1 ${
+                                  lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0) >= calendarioParaReasignacion?.cantidad_dosis 
+                                    ? 'text-white' 
+                                    : 'text-dark'
+                                }`}>Seleccionado</small>
+                                <h4 className="mb-0">{lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0).toLocaleString()}</h4>
+                                <small className={
+                                  lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0) >= calendarioParaReasignacion?.cantidad_dosis 
+                                    ? 'text-white' 
+                                    : 'text-dark'
+                                }>dosis</small>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <hr />
+                          
+                          <h6 className="mb-3">Detalle de lotes:</h6>
+                          <div className="row g-2">
+                            {lotesSeleccionados.map(lote => (
+                              <div key={lote.id_stock_vacuna} className="col-12">
+                                <div className={`p-3 rounded border ${lote.cantidad > lote.stock_disponible ? 'border-danger bg-danger bg-opacity-10' : 'border-success bg-success bg-opacity-10'}`}>
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <div className="d-flex align-items-center">
+                                      <FaBoxOpen className={`me-2 ${lote.cantidad > lote.stock_disponible ? 'text-danger' : 'text-success'}`} size={20} />
+                                      <div>
+                                        <strong className="d-block">{lote.lote}</strong>
+                                        <small className="text-muted">Disponible: {lote.stock_disponible} dosis</small>
+                                      </div>
+                                    </div>
+                                    <span className={`badge fs-5 ${lote.cantidad > lote.stock_disponible ? 'bg-danger' : 'bg-success'}`}>
+                                      {lote.cantidad.toLocaleString()} dosis
+                                    </span>
+                                  </div>
+                                  {lote.cantidad > lote.stock_disponible && (
+                                    <div className="alert alert-danger mt-2 mb-0 py-2 d-flex align-items-center">
+                                      <FaExclamationTriangle size={14} className="me-2" />
+                                      <small className="mb-0">
+                                        <strong>Excede stock disponible</strong> por {(lote.cantidad - lote.stock_disponible).toLocaleString()} dosis
+                                      </small>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0) < calendarioParaReasignacion?.cantidad_dosis && (
+                            <div className="alert alert-warning mt-3 mb-0 d-flex align-items-center">
+                              <FaExclamationTriangle className="me-2" size={20} />
+                              <div>
+                                <strong>Cantidad incompleta</strong>
+                                <p className="mb-0 mt-1">
+                                  Faltan <strong>{(calendarioParaReasignacion?.cantidad_dosis - lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0)).toLocaleString()} dosis</strong> para completar la cantidad requerida
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1943,6 +2377,7 @@ const CalendarioVacunacion = () => {
                   onClick={() => {
                     setShowReasignacionModal(false);
                     setStockSeleccionado(null);
+                    setLotesSeleccionados([]);
                   }}
                   disabled={realizandoReasignacion}
                 >
@@ -1953,7 +2388,12 @@ const CalendarioVacunacion = () => {
                     type="button"
                     className="btn btn-primary"
                     onClick={handleAsignarLoteManual}
-                    disabled={!stockSeleccionado || realizandoReasignacion}
+                    disabled={
+                      realizandoReasignacion || 
+                      (modoSeleccion === 'simple' && !stockSeleccionado) ||
+                      (modoSeleccion === 'multiple' && (lotesSeleccionados.length === 0 || 
+                        lotesSeleccionados.reduce((sum, l) => sum + l.cantidad, 0) < calendarioParaReasignacion?.cantidad_dosis))
+                    }
                   >
                     {realizandoReasignacion ? (
                       <>
@@ -1963,7 +2403,7 @@ const CalendarioVacunacion = () => {
                     ) : (
                       <>
                         <FaCheck className="me-2" />
-                        Asignar Lote Seleccionado
+                        {modoSeleccion === 'simple' ? 'Asignar Lote' : `Asignar ${lotesSeleccionados.length} Lote(s)`}
                       </>
                     )}
                   </button>
@@ -1972,6 +2412,7 @@ const CalendarioVacunacion = () => {
             </div>
           </div>
         </div>
+        </>
       )}
 
       {/* Modal de Alertas de Stock */}
@@ -2034,12 +2475,11 @@ const CalendarioVacunacion = () => {
         }}
         realizandoReasignacion={realizandoReasignacion}
         onReasignarAutomatico={handleReasignarAutomatico}
-        onAsignarManual={handleAbrirReasignacion}
-        onAsignarMultiples={handleAsignarMultiplesLotes}
+        onAsignarManual={(item) => handleAbrirReasignacion(item, 'simple')}
+        onAsignarMultiples={(item) => handleAbrirReasignacion(item, 'multiple')}
         onVerStocks={(item) => {
-          // TODO: Implementar vista de stocks disponibles
-          console.log('Ver stocks para:', item);
-          showWarning('Función "Ver stocks disponibles" en desarrollo');
+          // Abrir el modal de reasignación en modo vista
+          handleAbrirReasignacion(item, 'simple');
         }}
       />
     </div>

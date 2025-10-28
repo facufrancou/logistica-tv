@@ -1,12 +1,20 @@
 /* Estilos profesionales para FormularioVacuna - Mejoras estéticas */
 
-/* Fix para modales centrados y bien dimensionados */
+/* Fix para modales adaptados a la pantalla con scroll interno */
 .vacuna-modal-enhanced {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   min-height: 100vh;
+  max-height: 100vh;
   padding: 1rem;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1050;
 }
 
 .vacuna-modal-enhanced .modal-dialog {
@@ -14,18 +22,31 @@
   width: 80% !important;
   max-width: 80% !important;
   min-width: 800px !important;
+  height: calc(100vh - 2rem);
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Asegurar que el contenido use todo el ancho disponible */
 .vacuna-modal-enhanced .modal-content {
   width: 100% !important;
   max-width: 100% !important;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* Optimizar uso del espacio en el formulario */
+/* Modal body con scroll interno */
 .vacuna-modal-enhanced .modal-body {
   padding: 1.5rem !important;
   max-width: 100% !important;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  max-height: 100%;
 }
 
 .vacuna-modal-enhanced .form-section-enhanced {
@@ -53,14 +74,22 @@
     width: 95% !important;
     max-width: 95% !important;
     min-width: auto !important;
+    height: calc(100vh - 1rem);
+    max-height: calc(100vh - 1rem);
   }
 }
 
 @media (max-width: 768px) {
+  .vacuna-modal-enhanced {
+    padding: 0.5rem;
+  }
+  
   .vacuna-modal-enhanced .modal-dialog {
     width: 98% !important;
     max-width: 98% !important;
     min-width: auto !important;
+    height: calc(100vh - 1rem);
+    max-height: calc(100vh - 1rem);
   }
   
   .vacuna-modal-enhanced .modal-body {
@@ -76,12 +105,15 @@
   overflow: hidden;
 }
 
+/* Header fijo */
 .vacuna-modal-enhanced .modal-header {
   background: var(--color-principal);
   color: white;
   border-bottom: 1px solid #dee2e6;
   padding: 1.25rem 1.5rem;
   position: relative;
+  flex-shrink: 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .vacuna-modal-enhanced .modal-header::before {
@@ -102,13 +134,39 @@
 
 .vacuna-modal-enhanced .modal-header .close {
   color: white !important;
-  opacity: 0.8;
-  font-size: 1.5rem;
+  opacity: 1;
+  font-size: 1.8rem;
+  font-weight: 300;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  padding: 0;
+  margin: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .vacuna-modal-enhanced .modal-header .close:hover {
   color: white !important;
   opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.vacuna-modal-enhanced .modal-header .close:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.vacuna-modal-enhanced .modal-header .close:active {
+  transform: rotate(90deg) scale(0.95);
 }
 
 .vacuna-modal-enhanced .modal-header i,
@@ -117,9 +175,24 @@
   color: white !important;
 }
 
+/* Body con scroll */
 .vacuna-modal-enhanced .modal-body {
   padding: 2rem 1.5rem;
   background: #fbfbfb;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  max-height: 100%;
+}
+
+/* Footer fijo */
+.vacuna-modal-enhanced .modal-footer {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #dee2e6;
+  padding: 1.25rem 1.5rem;
+  flex-shrink: 0;
+  border-radius: 0 0 12px 12px;
 }
 
 /* Secciones profesionales con acordeón */
@@ -178,9 +251,10 @@
 }
 
 .section-content-enhanced.active {
-  max-height: 1000px;
+  max-height: none;
   opacity: 1;
   padding: 1.5rem;
+  overflow: visible;
 }
 
 /* Indicador de acordeón */
@@ -406,13 +480,6 @@
   color: #721c24;
 }
 
-/* Footer mejorado */
-.vacuna-modal-enhanced .modal-footer {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-top: 1px solid #dee2e6;
-  padding: 1.25rem 1.5rem;
-}
-
 .btn-enhanced {
   border-radius: 8px;
   padding: 0.6rem 1.5rem;
@@ -548,4 +615,94 @@
 .text-required {
   color: #dc3545;
   font-weight: 700;
+}
+
+/* Asegurar scroll suave y correcto */
+.vacuna-modal-enhanced .modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: #007bff transparent;
+}
+
+.vacuna-modal-enhanced .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vacuna-modal-enhanced .modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vacuna-modal-enhanced .modal-body::-webkit-scrollbar-thumb {
+  background-color: #007bff;
+  border-radius: 3px;
+}
+
+.vacuna-modal-enhanced .modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: #0056b3;
+}
+
+/* Asegurar que el modal dialog tenga la altura correcta */
+.vacuna-modal-enhanced .modal-dialog {
+  position: relative !important;
+  margin: 0 auto !important;
+  z-index: 1051;
+}
+
+/* Asegurar que el contenido del modal sea interactivo */
+.vacuna-modal-enhanced .modal-content {
+  pointer-events: auto;
+  z-index: 1052;
+}
+
+/* Evitar que el fondo interfiera con los clics */
+.vacuna-modal-enhanced {
+  pointer-events: auto;
+}
+/* Estilos para modo solo lectura (ver) */
+.form-control-enhanced:disabled,
+.custom-control-input:disabled ~ .custom-control-label {
+  opacity: 0.8;
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.form-control-enhanced:disabled {
+  color: #495057;
+  border-color: #e9ecef;
+}
+
+.btn-add-enhanced:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-add-enhanced:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Información adicional en modo ver */
+.info-adicional-ver {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.info-adicional-ver small {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.info-adicional-ver small:last-child {
+  margin-bottom: 0;
+}
+
+.info-adicional-ver i {
+  color: #6c757d;
+  margin-right: 0.5rem;
+}
+
+.info-adicional-ver strong {
+  color: #495057;
 }

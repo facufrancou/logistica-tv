@@ -58,7 +58,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
   // Efectos para cargar catálogos
   useEffect(() => {
     cargarCatalogos();
-    if (vacuna && modo === "editar") {
+    if (vacuna && (modo === "editar" || modo === "ver")) {
       setFormData({
         codigo: vacuna.codigo || "",
         nombre: vacuna.nombre || "",
@@ -227,13 +227,13 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
   return (
     <>
       {/* Modal principal */}
-      <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-        <div className="modal-dialog modal-xl modal-dialog-centered vacuna-modal-enhanced" style={{ maxWidth: '80%', width: '80%', minWidth: '800px' }}>
+      <div className="modal show d-block vacuna-modal-enhanced" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog modal-xl" style={{ maxWidth: '80%', width: '80%', minWidth: '800px' }}>
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">
-                <i className={`fas ${modo === "crear" ? "fa-plus-circle" : "fa-edit"} mr-2`}></i>
-                {modo === "crear" ? "Nueva Vacuna" : "Editar Vacuna"}
+                <i className={`fas ${modo === "crear" ? "fa-plus-circle" : modo === "ver" ? "fa-eye" : "fa-edit"} mr-2`}></i>
+                {modo === "crear" ? "Nueva Vacuna" : modo === "ver" ? "Detalle de Vacuna" : "Editar Vacuna"}
               </h5>
               <button
                 type="button"
@@ -244,8 +244,8 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
+            <div className="modal-body">
+              <form onSubmit={handleSubmit} id="vacuna-form">
                 {/* Mensaje de éxito */}
                 {success && (
                   <div className="alert-enhanced alert-success-enhanced" role="alert">
@@ -293,6 +293,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                           value={formData.codigo}
                           onChange={(e) => handleChange("codigo", e.target.value)}
                           placeholder="Ej: VAC001"
+                          disabled={modo === "ver"}
                         />
                         {errors.codigo && <div className="invalid-feedback">{errors.codigo}</div>}
                       </div>
@@ -315,6 +316,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                             value={formData.precio_lista}
                             onChange={(e) => handleChange("precio_lista", e.target.value)}
                             placeholder="0.00"
+                            disabled={modo === "ver"}
                           />
                         </div>
                         {errors.precio_lista && <div className="invalid-feedback">{errors.precio_lista}</div>}
@@ -333,6 +335,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                       value={formData.nombre}
                       onChange={(e) => handleChange("nombre", e.target.value)}
                       placeholder="Nombre comercial de la vacuna"
+                      disabled={modo === "ver"}
                     />
                     {errors.nombre && <div className="invalid-feedback">{errors.nombre}</div>}
                   </div>
@@ -348,6 +351,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                       value={formData.detalle}
                       onChange={(e) => handleChange("detalle", e.target.value)}
                       placeholder="Descripción detallada de la vacuna, composición, indicaciones..."
+                      disabled={modo === "ver"}
                     />
                   </div>
 
@@ -363,12 +367,35 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                         id="vacunaActiva"
                         checked={formData.activa}
                         onChange={(e) => handleChange("activa", e.target.checked)}
+                        disabled={modo === "ver"}
                       />
                       <label className="custom-control-label" htmlFor="vacunaActiva">
                         {formData.activa ? "Vacuna activa" : "Vacuna inactiva"}
                       </label>
                     </div>
                   </div>
+                  
+                  {/* Información adicional en modo ver */}
+                  {modo === "ver" && vacuna?.created_at && (
+                    <div className="mt-3 pt-3 border-top">
+                      <div className="row">
+                        <div className="col-md-6">
+                          <small className="text-muted">
+                            <i className="fas fa-calendar-plus mr-2"></i>
+                            <strong>Creado:</strong> {new Date(vacuna.created_at).toLocaleString('es-AR')}
+                          </small>
+                        </div>
+                        {vacuna.updated_at && (
+                          <div className="col-md-6">
+                            <small className="text-muted">
+                              <i className="fas fa-calendar-check mr-2"></i>
+                              <strong>Última actualización:</strong> {new Date(vacuna.updated_at).toLocaleString('es-AR')}
+                            </small>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                     </div>
                 </div>
 
@@ -399,6 +426,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                       className={`form-control form-control-enhanced ${errors.id_proveedor ? 'is-invalid' : ''}`}
                       value={formData.id_proveedor}
                       onChange={(e) => handleChange("id_proveedor", e.target.value)}
+                      disabled={modo === "ver"}
                     >
                       <option value="">Seleccionar proveedor/laboratorio</option>
                       {proveedores.map(prov => (
@@ -441,6 +469,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                             className="form-control form-control-enhanced"
                             value={formData.id_patologia}
                             onChange={(e) => handleChange("id_patologia", e.target.value)}
+                            disabled={modo === "ver"}
                           >
                             <option value="">Seleccionar patología</option>
                             {patologias.map(pat => (
@@ -455,6 +484,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                               className="btn btn-add-enhanced"
                               onClick={() => setMostrarCrearPatologia(true)}
                               title="Crear nueva patología"
+                              disabled={modo === "ver"}
                             >
                               <i className="fas fa-plus"></i>
                             </button>
@@ -474,6 +504,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                             className="form-control form-control-enhanced"
                             value={formData.id_presentacion}
                             onChange={(e) => handleChange("id_presentacion", e.target.value)}
+                            disabled={modo === "ver"}
                           >
                             <option value="">Seleccionar presentación</option>
                             {presentaciones.map(pres => (
@@ -488,6 +519,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                               className="btn btn-add-enhanced"
                               onClick={() => setMostrarCrearPresentacion(true)}
                               title="Crear nueva presentación"
+                              disabled={modo === "ver"}
                             >
                               <i className="fas fa-plus"></i>
                             </button>
@@ -507,6 +539,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                             className="form-control form-control-enhanced"
                             value={formData.id_via_aplicacion}
                             onChange={(e) => handleChange("id_via_aplicacion", e.target.value)}
+                            disabled={modo === "ver"}
                           >
                             <option value="">Seleccionar vía</option>
                             {viasAplicacion.map(via => (
@@ -521,6 +554,7 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                               className="btn btn-add-enhanced"
                               onClick={() => setMostrarCrearVia(true)}
                               title="Crear nueva vía de aplicación"
+                              disabled={modo === "ver"}
                             >
                               <i className="fas fa-plus"></i>
                             </button>
@@ -532,20 +566,23 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                   </div>
                   </div>
                 </div>
-              </div>
+              </form>
+            </div>
 
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-enhanced btn-secondary-enhanced"
-                  onClick={onClose}
-                  disabled={loading || success}
-                >
-                  <i className="fas fa-times mr-2"></i>
-                  Cancelar
-                </button>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-enhanced btn-secondary-enhanced"
+                onClick={onClose}
+                disabled={loading || success}
+              >
+                <i className="fas fa-times mr-2"></i>
+                {modo === "ver" ? "Cerrar" : "Cancelar"}
+              </button>
+              {modo !== "ver" && (
                 <button
                   type="submit"
+                  form="vacuna-form"
                   className={`btn btn-enhanced ${success ? 'btn-success-enhanced' : 'btn-dark-enhanced'}`}
                   disabled={loading || success}
                 >
@@ -566,8 +603,8 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
                     </>
                   )}
                 </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -613,9 +650,6 @@ function FormularioVacuna({ vacuna, onClose, onSave, modo = "crear" }) {
           onSave={(datos) => crearCatalogoRapido('via', datos)}
         />
       )}
-
-      {/* Backdrop */}
-      <div className="modal-backdrop show"></div>
     </>
   );
 }

@@ -3319,6 +3319,8 @@ const getCalendarioVacunacion = async (req, res) => {
 
         return {
           id_calendario: item.id_calendario,
+          id_producto: item.id_producto, // ID que puede ser vacuna o producto
+          id_vacuna: vacuna ? vacuna.id_vacuna : null, // ID específico de vacuna (si es vacuna)
           semana_aplicacion: item.numero_semana,
           fecha_aplicacion_programada: formatearFechaLocal(item.fecha_programada),
           vacuna_nombre: nombreItem,
@@ -3612,24 +3614,172 @@ exports.asignarMultiplesLotes = async (req, res) => {
 };
 
 /**
- * Obtener stocks disponibles para una vacuna específica
+ * Asignar múltiples lotes manualmente seleccionados por el usuario
  */
-exports.getStocksDisponibles = async (req, res) => {
-  const { id_vacuna, fecha_aplicacion } = req.query;
+exports.asignarMultiplesLotesManual = async (req, res) => {
+  const { id_calendario } = req.params;
+  const { lotes } = req.body;
 
   try {
-    if (!id_vacuna) {
+    // Validaciones
+    if (!lotes || !Array.isArray(lotes) || lotes.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere id_vacuna'
+        message: 'Se requiere un array de lotes con id_stock_vacuna y cantidad'
+      });
+    }
+
+    // Obtener información del calendario
+    const calendario = await prisma.calendarioVacunacion.findUnique({
+      where: { id_calendario: parseInt(id_calendario) },
+      include: {
+        producto: {
+          select: {
+            nombre: true
+          }
+        }
+      }
+    });
+
+    if (!calendario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Calendario no encontrado'
+      });
+    }
+
+    const cantidadTotal = lotes.reduce((sum, l) => sum + parseInt(l.cantidad), 0);
+    
+    if (cantidadTotal < calendario.cantidad_dosis) {
+      return res.status(400).json({
+        success: false,
+        message: `La cantidad total (${cantidadTotal}) es menor a la requerida (${calendario.cantidad_dosis})`
+      });
+    }
+
+    // Verificar disponibilidad de todos los lotes
+    for (const lote of lotes) {
+      const stock = await prisma.stockVacuna.findUnique({
+        where: { id_stock_vacuna: parseInt(lote.id_stock_vacuna) }
+      });
+
+      if (!stock) {
+        return res.status(404).json({
+          success: false,
+          message: `Lote con ID ${lote.id_stock_vacuna} no encontrado`
+        });
+      }
+
+      if (stock.stock_actual < lote.cantidad) {
+        return res.status(400).json({
+          success: false,
+          message: `Stock insuficiente en lote ${stock.lote}. Disponible: ${stock.stock_actual}, Solicitado: ${lote.cantidad}`
+        });
+      }
+    }
+
+    // Asignar los lotes
+    const resultados = [];
+    
+    for (let i = 0; i < lotes.length; i++) {
+      const lote = lotes[i];
+      const cantidad = parseInt(lote.cantidad);
+      
+      // Asignar el lote
+      const resultado = await asignarLoteManual(
+        parseInt(id_calendario),
+        parseInt(lote.id_stock_vacuna),
+        cantidad,
+        req.user?.id_usuario
+      );
+
+      resultados.push({
+        id_stock_vacuna: lote.id_stock_vacuna,
+        cantidad,
+        lote: resultado.lote
+      });
+
+      // Si no es el primer lote, crear un desdoblamiento
+      if (i > 0) {
+        // Crear registro de desdoblamiento o actualización
+        await prisma.calendarioVacunacion.update({
+          where: { id_calendario: parseInt(id_calendario) },
+          data: {
+            observaciones: calendario.observaciones 
+              ? `${calendario.observaciones}\nLotes múltiples asignados: ${resultados.map(r => r.lote).join(', ')}`
+              : `Lotes múltiples asignados: ${resultados.map(r => r.lote).join(', ')}`
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${lotes.length} lote(s) asignados correctamente`,
+      data: {
+        lotes_asignados: resultados.length,
+        cantidad_total: cantidadTotal,
+        lotes: resultados
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al asignar múltiples lotes manualmente:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al asignar múltiples lotes'
+    });
+  }
+};
+
+/**
+ * Obtener stocks disponibles para una vacuna específica
+ * IMPORTANTE: Solo busca en la tabla Vacuna, NO en Producto
+ * Acepta tanto id_vacuna como id_producto (para compatibilidad)
+ */
+exports.getStocksDisponibles = async (req, res) => {
+  const { id_vacuna, id_producto, fecha_aplicacion } = req.query;
+
+  try {
+    // Aceptar tanto id_vacuna como id_producto (el campo id_producto del calendario contiene IDs de vacuna)
+    const idVacuna = parseInt(id_vacuna || id_producto);
+    
+    if (!idVacuna || isNaN(idVacuna)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere id_vacuna o id_producto'
       });
     }
 
     const fechaAplicacion = fecha_aplicacion ? new Date(fecha_aplicacion) : new Date();
 
+    console.log('getStocksDisponibles - ID Vacuna recibido:', idVacuna);
+    console.log('getStocksDisponibles - Fecha aplicación:', fechaAplicacion);
+
+    // Verificar que la vacuna existe en la tabla Vacuna
+    const vacuna = await prisma.vacuna.findUnique({
+      where: { id_vacuna: idVacuna },
+      select: { 
+        id_vacuna: true,
+        nombre: true,
+        codigo: true
+      }
+    });
+    
+    if (!vacuna) {
+      console.error('Vacuna no encontrada con ID:', idVacuna);
+      return res.status(404).json({
+        success: false,
+        message: `No se encontró la vacuna con ID ${idVacuna}`
+      });
+    }
+
+    console.log('Vacuna encontrada:', vacuna);
+
+    // Buscar stocks disponibles SOLO de vacunas
     const stocks = await prisma.stockVacuna.findMany({
       where: {
-        id_vacuna: parseInt(id_vacuna),
+        id_vacuna: idVacuna,
         estado_stock: 'disponible',
         stock_actual: { gt: 0 },
         fecha_vencimiento: { gte: fechaAplicacion }
@@ -3646,6 +3796,11 @@ exports.getStocksDisponibles = async (req, res) => {
         fecha_vencimiento: 'asc'
       }
     });
+
+    console.log(`Stocks encontrados: ${stocks.length}`);
+    if (stocks.length > 0) {
+      console.log('Primer stock:', stocks[0]);
+    }
 
     // Formatear respuesta
     const stocksFormateados = stocks.map(stock => ({
