@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './FormularioNuevoLote.css';
 import './FormularioNuevoLote.css';
 
@@ -6,14 +6,15 @@ function FormularioNuevoLote({
   vacunas, 
   show, 
   onClose, 
-  onSubmit 
+  onSubmit,
+  vacunaPreseleccionada = null 
 }) {
   const [formData, setFormData] = useState({
-    id_vacuna: '',
+    id_vacuna: vacunaPreseleccionada?.id_vacuna?.toString() || '',
     lote: '',
     fecha_vencimiento: '',
-    stock_inicial: '',
-    stock_minimo: '',
+    stock_inicial_frascos: '',
+    stock_minimo_frascos: '',
     precio_compra: '',
     ubicacion_fisica: '',
     temperatura_req: '2-8°C',
@@ -22,6 +23,22 @@ function FormularioNuevoLote({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+
+  // Actualizar id_vacuna cuando cambie la vacuna preseleccionada
+  useEffect(() => {
+    if (vacunaPreseleccionada?.id_vacuna) {
+      setFormData(prev => ({
+        ...prev,
+        id_vacuna: vacunaPreseleccionada.id_vacuna.toString()
+      }));
+    }
+  }, [vacunaPreseleccionada]);
+
+  // Obtener información de la vacuna seleccionada
+  const vacunaSeleccionada = vacunas.find(v => v.id_vacuna === parseInt(formData.id_vacuna));
+  const dosisPorFrasco = vacunaSeleccionada?.presentacion?.dosis_por_frasco || 1;
+  const dosisCalculadas = parseInt(formData.stock_inicial_frascos || 0) * dosisPorFrasco;
+  const dosisMinimas = parseInt(formData.stock_minimo_frascos || 0) * dosisPorFrasco;
 
   // Generar código de lote automático con formato mejorado
   const generarCodigoLote = () => {
@@ -54,13 +71,13 @@ function FormularioNuevoLote({
     setErrors({});
     setSuccess(false);
     
-    if (!formData.id_vacuna || !formData.lote || !formData.fecha_vencimiento || !formData.stock_inicial) {
+    if (!formData.id_vacuna || !formData.lote || !formData.fecha_vencimiento || !formData.stock_inicial_frascos) {
       setErrors({ general: 'Por favor complete los campos obligatorios' });
       return;
     }
 
-    if (parseInt(formData.stock_inicial) <= 0) {
-      setErrors({ general: 'El stock inicial debe ser mayor a 0' });
+    if (parseInt(formData.stock_inicial_frascos) <= 0) {
+      setErrors({ general: 'El stock inicial debe ser mayor a 0 frascos' });
       return;
     }
 
@@ -71,12 +88,16 @@ function FormularioNuevoLote({
 
     setLoading(true);
     try {
+      // Convertir frascos a dosis para almacenar en la base de datos
+      const stockActualDosis = parseInt(formData.stock_inicial_frascos) * dosisPorFrasco;
+      const stockMinimoDosis = parseInt(formData.stock_minimo_frascos || 0) * dosisPorFrasco;
+
       await onSubmit({
         id_vacuna: parseInt(formData.id_vacuna),
         lote: formData.lote,
         fecha_vencimiento: formData.fecha_vencimiento,
-        stock_actual: parseInt(formData.stock_inicial),
-        stock_minimo: parseInt(formData.stock_minimo) || 0,
+        stock_actual: stockActualDosis,
+        stock_minimo: stockMinimoDosis,
         stock_reservado: 0,
         precio_compra: formData.precio_compra ? parseFloat(formData.precio_compra) : null,
         ubicacion_fisica: formData.ubicacion_fisica || null,
@@ -90,8 +111,8 @@ function FormularioNuevoLote({
         id_vacuna: '',
         lote: '',
         fecha_vencimiento: '',
-        stock_inicial: '',
-        stock_minimo: '',
+        stock_inicial_frascos: '',
+        stock_minimo_frascos: '',
         precio_compra: '',
         ubicacion_fisica: '',
         temperatura_req: '2-8°C',
@@ -168,6 +189,7 @@ function FormularioNuevoLote({
                       value={formData.id_vacuna}
                       onChange={(e) => setFormData({...formData, id_vacuna: e.target.value})}
                       required
+                      disabled={!!vacunaPreseleccionada}
                     >
                       <option value="">Seleccione una vacuna</option>
                       {vacunas.map(vacuna => (
@@ -176,6 +198,11 @@ function FormularioNuevoLote({
                         </option>
                       ))}
                     </select>
+                    {vacunaPreseleccionada && (
+                      <small className="form-text text-muted">
+                        <i className="fas fa-info-circle"></i> Vacuna preseleccionada: <strong>{vacunaPreseleccionada.vacuna_nombre}</strong>
+                      </small>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -234,28 +261,40 @@ function FormularioNuevoLote({
                   </div>
 
                   <div className="form-group">
-                    <label>Stock Inicial *</label>
+                    <label>Stock Inicial (Frascos) *</label>
                     <input
                       type="number"
                       className="form-control"
-                      value={formData.stock_inicial}
-                      onChange={(e) => setFormData({...formData, stock_inicial: e.target.value})}
+                      value={formData.stock_inicial_frascos}
+                      onChange={(e) => setFormData({...formData, stock_inicial_frascos: e.target.value})}
                       min="1"
-                      placeholder="Cantidad de dosis"
+                      placeholder="Cantidad de frascos"
                       required
                     />
+                    {formData.stock_inicial_frascos && formData.id_vacuna && (
+                      <small className="form-text text-info">
+                        <i className="fas fa-info-circle mr-1"></i>
+                        {formData.stock_inicial_frascos} frascos = <strong>{dosisCalculadas.toLocaleString()} dosis</strong>
+                        {dosisPorFrasco > 1 && ` (${dosisPorFrasco} dosis por frasco)`}
+                      </small>
+                    )}
                   </div>
 
                   <div className="form-group">
-                    <label>Stock Mínimo</label>
+                    <label>Stock Mínimo (Frascos)</label>
                     <input
                       type="number"
                       className="form-control"
-                      value={formData.stock_minimo}
-                      onChange={(e) => setFormData({...formData, stock_minimo: e.target.value})}
+                      value={formData.stock_minimo_frascos}
+                      onChange={(e) => setFormData({...formData, stock_minimo_frascos: e.target.value})}
                       min="0"
                       placeholder="Alerta cuando el stock baje de este nivel"
                     />
+                    {formData.stock_minimo_frascos && formData.id_vacuna && (
+                      <small className="form-text text-muted">
+                        {formData.stock_minimo_frascos} frascos = {dosisMinimas} dosis
+                      </small>
+                    )}
                   </div>
                 </div>
 
@@ -267,7 +306,7 @@ function FormularioNuevoLote({
                   </h6>
                   
                   <div className="form-group">
-                    <label>Precio de Compra</label>
+                    <label>Precio de Compra por Frasco</label>
                     <div className="input-group">
                       <div className="input-group-prepend">
                         <span className="input-group-text">$</span>
@@ -283,7 +322,7 @@ function FormularioNuevoLote({
                       />
                     </div>
                     <small className="form-text text-muted">
-                      Precio por dosis para control de costos
+                      Precio unitario por frasco completo para control de costos
                     </small>
                   </div>
 

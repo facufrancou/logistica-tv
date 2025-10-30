@@ -8,6 +8,7 @@ router.get('/', validarSesion, stockVacunasController.getStockVacunas);
 router.get('/alertas', validarSesion, stockVacunasController.getAlertas);
 router.get('/vacuna/:id_vacuna', validarSesion, stockVacunasController.getStockByVacuna);
 router.get('/:id/movimientos', validarSesion, stockVacunasController.getMovimientosStockVacuna);
+router.get('/:id/reservas', validarSesion, stockVacunasController.getReservasLote);
 router.post('/', validarSesion, stockVacunasController.createStockVacuna);
 router.put('/:id', validarSesion, stockVacunasController.updateStockVacuna);
 

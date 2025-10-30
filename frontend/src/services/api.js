@@ -547,6 +547,9 @@ export const getMovimientosStockVacuna = (idStock, params = {}) => {
   return fetchConSesion(`${API}/stock-vacunas/${idStock}/movimientos${queryString ? `?${queryString}` : ''}`);
 };
 
+export const getReservasLote = (idStock) => 
+  fetchConSesion(`${API}/stock-vacunas/${idStock}/reservas`);
+
 export const crearStockVacuna = async (stock) => {
   try {
     const res = await fetch(`${API}/stock-vacunas`, {

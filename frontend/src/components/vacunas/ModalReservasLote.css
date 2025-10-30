@@ -1,0 +1,165 @@
+/* Estilos para el Modal de Reservas de Lote */
+
+/* Backdrop del modal */
+.modal-backdrop-reservas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* Contenedor del modal */
+.modal-reservas-container {
+  width: 80%;
+  max-width: 1400px;
+  min-width: 800px;
+  margin: auto;
+  position: relative;
+}
+
+/* Contenido del modal */
+.modal-reservas-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+/* Header del modal */
+.modal-reservas-content .modal-header {
+  flex-shrink: 0;
+}
+
+/* Body del modal */
+.modal-reservas-content .modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+/* Footer del modal */
+.modal-reservas-content .modal-footer {
+  flex-shrink: 0;
+}
+
+.modal-reservas-content .cotizaciones-list {
+  max-height: none;
+}
+
+.modal-reservas-content .card {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease-in-out;
+  margin-bottom: 1rem;
+}
+
+.modal-reservas-content .card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+.modal-reservas-content .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 500;
+  padding: 1rem 1.25rem;
+}
+
+.modal-reservas-content .card-body {
+  padding: 1.25rem;
+}
+
+.modal-reservas-content .table-responsive {
+  max-height: none;
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.modal-reservas-content .badge {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+}
+
+.modal-reservas-content .table {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.modal-reservas-content .table th {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.75rem;
+  font-weight: 600;
+}
+
+.modal-reservas-content .table td {
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
+.modal-reservas-content .row {
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+.modal-reservas-content .row > div {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.modal-reservas-content .alert-info {
+  background-color: #e7f3ff;
+  border-color: #b3d9ff;
+  color: #004085;
+}
+
+.modal-reservas-content small {
+  font-size: 0.8rem;
+}
+
+/* Scrollbar personalizada */
+.modal-reservas-content .cotizaciones-list::-webkit-scrollbar,
+.modal-reservas-content .table-responsive::-webkit-scrollbar,
+.modal-reservas-content .modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-reservas-content .cotizaciones-list::-webkit-scrollbar-track,
+.modal-reservas-content .table-responsive::-webkit-scrollbar-track,
+.modal-reservas-content .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.modal-reservas-content .cotizaciones-list::-webkit-scrollbar-thumb,
+.modal-reservas-content .table-responsive::-webkit-scrollbar-thumb,
+.modal-reservas-content .modal-body::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.modal-reservas-content .cotizaciones-list::-webkit-scrollbar-thumb:hover,
+.modal-reservas-content .table-responsive::-webkit-scrollbar-thumb:hover,
+.modal-reservas-content .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .modal-reservas-container {
+    width: 95%;
+    min-width: auto;
+  }
+}

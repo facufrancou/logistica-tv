@@ -1091,6 +1091,7 @@ model Presentacion {
   nombre          String   @db.VarChar(100)
   descripcion     String?  @db.Text
   unidad_medida   String?  @db.VarChar(50)
+  dosis_por_frasco Int?    @default(1)  // Cantidad de dosis que contiene cada frasco
   activa          Boolean  @default(true)
   created_at      DateTime @default(now()) @db.DateTime(0)
   updated_at      DateTime @updatedAt @db.DateTime(0)

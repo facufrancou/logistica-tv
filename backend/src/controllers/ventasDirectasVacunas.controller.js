@@ -84,7 +84,13 @@ exports.getStocksDisponibles = async (req, res) => {
       const today = new Date();
       const fechaVencimiento = new Date(stock.fecha_vencimiento);
       const diasHastaVencimiento = Math.ceil((fechaVencimiento - today) / (1000 * 60 * 60 * 24));
-      const stockDisponible = stock.stock_actual - stock.stock_reservado;
+      
+      // Calcular en dosis
+      const dosisDisponibles = stock.stock_actual - stock.stock_reservado;
+      
+      // Calcular en frascos
+      const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
+      const frascosDisponibles = Math.floor(dosisDisponibles / dosisPorFrasco);
 
       return {
         id: Number(stock.id_stock_vacuna), // Mapear a 'id' para el frontend
@@ -92,9 +98,11 @@ exports.getStocksDisponibles = async (req, res) => {
         id_vacuna: Number(stock.id_vacuna),
         lote: stock.lote,
         fechaVencimiento: stock.fecha_vencimiento, // Mapear para el frontend
-        cantidadDisponible: stockDisponible, // Mapear para el frontend
+        cantidadDisponible: frascosDisponibles, // FRASCOS disponibles para el frontend
+        dosisDisponibles: dosisDisponibles, // Dosis disponibles
+        dosisPorFrasco: dosisPorFrasco, // Para cálculos en el frontend
         precioVenta: stock.precio_compra ? parseFloat(stock.precio_compra) : 0, // Mapear para el frontend
-        stock_disponible: stockDisponible,
+        stock_disponible: dosisDisponibles,
         dias_hasta_vencimiento: diasHastaVencimiento,
         vencido: diasHastaVencimiento < 0,
         proximo_vencimiento: diasHastaVencimiento <= 30 && diasHastaVencimiento >= 0,

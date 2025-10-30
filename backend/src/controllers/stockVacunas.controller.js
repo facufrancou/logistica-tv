@@ -60,7 +60,8 @@ exports.getStockVacunas = async (req, res) => {
               presentacion: {
                 select: {
                   nombre: true,
-                  unidad_medida: true
+                  unidad_medida: true,
+                  dosis_por_frasco: true
                 }
               }
             }
@@ -82,6 +83,16 @@ exports.getStockVacunas = async (req, res) => {
       const fechaVencimiento = new Date(stock.fecha_vencimiento);
       const diasHastaVencimiento = Math.ceil((fechaVencimiento - today) / (1000 * 60 * 60 * 24));
       
+      // Calcular conversión a frascos
+      const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1;
+      const frascosActuales = Math.floor(stock.stock_actual / dosisPorFrasco);
+      const frascoMinimo = Math.ceil(stock.stock_minimo / dosisPorFrasco);
+      const dosisSobrantes = stock.stock_actual % dosisPorFrasco;
+      
+      // Calcular frascos reservados
+      const frascosReservados = Math.floor((stock.stock_reservado || 0) / dosisPorFrasco);
+      const dosisReservadasSobrantes = (stock.stock_reservado || 0) % dosisPorFrasco;
+      
       return {
         ...stock,
         id_stock_vacuna: Number(stock.id_stock_vacuna),
@@ -89,7 +100,15 @@ exports.getStockVacunas = async (req, res) => {
         precio_compra: stock.precio_compra ? parseFloat(stock.precio_compra) : null,
         dias_hasta_vencimiento: diasHastaVencimiento,
         vencido: diasHastaVencimiento < 0,
-        proximo_vencimiento: diasHastaVencimiento <= parseInt(dias_vencimiento) && diasHastaVencimiento >= 0
+        proximo_vencimiento: diasHastaVencimiento <= parseInt(dias_vencimiento) && diasHastaVencimiento >= 0,
+        // Información de conversión frascos/dosis
+        dosis_por_frasco: dosisPorFrasco,
+        frascos_actuales: frascosActuales,
+        frascos_minimo: frascoMinimo,
+        dosis_sobrantes: dosisSobrantes,
+        // Información de stock reservado
+        frascos_reservados: frascosReservados,
+        dosis_reservadas_sobrantes: dosisReservadasSobrantes
       };
     });
 
@@ -187,7 +206,8 @@ exports.createStockVacuna = async (req, res) => {
       id_vacuna,
       lote,
       fecha_vencimiento,
-      stock_actual,
+      stock_actual, // Ahora puede venir en frascos o dosis
+      cantidad_frascos, // Nuevo: cantidad en frascos
       stock_minimo = 0,
       precio_compra,
       ubicacion_fisica,
@@ -196,10 +216,47 @@ exports.createStockVacuna = async (req, res) => {
     } = req.body;
 
     // Validaciones
-    if (!id_vacuna || !lote || !fecha_vencimiento || stock_actual === undefined) {
+    if (!id_vacuna || !lote || !fecha_vencimiento) {
       return res.status(400).json({ 
-        error: 'Campos obligatorios: id_vacuna, lote, fecha_vencimiento, stock_actual' 
+        error: 'Campos obligatorios: id_vacuna, lote, fecha_vencimiento' 
       });
+    }
+
+    if (stock_actual === undefined && cantidad_frascos === undefined) {
+      return res.status(400).json({ 
+        error: 'Debe proporcionar stock_actual (dosis) o cantidad_frascos' 
+      });
+    }
+
+    // Obtener información de la vacuna para conversión
+    const vacuna = await prisma.vacuna.findUnique({
+      where: { id_vacuna: parseInt(id_vacuna) },
+      include: {
+        presentacion: {
+          select: {
+            dosis_por_frasco: true
+          }
+        }
+      }
+    });
+
+    if (!vacuna) {
+      return res.status(404).json({ error: 'Vacuna no encontrada' });
+    }
+
+    // Calcular stock en dosis (base de datos trabaja con dosis)
+    const dosisPorFrasco = vacuna.presentacion?.dosis_por_frasco || 1;
+    let stockActualDosis;
+    let stockMinimoDosis = 0;
+    
+    if (cantidad_frascos !== undefined) {
+      // Si viene en frascos, convertir a dosis
+      stockActualDosis = parseInt(cantidad_frascos) * dosisPorFrasco;
+      stockMinimoDosis = parseInt(stock_minimo || 0) * dosisPorFrasco;
+    } else {
+      // Si viene en dosis, usar directamente (ya viene calculado desde el frontend)
+      stockActualDosis = parseInt(stock_actual);
+      stockMinimoDosis = parseInt(stock_minimo || 0);
     }
 
     // Verificar que no exista otro lote igual para la misma vacuna
@@ -223,8 +280,8 @@ exports.createStockVacuna = async (req, res) => {
         id_vacuna: parseInt(id_vacuna),
         lote,
         fecha_vencimiento: new Date(fecha_vencimiento),
-        stock_actual: parseInt(stock_actual),
-        stock_minimo: parseInt(stock_minimo),
+        stock_actual: stockActualDosis,
+        stock_minimo: stockMinimoDosis,
         precio_compra: precio_compra ? parseFloat(precio_compra) : null,
         ubicacion_fisica: ubicacion_fisica || null,
         temperatura_req: temperatura_req || null,
@@ -233,25 +290,30 @@ exports.createStockVacuna = async (req, res) => {
       },
       include: {
         vacuna: {
-          select: {
-            codigo: true,
-            nombre: true
+          include: {
+            presentacion: {
+              select: {
+                nombre: true,
+                dosis_por_frasco: true
+              }
+            }
           }
         }
       }
     });
 
     // Registrar movimiento de stock inicial
-    if (parseInt(stock_actual) > 0) {
+    if (stockActualDosis > 0) {
+      const frascos = Math.floor(stockActualDosis / dosisPorFrasco);
       await prisma.movimientoStockVacuna.create({
         data: {
           id_stock_vacuna: nuevoStock.id_stock_vacuna,
           tipo_movimiento: 'ingreso',
-          cantidad: parseInt(stock_actual),
+          cantidad: stockActualDosis,
           stock_anterior: 0,
-          stock_posterior: parseInt(stock_actual),
+          stock_posterior: stockActualDosis,
           motivo: 'Stock inicial',
-          observaciones: `Lote: ${lote}`,
+          observaciones: `Lote: ${lote} - ${frascos} frascos (${stockActualDosis} dosis)`,
           precio_unitario: precio_compra ? parseFloat(precio_compra) : null,
           id_usuario: req.user?.id || null
         }
@@ -262,7 +324,10 @@ exports.createStockVacuna = async (req, res) => {
       ...nuevoStock,
       id_stock_vacuna: Number(nuevoStock.id_stock_vacuna),
       id_vacuna: Number(nuevoStock.id_vacuna),
-      precio_compra: nuevoStock.precio_compra ? parseFloat(nuevoStock.precio_compra) : null
+      precio_compra: nuevoStock.precio_compra ? parseFloat(nuevoStock.precio_compra) : null,
+      dosis_por_frasco: dosisPorFrasco,
+      frascos_actuales: Math.floor(stockActualDosis / dosisPorFrasco),
+      dosis_sobrantes: stockActualDosis % dosisPorFrasco
     };
 
     res.status(201).json(stockFormatted);
@@ -549,38 +614,65 @@ exports.getAlertas = async (req, res) => {
 exports.registrarIngreso = async (req, res) => {
   try {
     const { id } = req.params;
-    const { cantidad, motivo, observaciones, precio_unitario } = req.body;
+    const { cantidad, cantidad_frascos, motivo, observaciones, precio_unitario } = req.body;
     const id_usuario = req.usuario?.id_usuario || 1;
 
-    if (!cantidad || cantidad <= 0) {
+    if ((!cantidad || cantidad <= 0) && (!cantidad_frascos || cantidad_frascos <= 0)) {
       return res.status(400).json({ error: 'La cantidad debe ser mayor a 0' });
     }
 
-    // Obtener el stock actual
+    // Obtener el stock actual con información de la vacuna
     const stockActual = await prisma.stockVacuna.findUnique({
-      where: { id_stock_vacuna: parseInt(id) }
+      where: { id_stock_vacuna: parseInt(id) },
+      include: {
+        vacuna: {
+          include: {
+            presentacion: {
+              select: {
+                dosis_por_frasco: true
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!stockActual) {
       return res.status(404).json({ error: 'Stock no encontrado' });
     }
 
+    // Obtener dosis por frasco para conversión
+    const dosisPorFrasco = stockActual.vacuna?.presentacion?.dosis_por_frasco || 1;
+    
+    // Calcular cantidad en dosis
+    let cantidadDosis;
+    if (cantidad_frascos !== undefined) {
+      cantidadDosis = parseInt(cantidad_frascos) * dosisPorFrasco;
+    } else {
+      cantidadDosis = parseInt(cantidad);
+    }
+
     // Calcular nuevo stock
     const stockAnterior = stockActual.stock_actual;
-    const stockPosterior = stockAnterior + parseInt(cantidad);
+    const stockPosterior = stockAnterior + cantidadDosis;
 
     // Crear movimiento y actualizar stock en una transacción
     const resultado = await prisma.$transaction(async (prisma) => {
       // Crear movimiento
+      const frascos = Math.floor(cantidadDosis / dosisPorFrasco);
+      const observacionesCompletas = cantidad_frascos !== undefined 
+        ? `${observaciones || ''} - ${cantidad_frascos} frascos (${cantidadDosis} dosis)`.trim()
+        : observaciones || null;
+
       const movimiento = await prisma.movimientoStockVacuna.create({
         data: {
           id_stock_vacuna: parseInt(id),
           tipo_movimiento: 'ingreso',
-          cantidad: parseInt(cantidad),
+          cantidad: cantidadDosis,
           stock_anterior: stockAnterior,
           stock_posterior: stockPosterior,
           motivo: motivo || 'Ingreso manual',
-          observaciones: observaciones || null,
+          observaciones: observacionesCompletas,
           precio_unitario: precio_unitario ? parseFloat(precio_unitario) : null,
           id_usuario: id_usuario
         }
@@ -628,56 +720,95 @@ exports.registrarIngreso = async (req, res) => {
 exports.registrarEgreso = async (req, res) => {
   try {
     const { id } = req.params;
-    const { cantidad, motivo, observaciones, precio_unitario } = req.body;
+    const { cantidad, cantidad_frascos, motivo, observaciones, precio_unitario } = req.body;
     const id_usuario = req.usuario?.id_usuario || 1;
 
-    if (!cantidad || cantidad <= 0) {
+    if ((!cantidad || cantidad <= 0) && (!cantidad_frascos || cantidad_frascos <= 0)) {
       return res.status(400).json({ error: 'La cantidad debe ser mayor a 0' });
     }
 
-    // Obtener el stock actual
+    // Obtener el stock actual con información de la vacuna
     const stockActual = await prisma.stockVacuna.findUnique({
-      where: { id_stock_vacuna: parseInt(id) }
+      where: { id_stock_vacuna: parseInt(id) },
+      include: {
+        vacuna: {
+          include: {
+            presentacion: {
+              select: {
+                dosis_por_frasco: true
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!stockActual) {
       return res.status(404).json({ error: 'Stock no encontrado' });
     }
 
-    // Validar que hay suficiente stock
-    const stockDisponible = stockActual.stock_actual - stockActual.stock_reservado;
-    if (parseInt(cantidad) > stockDisponible) {
+    // Obtener dosis por frasco para conversión
+    const dosisPorFrasco = stockActual.vacuna?.presentacion?.dosis_por_frasco || 1;
+    
+    // Calcular cantidad en dosis
+    let cantidadDosis;
+    if (cantidad_frascos !== undefined) {
+      cantidadDosis = parseInt(cantidad_frascos) * dosisPorFrasco;
+    } else {
+      cantidadDosis = parseInt(cantidad);
+    }
+
+    // Validar que hay suficiente stock TOTAL (incluyendo reservados)
+    if (cantidadDosis > stockActual.stock_actual) {
+      const frascosActuales = Math.floor(stockActual.stock_actual / dosisPorFrasco);
       return res.status(400).json({ 
-        error: `Stock insuficiente. Disponible: ${stockDisponible}, solicitado: ${cantidad}` 
+        error: `Stock insuficiente. Stock actual: ${frascosActuales} frascos (${stockActual.stock_actual} dosis), solicitado: ${Math.ceil(cantidadDosis / dosisPorFrasco)} frascos (${cantidadDosis} dosis)` 
       });
     }
 
     // Calcular nuevo stock
     const stockAnterior = stockActual.stock_actual;
-    const stockPosterior = stockAnterior - parseInt(cantidad);
+    const stockPosterior = stockAnterior - cantidadDosis;
+    
+    // Calcular cuánto afecta a las reservas (si es que afecta)
+    const stockDisponible = stockActual.stock_actual - stockActual.stock_reservado;
+    let stockReservadoNuevo = stockActual.stock_reservado;
+    
+    if (cantidadDosis > stockDisponible) {
+      // El egreso afecta stock reservado
+      const dosisDeReserva = cantidadDosis - stockDisponible;
+      stockReservadoNuevo = Math.max(0, stockActual.stock_reservado - dosisDeReserva);
+      console.log(`⚠️ Egreso afecta stock reservado: ${dosisDeReserva} dosis de ${stockActual.stock_reservado} reservadas`);
+    }
 
     // Crear movimiento y actualizar stock en una transacción
     const resultado = await prisma.$transaction(async (prisma) => {
       // Crear movimiento
+      const frascos = cantidad_frascos !== undefined ? cantidad_frascos : Math.floor(cantidadDosis / dosisPorFrasco);
+      const observacionesCompletas = cantidad_frascos !== undefined 
+        ? `${observaciones || ''} - ${cantidad_frascos} frascos (${cantidadDosis} dosis)`.trim()
+        : observaciones || null;
+
       const movimiento = await prisma.movimientoStockVacuna.create({
         data: {
           id_stock_vacuna: parseInt(id),
           tipo_movimiento: 'egreso',
-          cantidad: parseInt(cantidad),
+          cantidad: cantidadDosis,
           stock_anterior: stockAnterior,
           stock_posterior: stockPosterior,
           motivo: motivo || 'Egreso manual',
-          observaciones: observaciones || null,
+          observaciones: observacionesCompletas,
           precio_unitario: precio_unitario ? parseFloat(precio_unitario) : null,
           id_usuario: id_usuario
         }
       });
 
-      // Actualizar stock
+      // Actualizar stock (y reservas si fueron afectadas)
       const stockActualizado = await prisma.stockVacuna.update({
         where: { id_stock_vacuna: parseInt(id) },
         data: { 
           stock_actual: stockPosterior,
+          stock_reservado: stockReservadoNuevo,
           updated_at: new Date()
         },
         include: {
@@ -830,5 +961,189 @@ exports.crearMovimiento = async (req, res) => {
   } catch (error) {
     console.error('Error al crear movimiento:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Obtener cotizaciones que tienen reservas en un lote específico
+ */
+exports.getReservasLote = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtener información del lote
+    const lote = await prisma.stockVacuna.findUnique({
+      where: { id_stock_vacuna: parseInt(id) },
+      include: {
+        vacuna: {
+          select: {
+            nombre: true,
+            codigo: true,
+            presentacion: {
+              select: {
+                dosis_por_frasco: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!lote) {
+      return res.status(404).json({ error: 'Lote no encontrado' });
+    }
+
+    // Si no hay stock reservado, retornar vacío
+    if (!lote.stock_reservado || lote.stock_reservado <= 0) {
+      const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
+      return res.json({
+        success: true,
+        lote: {
+          id_stock_vacuna: lote.id_stock_vacuna,
+          lote: lote.lote,
+          vacuna: lote.vacuna.nombre,
+          stock_actual: lote.stock_actual,
+          stock_reservado: 0,
+          frascos_actuales: Math.floor(lote.stock_actual / dosisPorFrasco),
+          frascos_reservados: 0,
+          dosis_por_frasco: dosisPorFrasco
+        },
+        totales: {
+          total_dosis_reservadas: 0,
+          total_frascos_reservados: 0,
+          total_cotizaciones: 0
+        },
+        cotizaciones: []
+      });
+    }
+
+    // Buscar todos los calendarios que tienen este lote asignado Y tienen entregas pendientes
+    console.log(`Buscando calendarios para lote ID: ${id}, stock_reservado: ${lote.stock_reservado}`);
+    
+    const calendarios = await prisma.calendarioVacunacion.findMany({
+      where: {
+        id_stock_vacuna: parseInt(id),
+        estado_entrega: {
+          in: ['pendiente', 'parcial'] // Solo los que aún tienen reservas activas
+        }
+      },
+      include: {
+        cotizacion: {
+          select: {
+            numero_cotizacion: true,
+            estado: true,
+            created_at: true,
+            cliente: {
+              select: {
+                nombre: true
+              }
+            },
+            plan: {
+              select: {
+                nombre: true
+              }
+            }
+          }
+        },
+        producto: {
+          select: {
+            nombre: true
+          }
+        }
+      },
+      orderBy: {
+        fecha_programada: 'asc'
+      }
+    });
+
+    console.log(`Calendarios encontrados: ${calendarios.length}`);
+
+    // Agrupar por cotización
+    const cotizacionesMap = new Map();
+
+    calendarios.forEach(calendario => {
+      const idCotizacion = calendario.id_cotizacion;
+      
+      if (!cotizacionesMap.has(idCotizacion)) {
+        const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const dosisReservadas = calendario.cantidad_dosis - (calendario.dosis_entregadas || 0);
+        const frascosReservados = Math.ceil(dosisReservadas / dosisPorFrasco);
+
+        cotizacionesMap.set(idCotizacion, {
+          id_cotizacion: idCotizacion,
+          numero_cotizacion: calendario.cotizacion.numero_cotizacion,
+          cliente: calendario.cotizacion.cliente?.nombre || 'Sin cliente',
+          plan: calendario.cotizacion.plan?.nombre || 'Sin plan',
+          estado: calendario.cotizacion.estado,
+          fecha_creacion: calendario.cotizacion.created_at,
+          total_dosis_reservadas: dosisReservadas,
+          total_frascos_reservados: frascosReservados,
+          entregas: []
+        });
+      }
+
+      // Agregar detalle de esta entrega
+      const dosisReservadas = calendario.cantidad_dosis - (calendario.dosis_entregadas || 0);
+      const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
+      const frascosReservados = Math.ceil(dosisReservadas / dosisPorFrasco);
+
+      cotizacionesMap.get(idCotizacion).entregas.push({
+        id_calendario: calendario.id_calendario,
+        fecha_programada: calendario.fecha_programada,
+        producto: calendario.producto?.nombre || lote.vacuna.nombre,
+        cantidad_total: calendario.cantidad_dosis,
+        dosis_entregadas: calendario.dosis_entregadas || 0,
+        dosis_pendientes: dosisReservadas,
+        frascos_pendientes: frascosReservados,
+        estado_entrega: calendario.estado_entrega
+      });
+
+      // Actualizar total
+      const cotizacion = cotizacionesMap.get(idCotizacion);
+      cotizacion.total_dosis_reservadas = cotizacion.entregas.reduce(
+        (sum, e) => sum + e.dosis_pendientes, 0
+      );
+      cotizacion.total_frascos_reservados = Math.ceil(
+        cotizacion.total_dosis_reservadas / dosisPorFrasco
+      );
+    });
+
+    const cotizaciones = Array.from(cotizacionesMap.values());
+
+    // Calcular totales
+    const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
+    const totalDosisReservadas = cotizaciones.reduce(
+      (sum, cot) => sum + cot.total_dosis_reservadas, 0
+    );
+    const totalFrascosReservados = Math.ceil(totalDosisReservadas / dosisPorFrasco);
+
+    res.json({
+      success: true,
+      lote: {
+        id_stock_vacuna: lote.id_stock_vacuna,
+        lote: lote.lote,
+        vacuna: lote.vacuna.nombre,
+        stock_actual: lote.stock_actual,
+        stock_reservado: lote.stock_reservado,
+        frascos_actuales: Math.floor(lote.stock_actual / dosisPorFrasco),
+        frascos_reservados: Math.floor(lote.stock_reservado / dosisPorFrasco),
+        dosis_por_frasco: dosisPorFrasco
+      },
+      totales: {
+        total_dosis_reservadas: totalDosisReservadas,
+        total_frascos_reservados: totalFrascosReservados,
+        total_cotizaciones: cotizaciones.length
+      },
+      cotizaciones
+    });
+
+  } catch (error) {
+    console.error('Error al obtener reservas del lote:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };

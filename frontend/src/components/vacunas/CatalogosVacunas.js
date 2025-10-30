@@ -85,10 +85,11 @@ function CatalogosVacunas() {
           title: "Presentaciones",
           singular: "presentación",
           fields: [
-            { key: "nombre", label: "Nombre", type: "text", required: true },
+            { key: "codigo", label: "Código", type: "text", required: true, placeholder: "Ej: P1000, P2000, P5000" },
+            { key: "nombre", label: "Nombre", type: "text", required: true, placeholder: "Ej: 1000 dosis, 2000 dosis" },
             { key: "descripcion", label: "Descripción", type: "textarea", required: false },
-            { key: "unidad_medida", label: "Unidad", type: "text", required: false },
-            { key: "volumen_dosis", label: "Volumen por Dosis", type: "number", required: false }
+            { key: "unidad_medida", label: "Unidad de Medida", type: "text", required: false, placeholder: "Ej: dosis, ml, etc." },
+            { key: "dosis_por_frasco", label: "Dosis por Frasco", type: "number", required: true, placeholder: "Ej: 1000, 2000, 5000, 10000", min: 1 }
           ]
         };
       case "vias":
@@ -292,11 +293,12 @@ function CatalogosVacunas() {
                 <table className="table table-striped table-hover">
                   <thead className="thead-light">
                     <tr>
+                      {catalogoActivo === "presentaciones" && <th className="text-dark">Código</th>}
                       <th className="text-dark">Nombre</th>
                       <th className="text-dark">Descripción</th>
                       {catalogoActivo === "patologias" && <th className="text-dark">Grupo</th>}
                       {catalogoActivo === "presentaciones" && <th className="text-dark">Unidad</th>}
-                      {catalogoActivo === "presentaciones" && <th className="text-dark">Vol. Dosis</th>}
+                      {catalogoActivo === "presentaciones" && <th className="text-dark">Dosis/Frasco</th>}
                       {catalogoActivo === "vias" && <th className="text-dark">Abreviación</th>}
                       <th className="text-dark">Estado</th>
                       <th className="text-dark">Fecha Creación</th>
@@ -306,6 +308,11 @@ function CatalogosVacunas() {
                   <tbody>
                     {datosFiltrados.map((item) => (
                       <tr key={getItemId(item)}>
+                        {catalogoActivo === "presentaciones" && (
+                          <td>
+                            <code className="text-primary">{item.codigo || "—"}</code>
+                          </td>
+                        )}
                         <td>
                           <strong>{item.nombre}</strong>
                         </td>
@@ -333,7 +340,9 @@ function CatalogosVacunas() {
                               </span>
                             </td>
                             <td>
-                              {item.volumen_dosis ? `${item.volumen_dosis} ml` : "—"}
+                              <span className="badge bg-primary text-white">
+                                {item.dosis_por_frasco ? `${item.dosis_por_frasco.toLocaleString()}` : "—"}
+                              </span>
                             </td>
                           </>
                         )}

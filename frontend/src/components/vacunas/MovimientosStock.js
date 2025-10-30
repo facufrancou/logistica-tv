@@ -157,15 +157,20 @@ function MovimientosStock({ onRefresh }) {
           nombre: nombreVacuna,
           codigo: item.vacuna?.codigo,
           lotes: [],
-          stockTotal: 0,
-          stockReservadoTotal: 0,
+          stockTotalDosis: 0,
+          stockReservadoDosis: 0,
+          frascosTotal: 0,
+          frascosReservado: 0,
+          dosisPorFrasco: item.dosis_por_frasco || 1,
           estadoGeneral: 'success'
         };
       }
       
       grupos[nombreVacuna].lotes.push(item);
-      grupos[nombreVacuna].stockTotal += item.stock_actual || 0;
-      grupos[nombreVacuna].stockReservadoTotal += item.stock_reservado || 0;
+      grupos[nombreVacuna].stockTotalDosis += item.stock_actual || 0;
+      grupos[nombreVacuna].stockReservadoDosis += item.stock_reservado || 0;
+      grupos[nombreVacuna].frascosTotal += item.frascos_actuales || 0;
+      grupos[nombreVacuna].frascosReservado += Math.floor((item.stock_reservado || 0) / (item.dosis_por_frasco || 1));
       
       // Determinar el estado general de la vacuna (el más crítico de todos sus lotes)
       const estadoLote = getEstadoStock(item);
@@ -301,8 +306,8 @@ function MovimientosStock({ onRefresh }) {
                 <tr>
                   <th className="text-dark" style={{width: '30px'}}></th>
                   <th className="text-dark">Vacuna</th>
-                  <th className="text-dark">Stock Total</th>
-                  <th className="text-dark">Reservado Total</th>
+                  <th className="text-dark">Frascos Totales</th>
+                  <th className="text-dark">Frascos Reservados</th>
                   <th className="text-dark">Lotes</th>
                   <th className="text-dark">Estado General</th>
                   <th className="text-dark">Acciones</th>
@@ -312,7 +317,8 @@ function MovimientosStock({ onRefresh }) {
                 {agruparPorVacuna(lotesFiltrados).map((vacunaGroup) => {
                   const estadoGeneral = getEstadoVacunaGeneral(vacunaGroup.estadoGeneral);
                   const estaExpandida = vacunasExpandidas.has(vacunaGroup.nombre);
-                  const stockDisponibleTotal = vacunaGroup.stockTotal - vacunaGroup.stockReservadoTotal;
+                  const frascosDisponibles = vacunaGroup.frascosTotal - vacunaGroup.frascosReservado;
+                  const dosisDisponibles = vacunaGroup.stockTotalDosis - vacunaGroup.stockReservadoDosis;
                   
                   return (
                     <Fragment key={vacunaGroup.nombre}>
@@ -344,13 +350,21 @@ function MovimientosStock({ onRefresh }) {
                         </td>
                         <td>
                           <span className="badge bg-primary text-white fs-6">
-                            {vacunaGroup.stockTotal.toLocaleString()}
+                            {vacunaGroup.frascosTotal.toLocaleString()} frascos
                           </span>
+                          <br />
+                          <small className="text-muted">
+                            ({vacunaGroup.stockTotalDosis.toLocaleString()} dosis)
+                          </small>
                         </td>
                         <td>
                           <span className="badge bg-warning text-dark">
-                            {vacunaGroup.stockReservadoTotal.toLocaleString()}
+                            {vacunaGroup.frascosReservado.toLocaleString()} frascos
                           </span>
+                          <br />
+                          <small className="text-muted">
+                            ({vacunaGroup.stockReservadoDosis.toLocaleString()} dosis)
+                          </small>
                         </td>
                         <td>
                           <span className="badge bg-info text-white">
@@ -358,8 +372,8 @@ function MovimientosStock({ onRefresh }) {
                           </span>
                           <br />
                           <small className="text-muted">
-                            Disp: <span className={stockDisponibleTotal > 0 ? 'text-success' : 'text-danger'}>
-                              {stockDisponibleTotal}
+                            Disp: <span className={frascosDisponibles > 0 ? 'text-success' : 'text-danger'}>
+                              {frascosDisponibles} frascos
                             </span>
                           </small>
                         </td>
@@ -382,7 +396,11 @@ function MovimientosStock({ onRefresh }) {
                       {/* Filas de detalle de lotes (si está expandida) */}
                       {estaExpandida && vacunaGroup.lotes.map((lote, index) => {
                         const estado = getEstadoStock(lote);
-                        const stockDisponible = lote.stock_actual - lote.stock_reservado;
+                        const dosisPorFrasco = lote.dosis_por_frasco || 1;
+                        const frascosActuales = lote.frascos_actuales || Math.floor(lote.stock_actual / dosisPorFrasco);
+                        const frascosReservados = Math.floor(lote.stock_reservado / dosisPorFrasco);
+                        const frascosDisponibles = frascosActuales - frascosReservados;
+                        const dosisDisponibles = lote.stock_actual - lote.stock_reservado;
                         
                         return (
                           <tr 
@@ -397,17 +415,25 @@ function MovimientosStock({ onRefresh }) {
                               <code>{lote.lote}</code>
                             </td>
                             <td>
-                              <span className="badge bg-dark text-white">{lote.stock_actual}</span>
+                              <span className="badge bg-dark text-white">
+                                {frascosActuales} frascos
+                              </span>
+                              <br />
+                              <small className="text-muted">{lote.stock_actual} dosis</small>
                             </td>
                             <td>
-                              <span className="badge bg-warning text-dark">{lote.stock_reservado}</span>
+                              <span className="badge bg-warning text-dark">
+                                {frascosReservados} frascos
+                              </span>
+                              <br />
+                              <small className="text-muted">{lote.stock_reservado} dosis</small>
                             </td>
                             <td>
                               <small>
                                 <strong>Venc:</strong> {formatearFecha(lote.fecha_vencimiento)}
                                 <br />
-                                <strong>Disp:</strong> <span className={stockDisponible > 0 ? 'text-success' : 'text-danger'}>
-                                  {stockDisponible}
+                                <strong>Disp:</strong> <span className={frascosDisponibles > 0 ? 'text-success' : 'text-danger'}>
+                                  {frascosDisponibles} frascos ({dosisDisponibles} dosis)
                                 </span>
                               </small>
                             </td>
@@ -434,7 +460,7 @@ function MovimientosStock({ onRefresh }) {
                                     setLoteSeleccionado(lote);
                                     setMostrarFormEgreso(true);
                                   }}
-                                  disabled={stockDisponible <= 0}
+                                  disabled={frascosDisponibles <= 0}
                                   title="Registrar Egreso"
                                 >
                                   EGRESO

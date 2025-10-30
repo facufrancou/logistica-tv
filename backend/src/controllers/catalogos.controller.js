@@ -188,7 +188,7 @@ exports.getPresentaciones = async (req, res) => {
  */
 exports.createPresentacion = async (req, res) => {
   try {
-    const { codigo, nombre, descripcion, unidad_medida } = req.body;
+    const { codigo, nombre, descripcion, unidad_medida, dosis_por_frasco } = req.body;
 
     if (!codigo || !nombre) {
       return res.status(400).json({ error: 'Código y nombre son obligatorios' });
@@ -200,6 +200,7 @@ exports.createPresentacion = async (req, res) => {
         nombre,
         descripcion: descripcion || null,
         unidad_medida: unidad_medida || null,
+        dosis_por_frasco: dosis_por_frasco ? parseInt(dosis_por_frasco) : 1,
         created_by: req.user?.id || null
       }
     });
@@ -226,7 +227,7 @@ exports.createPresentacion = async (req, res) => {
 exports.updatePresentacion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { codigo, nombre, descripcion, unidad_medida, activa } = req.body;
+    const { codigo, nombre, descripcion, unidad_medida, dosis_por_frasco, activa } = req.body;
 
     const presentacionActualizada = await prisma.presentacion.update({
       where: { id_presentacion: parseInt(id) },
@@ -235,6 +236,7 @@ exports.updatePresentacion = async (req, res) => {
         nombre: nombre || undefined,
         descripcion: descripcion !== undefined ? descripcion : undefined,
         unidad_medida: unidad_medida !== undefined ? unidad_medida : undefined,
+        dosis_por_frasco: dosis_por_frasco !== undefined ? parseInt(dosis_por_frasco) : undefined,
         activa: activa !== undefined ? Boolean(activa) : undefined,
         updated_by: req.user?.id || null
       }

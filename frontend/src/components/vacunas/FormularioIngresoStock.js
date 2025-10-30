@@ -8,25 +8,29 @@ function FormularioIngresoStock({
   onSubmit 
 }) {
   const [formData, setFormData] = useState({
-    cantidad: '',
+    cantidad_frascos: '',
     motivo: 'Compra nueva',
     observaciones: '',
     precio_unitario: ''
   });
   const [loading, setLoading] = useState(false);
 
+  // Obtener dosis por frasco
+  const dosisPorFrasco = lote?.dosis_por_frasco || lote?.vacuna?.presentacion?.dosis_por_frasco || 1;
+  const dosisCalculadas = formData.cantidad_frascos ? parseInt(formData.cantidad_frascos) * dosisPorFrasco : 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.cantidad || parseInt(formData.cantidad) <= 0) {
-      alert('La cantidad debe ser mayor a 0');
+    if (!formData.cantidad_frascos || parseInt(formData.cantidad_frascos) <= 0) {
+      alert('La cantidad de frascos debe ser mayor a 0');
       return;
     }
 
     setLoading(true);
     try {
       await onSubmit({
-        cantidad: parseInt(formData.cantidad),
+        cantidad_frascos: parseInt(formData.cantidad_frascos),
         motivo: formData.motivo,
         observaciones: formData.observaciones || null,
         precio_unitario: formData.precio_unitario ? parseFloat(formData.precio_unitario) : null
@@ -34,7 +38,7 @@ function FormularioIngresoStock({
       
       // Limpiar formulario
       setFormData({
-        cantidad: '',
+        cantidad_frascos: '',
         motivo: 'Compra nueva',
         observaciones: '',
         precio_unitario: ''
@@ -87,7 +91,10 @@ function FormularioIngresoStock({
                         <div className="text-dark font-weight-bold" style={{fontSize: '1.1em'}}>
                           {lote.lote}
                         </div>
-                        <div className="text-muted small">Stock actual: <strong>{lote.stock_actual}</strong></div>
+                        <div className="text-muted small">
+                          Stock actual: <strong>{lote.frascos_actuales || Math.floor(lote.stock_actual / dosisPorFrasco)} frascos</strong>
+                          <span className="text-muted"> ({lote.stock_actual} dosis)</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -96,16 +103,23 @@ function FormularioIngresoStock({
 
               {/* Formulario */}
               <div className="form-group">
-                <label>Cantidad a Ingresar *</label>
+                <label>Cantidad de Frascos a Ingresar *</label>
                 <input
                   type="number"
                   className="form-control"
-                  value={formData.cantidad}
-                  onChange={(e) => setFormData({...formData, cantidad: e.target.value})}
+                  value={formData.cantidad_frascos}
+                  onChange={(e) => setFormData({...formData, cantidad_frascos: e.target.value})}
                   min="1"
                   required
-                  placeholder="Ingrese la cantidad"
+                  placeholder="Ingrese la cantidad de frascos"
                 />
+                {formData.cantidad_frascos && (
+                  <small className="form-text text-muted">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    {formData.cantidad_frascos} frascos = <strong>{dosisCalculadas.toLocaleString()} dosis</strong>
+                    <span className="text-muted"> ({dosisPorFrasco} dosis por frasco)</span>
+                  </small>
+                )}
               </div>
 
               <div className="form-group">
@@ -125,7 +139,7 @@ function FormularioIngresoStock({
               </div>
 
               <div className="form-group">
-                <label>Precio Unitario (Opcional)</label>
+                <label>Precio Unitario por Frasco (Opcional)</label>
                 <div className="input-group">
                   <div className="input-group-prepend">
                     <span className="input-group-text">$</span>
@@ -141,7 +155,7 @@ function FormularioIngresoStock({
                   />
                 </div>
                 <small className="form-text text-muted">
-                  Precio por dosis para el cálculo de costo de inventario
+                  Precio por frasco para el cálculo de costo de inventario
                 </small>
               </div>
 
@@ -157,7 +171,7 @@ function FormularioIngresoStock({
               </div>
 
               {/* Resumen */}
-              {formData.cantidad && (
+              {formData.cantidad_frascos && (
                 <div className="alert alert-info border-info">
                   <h6 className="alert-heading">
                     <i className="fas fa-calculator mr-2"></i>
@@ -166,10 +180,18 @@ function FormularioIngresoStock({
                   <hr />
                   <div className="row">
                     <div className="col-6">
-                      <strong>Stock actual:</strong> {lote.stock_actual}
+                      <div><strong>Stock actual:</strong></div>
+                      <div>{lote.frascos_actuales || Math.floor(lote.stock_actual / dosisPorFrasco)} frascos</div>
+                      <small className="text-muted">({lote.stock_actual} dosis)</small>
                     </div>
                     <div className="col-6">
-                      <strong>Nuevo stock:</strong> {lote.stock_actual + parseInt(formData.cantidad || 0)}
+                      <div><strong>Nuevo stock:</strong></div>
+                      <div>
+                        {(lote.frascos_actuales || Math.floor(lote.stock_actual / dosisPorFrasco)) + parseInt(formData.cantidad_frascos || 0)} frascos
+                      </div>
+                      <small className="text-muted">
+                        ({lote.stock_actual + dosisCalculadas} dosis)
+                      </small>
                     </div>
                   </div>
                 </div>

@@ -60,7 +60,8 @@ exports.getVacunas = async (req, res) => {
               id_presentacion: true,
               codigo: true,
               nombre: true,
-              unidad_medida: true
+              unidad_medida: true,
+              dosis_por_frasco: true
             }
           },
           via_aplicacion: {
@@ -88,22 +89,39 @@ exports.getVacunas = async (req, res) => {
     ]);
 
     // Formatear respuesta
-    const vacunasFormatted = vacunas.map(vacuna => ({
-      ...vacuna,
-      id_vacuna: Number(vacuna.id_vacuna),
-      id_proveedor: Number(vacuna.id_proveedor),
-      id_patologia: Number(vacuna.id_patologia),
-      id_presentacion: Number(vacuna.id_presentacion),
-      id_via_aplicacion: Number(vacuna.id_via_aplicacion),
-      precio_lista: parseFloat(vacuna.precio_lista),
-      // Calcular stock total disponible
-      stock_total: vacuna.stock_vacunas.reduce((total, stock) => 
+    const vacunasFormatted = vacunas.map(vacuna => {
+      // Calcular stock total disponible en dosis
+      const stockTotalDosis = vacuna.stock_vacunas.reduce((total, stock) => 
         total + (stock.estado_stock === 'disponible' ? stock.stock_actual : 0), 0
-      ),
-      stock_reservado_total: vacuna.stock_vacunas.reduce((total, stock) => 
+      );
+      const stockReservadoDosis = vacuna.stock_vacunas.reduce((total, stock) => 
         total + stock.stock_reservado, 0
-      )
-    }));
+      );
+      
+      // Obtener dosis por frasco para conversión
+      const dosisPorFrasco = vacuna.presentacion?.dosis_por_frasco || 1;
+      
+      return {
+        ...vacuna,
+        id_vacuna: Number(vacuna.id_vacuna),
+        id_proveedor: Number(vacuna.id_proveedor),
+        id_patologia: Number(vacuna.id_patologia),
+        id_presentacion: Number(vacuna.id_presentacion),
+        id_via_aplicacion: Number(vacuna.id_via_aplicacion),
+        precio_lista: parseFloat(vacuna.precio_lista),
+        // Stock en dosis (base de datos)
+        stock_total_dosis: stockTotalDosis,
+        stock_reservado_total_dosis: stockReservadoDosis,
+        // Stock en frascos (para UI)
+        stock_total_frascos: Math.floor(stockTotalDosis / dosisPorFrasco),
+        stock_reservado_total_frascos: Math.floor(stockReservadoDosis / dosisPorFrasco),
+        // Mantener compatibilidad con frontend que espera estos campos
+        stock_total: stockTotalDosis,
+        stock_reservado_total: stockReservadoDosis,
+        // Información de conversión
+        dosis_por_frasco: dosisPorFrasco
+      };
+    });
 
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 

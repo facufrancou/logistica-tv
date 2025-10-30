@@ -44,12 +44,6 @@ const CotizacionDetalleOptimizado = () => {
   const [cotizacion, setCotizacion] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [modalConfirmacion, setModalConfirmacion] = useState({ show: false, accion: null });
-  const [modalStockInsuficiente, setModalStockInsuficiente] = useState({ 
-    show: false, 
-    productos: [], 
-    estadoDestino: null,
-    observaciones: null
-  });
   const [observacionesEstado, setObservacionesEstado] = useState('');
   const [mostrarClasificacion, setMostrarClasificacion] = useState(false);
   const [generandoPDF, setGenerandoPDF] = useState(false);
@@ -105,16 +99,12 @@ const CotizacionDetalleOptimizado = () => {
     );
   };
 
-  const handleCambiarEstado = async (nuevoEstado, forzarAceptacion = false) => {
+  const handleCambiarEstado = async (nuevoEstado) => {
     try {
       const datos = { 
         estado: nuevoEstado,
         observaciones: observacionesEstado || null
       };
-      
-      if (forzarAceptacion) {
-        datos.forzar_aceptacion = true;
-      }
       
       await cambiarEstadoCotizacion(id, datos);
       
@@ -122,27 +112,21 @@ const CotizacionDetalleOptimizado = () => {
       const scrollPosition = window.pageYOffset;
       
       await cargarDatos();
-      showSuccess(`Estado cambiado a ${nuevoEstado} exitosamente`);
+      
+      if (nuevoEstado === 'aceptada') {
+        showSuccess('Cotización aceptada exitosamente. Podrás asignar lotes en el calendario.');
+      } else {
+        showSuccess(`Estado cambiado a ${nuevoEstado} exitosamente`);
+      }
       
       // Restaurar posición
       window.scrollTo(0, scrollPosition);
       
       setModalConfirmacion({ show: false, accion: null });
-      setModalStockInsuficiente({ show: false, productos: [], estadoDestino: null, observaciones: null });
       setObservacionesEstado('');
     } catch (error) {
       console.error('Error al cambiar estado:', error);
-      
-      if (error.response?.status === 400 && error.response?.data?.productosInsuficientes) {
-        setModalStockInsuficiente({
-          show: true,
-          productos: error.response.data.productosInsuficientes,
-          estadoDestino: nuevoEstado,
-          observaciones: observacionesEstado
-        });
-      } else {
-        showError(error.response?.data?.error || 'Error al cambiar estado de la cotización');
-      }
+      showError(error.response?.data?.error || 'Error al cambiar estado de la cotización');
     }
   };
 
@@ -161,10 +145,6 @@ const CotizacionDetalleOptimizado = () => {
       const nuevoEstado = accion.split('cambiar estado a ')[1];
       await handleCambiarEstado(nuevoEstado);
     }
-  };
-
-  const forzarAceptacion = async () => {
-    await handleCambiarEstado(modalStockInsuficiente.estadoDestino, true);
   };
 
   const formatearFecha = (fecha) => {
@@ -293,19 +273,40 @@ const CotizacionDetalleOptimizado = () => {
       const leftColX = margin + 5;
       const rightColX = margin + (infoBoxWidth / 2) + 10;
       const infoY = yPos + 15;
-      const labelWidth = 40;
+      const labelWidth = 42;
 
       doc.setFontSize(9);
       doc.setFont('courier', 'bold');
       doc.setTextColor(...primaryColor);
       
-      // Columna izquierda - Labels
-      doc.text('CLIENTE:', leftColX, infoY);
-      doc.text('EMAIL:', leftColX, infoY + 6);
-      doc.text('TELÉFONO:', leftColX, infoY + 12);
-      doc.text('CANTIDAD POLLOS:', leftColX, infoY + 18);
+      // Valores columna izquierda - calcular primero para determinar posiciones
+      const nombreCliente = cotizacion.cliente?.nombre || 'N/A';
+      const emailCliente = cotizacion.cliente?.email || 'No especificado';
+      const telefonoCliente = cotizacion.cliente?.telefono || 'No especificado';
+      const cantidadPollos = (cotizacion.cantidad_animales || 0).toLocaleString('es-ES');
       
-      // Columna derecha - Labels
+      // Calcular ancho máximo disponible para la columna izquierda (sin invadir columna derecha)
+      const maxWidthLeftCol = (infoBoxWidth / 2) - 8; // Dejar margen entre columnas
+      
+      // Nombre del cliente (puede ocupar múltiples líneas)
+      const nombreClienteLineas = doc.splitTextToSize(nombreCliente, maxWidthLeftCol - labelWidth);
+      const nombreClienteAltura = nombreClienteLineas.length * 5; // 5mm por línea aproximadamente
+      const offsetEmail = Math.max(6, nombreClienteAltura);
+      
+      // Email
+      const emailLineas = doc.splitTextToSize(emailCliente, maxWidthLeftCol - labelWidth);
+      const emailAltura = emailLineas.length * 5;
+      const offsetTelefono = offsetEmail + Math.max(6, emailAltura);
+      
+      const offsetCantidad = offsetTelefono + 6;
+      
+      // Columna izquierda - Labels (con offset dinámico)
+      doc.text('CLIENTE:', leftColX, infoY);
+      doc.text('EMAIL:', leftColX, infoY + offsetEmail);
+      doc.text('TELÉFONO:', leftColX, infoY + offsetTelefono);
+      doc.text('CANTIDAD POLLOS:', leftColX, infoY + offsetCantidad);
+      
+      // Columna derecha - Labels (posición fija)
       doc.text('PLAN VACUNAL:', rightColX, infoY);
       doc.text('DURACIÓN:', rightColX, infoY + 6);
       doc.text('FECHA NACIMIENTO:', rightColX, infoY + 12);
@@ -315,24 +316,19 @@ const CotizacionDetalleOptimizado = () => {
       doc.setFont('courier', 'normal');
       doc.setTextColor(...secondaryColor);
       
-      // Valores columna izquierda
-      const nombreCliente = cotizacion.cliente?.nombre || 'N/A';
-      const emailCliente = cotizacion.cliente?.email || 'No especificado';
-      const telefonoCliente = cotizacion.cliente?.telefono || 'No especificado';
-      const cantidadPollos = cotizacion.cantidad_animales?.toLocaleString() || 'N/A';
-      
-      doc.text(nombreCliente.length > 25 ? nombreCliente.substring(0, 25) + '...' : nombreCliente, leftColX + labelWidth, infoY);
-      doc.text(emailCliente.length > 25 ? emailCliente.substring(0, 25) + '...' : emailCliente, leftColX + labelWidth, infoY + 6);
-      doc.text(telefonoCliente, leftColX + labelWidth, infoY + 12);
-      doc.text(cantidadPollos, leftColX + labelWidth, infoY + 18);
+      // Valores columna izquierda (con offset dinámico)
+      doc.text(nombreClienteLineas, leftColX + labelWidth, infoY);
+      doc.text(emailLineas, leftColX + labelWidth, infoY + offsetEmail);
+      doc.text(telefonoCliente, leftColX + labelWidth, infoY + offsetTelefono);
+      doc.text(cantidadPollos, leftColX + labelWidth, infoY + offsetCantidad);
       
       // Valores columna derecha
-      const nombrePlan = cotizacion.plan?.nombre || 'N/A';
+      const nombrePlan = cotizacion.plan?.nombre || 'Plan para 25000';
       const duracionSemanas = `${cotizacion.plan?.duracion_semanas || 'N/A'} semanas`;
       const fechaNacimiento = cotizacion.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'No especificada';
-      const fechaCotizacion = new Date().toLocaleDateString('es-ES');
+      const fechaCotizacion = cotizacion.created_at ? new Date(cotizacion.created_at).toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES');
       
-      doc.text(nombrePlan.length > 20 ? nombrePlan.substring(0, 20) + '...' : nombrePlan, rightColX + labelWidth, infoY);
+      doc.text(nombrePlan.length > 22 ? nombrePlan.substring(0, 22) + '...' : nombrePlan, rightColX + labelWidth, infoY);
       doc.text(duracionSemanas, rightColX + labelWidth, infoY + 6);
       doc.text(fechaNacimiento, rightColX + labelWidth, infoY + 12);
       doc.text(fechaCotizacion, rightColX + labelWidth, infoY + 18);
@@ -348,46 +344,48 @@ const CotizacionDetalleOptimizado = () => {
 
       let tableData = [];
       
-      // Usar datos del detalle de cotización si están disponibles
-      if (cotizacion.detalle_cotizacion && cotizacion.detalle_cotizacion.length > 0) {
+      // Usar datos del detalle_productos que ya trae los nombres correctos
+      if (cotizacion.detalle_productos && cotizacion.detalle_productos.length > 0) {
+        tableData = cotizacion.detalle_productos.map(detalle => {
+          const precioUnitario = parseFloat(detalle.precio_unitario || 0);
+          const subtotal = parseFloat(detalle.subtotal || 0);
+          const totalFrascos = detalle.cantidad_total || 0;
+
+          return [
+            detalle.nombre_producto || 'Producto no encontrado',
+            totalFrascos.toLocaleString(),
+            `$${precioUnitario.toFixed(2)}`,
+            `$${subtotal.toLocaleString()}`
+          ];
+        });
+      } else if (cotizacion.detalle_cotizacion && cotizacion.detalle_cotizacion.length > 0) {
+        // Fallback: usar detalle_cotizacion si no está detalle_productos
         tableData = cotizacion.detalle_cotizacion.map(detalle => {
-          const semanaTexto = detalle.semana_fin ? 
-            `${detalle.semana_inicio} - ${detalle.semana_fin}` : 
-            `${detalle.semana_inicio} - final`;
-          
           const precioUnitario = parseFloat(detalle.precio_final_calculado || detalle.precio_unitario || 0);
           const subtotal = parseFloat(detalle.subtotal || 0);
+          const totalFrascos = detalle.cantidad_total || 0;
 
           return [
             detalle.producto?.nombre || 'Producto no encontrado',
-            semanaTexto,
-            `${detalle.dosis_por_semana} x ${cotizacion.cantidad_animales?.toLocaleString() || 'N/A'}`,
-            detalle.cantidad_total?.toLocaleString() || 'N/A',
+            totalFrascos.toLocaleString(),
             `$${precioUnitario.toFixed(2)}`,
             `$${subtotal.toLocaleString()}`
           ];
         });
       } else if (cotizacion.plan?.vacunas_plan && cotizacion.plan.vacunas_plan.length > 0) {
-        // Fallback: usar datos del plan de vacunas
+        // Último fallback: usar datos del plan de vacunas
         tableData = cotizacion.plan.vacunas_plan.map(vp => {
-          const semanaTexto = vp.semana_fin ? 
-            `${vp.semana_inicio} - ${vp.semana_fin}` : 
-            `${vp.semana_inicio} - final`;
-          
-          const dosisSemanales = vp.dosis_por_semana || 0;
           const cantidadAnimales = cotizacion.cantidad_animales || 0;
           const dosisNecesarias = cantidadAnimales; // 1 dosis por animal
-          const dosisPorFrasco = vp.vacuna?.dosis_por_frasco || 1000;
+          const dosisPorFrasco = vp.vacuna?.presentacion?.dosis_por_frasco || 1000;
           const frascosNecesarios = Math.ceil(dosisNecesarias / dosisPorFrasco);
-          const precioUnitario = vp.vacuna?.precio_lista || 0;
+          const precioUnitario = parseFloat(vp.vacuna?.precio_lista || 0);
           const subtotal = frascosNecesarios * precioUnitario;
 
           return [
             vp.vacuna?.nombre || 'Vacuna no encontrada',
-            semanaTexto,
-            `${dosisSemanales} x ${cantidadAnimales.toLocaleString()}`,
-            `${dosisNecesarias.toLocaleString()} (${frascosNecesarios} frascos)`,
-            `$${precioUnitario.toFixed(2)} por frasco`,
+            frascosNecesarios.toLocaleString(),
+            `$${precioUnitario.toFixed(2)}`,
             `$${subtotal.toLocaleString()}`
           ];
         });
@@ -396,7 +394,7 @@ const CotizacionDetalleOptimizado = () => {
       // Crear la tabla
       autoTable(doc, {
         startY: yPos,
-        head: [['Producto/Vacuna', 'Semanas', 'Dosis x Cantidad', 'Total Dosis', 'Precio Unit.', 'Subtotal']],
+        head: [['Producto/Vacuna', 'Total Frascos', 'Precio Unit.', 'Subtotal']],
         body: tableData,
         theme: 'striped',
         headStyles: {
@@ -416,15 +414,13 @@ const CotizacionDetalleOptimizado = () => {
         tableWidth: pageWidth - 2 * margin,
         columnStyles: {
           0: { cellWidth: 'auto' },
-          1: { cellWidth: 25, halign: 'center' },
-          2: { cellWidth: 30, halign: 'center' },
-          3: { cellWidth: 25, halign: 'center' },
-          4: { cellWidth: 25, halign: 'right' },
-          5: { cellWidth: 30, halign: 'right' }
+          1: { cellWidth: 35, halign: 'center' },
+          2: { cellWidth: 35, halign: 'right' },
+          3: { cellWidth: 35, halign: 'right' }
         },
         // Agregar fila del total como parte de la tabla
         foot: cotizacion.precio_total ? [[
-          { content: 'TOTAL', colSpan: 5, styles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' } },
+          { content: 'TOTAL', colSpan: 3, styles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' } },
           { content: `$${parseFloat(cotizacion.precio_total).toLocaleString()}`, styles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' } }
         ]] : undefined
       });
@@ -965,74 +961,6 @@ const CotizacionDetalleOptimizado = () => {
                   onClick={confirmarAccion}
                 >
                   Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Stock Insuficiente */}
-      {modalStockInsuficiente.show && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <FaExclamationTriangle className="text-warning me-2" />
-                  Stock Insuficiente
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], estadoDestino: null, observaciones: null })}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <div className="alert alert-warning">
-                  Los siguientes productos no tienen stock suficiente para completar la cotización:
-                </div>
-                <div className="table-responsive">
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Producto</th>
-                        <th className="text-end">Requerido</th>
-                        <th className="text-end">Disponible</th>
-                        <th className="text-end">Faltante</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {modalStockInsuficiente.productos.map((producto, index) => (
-                        <tr key={index}>
-                          <td>{producto.nombre}</td>
-                          <td className="text-end">{producto.requerido}</td>
-                          <td className="text-end">{producto.disponible}</td>
-                          <td className="text-end text-danger fw-bold">{producto.faltante}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="mt-3">
-                  ¿Deseas continuar y aceptar la cotización de todas formas? 
-                  Esto puede generar productos en estado de pedido pendiente.
-                </p>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setModalStockInsuficiente({ show: false, productos: [], estadoDestino: null, observaciones: null })}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-warning"
-                  onClick={() => forzarAceptacion()}
-                >
-                  Continuar de Todas Formas
                 </button>
               </div>
             </div>

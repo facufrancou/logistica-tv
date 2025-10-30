@@ -3,6 +3,9 @@ import {
   getStockVacunas,
   getAlertasStockVacunas,
   getVacunasNuevas,
+  registrarIngresoStock,
+  registrarEgresoStock,
+  crearStockVacuna,
 } from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import { 
@@ -16,8 +19,13 @@ import {
   FaChevronDown, 
   FaChevronRight, 
   FaChevronUp, 
-  FaInbox 
+  FaInbox,
+  FaPlus
 } from 'react-icons/fa';
+import FormularioIngresoStock from './FormularioIngresoStock';
+import FormularioEgresoStock from './FormularioEgresoStock';
+import FormularioNuevoLote from './FormularioNuevoLote';
+import ModalReservasLote from './ModalReservasLote';
 
 function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh }) {
   const { usuario } = useContext(AuthContext);
@@ -34,6 +42,16 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   });
   const [loading, setLoading] = useState(false);
   const [vacunasExpandidas, setVacunasExpandidas] = useState(new Set());
+  const [mostrarStockCero, setMostrarStockCero] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const vacunasPorPagina = 5;
+
+  // Estados para formularios
+  const [mostrarFormIngreso, setMostrarFormIngreso] = useState(false);
+  const [mostrarFormEgreso, setMostrarFormEgreso] = useState(false);
+  const [mostrarFormNuevoLote, setMostrarFormNuevoLote] = useState(false);
+  const [mostrarModalReservas, setMostrarModalReservas] = useState(false);
+  const [loteSeleccionado, setLoteSeleccionado] = useState(null);
 
   useEffect(() => {
     if (stockProp) {
@@ -97,7 +115,10 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
       (filtros.estado === "vencido" && new Date(item.fecha_vencimiento) < new Date()) ||
       (filtros.estado === "ok" && item.stock_actual > item.stock_minimo && new Date(item.fecha_vencimiento) > new Date());
 
-    return cumpleBusqueda && cumpleVacuna && cumpleUbicacion && cumpleEstado;
+    // Filtrar por stock cero (por defecto ocultos)
+    const cumpleStockCero = mostrarStockCero || item.stock_actual > 0;
+
+    return cumpleBusqueda && cumpleVacuna && cumpleUbicacion && cumpleEstado && cumpleStockCero;
   });
 
   const getEstadoStock = (item) => {
@@ -123,20 +144,39 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   // Agrupar stock por vacuna (después de declarar las funciones)
   const stockAgrupado = stockFiltrado.reduce((grupos, item) => {
     const nombreVacuna = getNombreVacuna(item.id_vacuna);
+    const dosisPorFrasco = item.dosis_por_frasco || 1;
+    
     if (!grupos[nombreVacuna]) {
       grupos[nombreVacuna] = {
         nombre: nombreVacuna,
         id_vacuna: item.id_vacuna,
         lotes: [],
-        stockTotal: 0,
-        stockMinimoTotal: 0,
+        stockTotalDosis: 0,
+        stockMinimoDosis: 0,
+        frascosTotal: 0,
+        frascosMinimo: 0,
+        frascosReservados: 0,
+        stockReservadoDosis: 0,
+        dosisPorFrasco: dosisPorFrasco,
         estadoGeneral: 'success'
       };
     }
     
     grupos[nombreVacuna].lotes.push(item);
-    grupos[nombreVacuna].stockTotal += item.stock_actual || 0;
-    grupos[nombreVacuna].stockMinimoTotal += item.stock_minimo || 0;
+    
+    // Calcular frascos y dosis correctamente
+    const frascosActuales = item.frascos_actuales || Math.floor((item.stock_actual || 0) / dosisPorFrasco);
+    const frascosMinimos = item.frascos_minimo || Math.floor((item.stock_minimo || 0) / dosisPorFrasco);
+    const frascosReservados = item.frascos_reservados || Math.floor((item.stock_reservado || 0) / dosisPorFrasco);
+    
+    grupos[nombreVacuna].frascosTotal += frascosActuales;
+    grupos[nombreVacuna].frascosMinimo += frascosMinimos;
+    grupos[nombreVacuna].frascosReservados += frascosReservados;
+    
+    // Usar SIEMPRE el stock real en dosis (no recalcular desde frascos)
+    grupos[nombreVacuna].stockTotalDosis += (item.stock_actual || 0);
+    grupos[nombreVacuna].stockMinimoDosis += (item.stock_minimo || 0);
+    grupos[nombreVacuna].stockReservadoDosis += (item.stock_reservado || 0);
     
     // Determinar el estado general de la vacuna (el más crítico de todos sus lotes)
     const estadoLote = getEstadoStock(item);
@@ -152,6 +192,12 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   }, {});
 
   const vacunasAgrupadas = Object.values(stockAgrupado);
+
+  // Calcular paginación
+  const totalPaginas = Math.ceil(vacunasAgrupadas.length / vacunasPorPagina);
+  const indiceInicio = (paginaActual - 1) * vacunasPorPagina;
+  const indiceFin = indiceInicio + vacunasPorPagina;
+  const vacunasPaginadas = vacunasAgrupadas.slice(indiceInicio, indiceFin);
 
   const toggleVacunaExpansion = (nombreVacuna) => {
     const nuevasExpandidas = new Set(vacunasExpandidas);
@@ -186,6 +232,42 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
     if (onRefresh) onRefresh();
   };
 
+  const manejarIngresoStock = async (datosIngreso) => {
+    try {
+      await registrarIngresoStock(loteSeleccionado.id_stock_vacuna, datosIngreso);
+      await cargarStock();
+      await cargarAlertas();
+      if (onRefresh) onRefresh();
+      alert('Ingreso registrado exitosamente');
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const manejarEgresoStock = async (datosEgreso) => {
+    try {
+      await registrarEgresoStock(loteSeleccionado.id_stock_vacuna, datosEgreso);
+      await cargarStock();
+      await cargarAlertas();
+      if (onRefresh) onRefresh();
+      alert('Egreso registrado exitosamente');
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const manejarNuevoLote = async (datosLote) => {
+    try {
+      await crearStockVacuna(datosLote);
+      await cargarStock();
+      await cargarAlertas();
+      if (onRefresh) onRefresh();
+      alert('Nuevo lote creado exitosamente');
+    } catch (error) {
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{minHeight: "300px"}}>
@@ -201,19 +283,35 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h4 className="mb-0"><FaWarehouse className="mr-2" />Stock de Vacunas</h4>
-        <div className="btn-group">
+        <div className="d-flex gap-2">
           <button
-            className={`btn ${vistaActiva === "stock" ? "btn-primary" : "btn-outline-primary"}`}
-            onClick={() => setVistaActiva("stock")}
+            className="btn btn-success"
+            onClick={() => setMostrarFormNuevoLote(true)}
           >
-            <FaWarehouse className="mr-1" />Stock ({vacunasAgrupadas.length} vacunas)
+            <FaPlus className="mr-1" />Nuevo Lote
           </button>
           <button
-            className={`btn ${vistaActiva === "alertas" ? "btn-warning" : "btn-outline-warning"}`}
-            onClick={() => setVistaActiva("alertas")}
+            className={`btn ${mostrarStockCero ? "btn-secondary" : "btn-outline-secondary"}`}
+            onClick={() => setMostrarStockCero(!mostrarStockCero)}
+            title={mostrarStockCero ? "Ocultar lotes sin stock" : "Mostrar lotes sin stock"}
           >
-            <FaExclamationTriangle className="mr-1" />Alertas ({Object.keys(alertas).length})
+            <FaEye className="mr-1" />
+            {mostrarStockCero ? "Ocultar stock 0" : "Ver todos"}
           </button>
+          <div className="btn-group">
+            <button
+              className={`btn ${vistaActiva === "stock" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => setVistaActiva("stock")}
+            >
+              <FaWarehouse className="mr-1" />Stock ({vacunasAgrupadas.length} vacunas)
+            </button>
+            <button
+              className={`btn ${vistaActiva === "alertas" ? "btn-warning" : "btn-outline-warning"}`}
+              onClick={() => setVistaActiva("alertas")}
+            >
+              <FaExclamationTriangle className="mr-1" />Alertas ({Object.keys(alertas).length})
+            </button>
+          </div>
         </div>
       </div>
 
@@ -277,23 +375,28 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
               <tr>
                 <th className="text-dark" style={{width: '30px'}}></th>
                 <th className="text-dark">Vacuna</th>
-                <th className="text-dark">Stock Total</th>
-                <th className="text-dark">Stock Mínimo Total</th>
-                <th className="text-dark">Lotes</th>
+                <th className="text-dark">Frascos Totales</th>
+                <th className="text-dark">Frascos Reservados</th>
+                <th className="text-dark" colSpan="2">Frascos Faltante</th>
                 <th className="text-dark">Estado General</th>
                 <th className="text-dark">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {vacunasAgrupadas.map((vacunaGroup) => {
+              {vacunasPaginadas.map((vacunaGroup) => {
                 const estadoGeneral = getEstadoVacunaGeneral(vacunaGroup.estadoGeneral);
                 const estaExpandida = vacunasExpandidas.has(vacunaGroup.nombre);
+                
+                // Calcular frascos faltante = Reservados - Totales (si es negativo, hay déficit)
+                const frascosFaltante = Math.max(0, vacunaGroup.frascosReservados - vacunaGroup.frascosTotal);
+                const dosisFaltante = Math.max(0, vacunaGroup.stockReservadoDosis - vacunaGroup.stockTotalDosis);
+                const tieneFaltante = frascosFaltante > 0;
                 
                 return (
                   <React.Fragment key={vacunaGroup.nombre}>
                     {/* Fila principal con totales */}
                     <tr 
-                      className={`${estadoGeneral.clase === "danger" ? "table-danger" : ""}`}
+                      className={`${estadoGeneral.clase === "danger" ? "table-danger" : ""} ${tieneFaltante ? "table-warning" : ""}`}
                       style={{
                         backgroundColor: estaExpandida ? '#f8f9fa' : 'inherit',
                         cursor: 'pointer',
@@ -319,13 +422,40 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                       </td>
                       <td>
                         <span className="badge bg-primary text-white fs-6">
-                          {vacunaGroup.stockTotal.toLocaleString()}
+                          {vacunaGroup.frascosTotal.toLocaleString()} frascos
                         </span>
+                        <br />
+                        <small className="text-muted">
+                          ({vacunaGroup.stockTotalDosis.toLocaleString()} dosis)
+                        </small>
                       </td>
                       <td>
-                        <span className="badge bg-secondary text-white">
-                          {vacunaGroup.stockMinimoTotal.toLocaleString()}
+                        <span className={`badge ${vacunaGroup.frascosReservados > 0 ? 'bg-warning' : 'bg-secondary'} text-white`}>
+                          {vacunaGroup.frascosReservados.toLocaleString()} frascos
                         </span>
+                        <br />
+                        <small className="text-muted">
+                          ({vacunaGroup.stockReservadoDosis.toLocaleString()} dosis)
+                        </small>
+                      </td>
+                      <td>
+                        {tieneFaltante ? (
+                          <>
+                            <span className="badge bg-danger text-white fs-6">
+                              <FaExclamationTriangle className="me-1" />
+                              {frascosFaltante.toLocaleString()} frascos
+                            </span>
+                            <br />
+                            <small className="text-danger">
+                              ({dosisFaltante.toLocaleString()} dosis)
+                            </small>
+                          </>
+                        ) : (
+                          <span className="badge bg-success text-white">
+                            <FaCheckCircle className="me-1" />
+                            Sin faltante
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className="badge bg-info text-white">
@@ -338,19 +468,39 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                         </span>
                       </td>
                       <td>
-                        <button 
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => toggleVacunaExpansion(vacunaGroup.nombre)}
-                        >
-                          {estaExpandida ? <FaChevronUp className="mr-1" /> : <FaChevronDown className="mr-1" />}
-                          {estaExpandida ? 'Contraer' : 'Expandir'}
-                        </button>
+                        <div className="d-flex gap-2">
+                          <button 
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => toggleVacunaExpansion(vacunaGroup.nombre)}
+                          >
+                            {estaExpandida ? <FaChevronUp className="me-1" /> : <FaChevronDown className="me-1" />}
+                            {estaExpandida ? 'Contraer' : 'Expandir'}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-success"
+                            onClick={() => {
+                              setLoteSeleccionado({ 
+                                id_vacuna: vacunaGroup.id_vacuna,
+                                vacuna_nombre: vacunaGroup.nombre 
+                              });
+                              setMostrarFormNuevoLote(true);
+                            }}
+                            title="Agregar nuevo lote de esta vacuna"
+                          >
+                            <FaPlus className="me-1" />
+                            Nuevo Lote
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     
                     {/* Filas de detalle de lotes (si está expandida) */}
                     {estaExpandida && vacunaGroup.lotes.map((item, index) => {
                       const estado = getEstadoStock(item);
+                      const frascosReservados = item.frascos_reservados || Math.floor((item.stock_reservado || 0) / (item.dosis_por_frasco || 1));
+                      const frascosActuales = item.frascos_actuales || 0;
+                      const dosisActuales = item.stock_actual || 0;
+                      
                       return (
                         <tr 
                           key={`${vacunaGroup.nombre}-${item.lote}-${index}`}
@@ -364,16 +514,31 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                             <code>{item.lote}</code>
                           </td>
                           <td>
-                            <span className="badge bg-dark text-white">{item.stock_actual}</span>
+                            <span className="badge bg-dark text-white">
+                              {item.frascos_actuales || 0} frascos
+                            </span>
+                            <br />
+                            <small className="text-muted">
+                              {item.stock_actual} dosis
+                              {item.dosis_sobrantes > 0 && ` (+${item.dosis_sobrantes})`}
+                            </small>
                           </td>
                           <td>
-                            <span className="badge bg-secondary text-white">{item.stock_minimo}</span>
+                            <span className="badge bg-warning text-dark">
+                              {frascosReservados} frascos
+                            </span>
+                            <br />
+                            <small className="text-muted">{item.stock_reservado || 0} dosis</small>
                           </td>
-                          <td>
+                          <td colSpan="2">
                             <small>
                               <strong>Venc:</strong> {formatearFecha(item.fecha_vencimiento)}
                               <br />
                               <strong>Ubic:</strong> {item.ubicacion_fisica || '—'}
+                              <br />
+                              <strong>Total:</strong> <span className={frascosActuales > 0 ? 'text-success' : 'text-danger'}>
+                                {frascosActuales} frascos ({dosisActuales} dosis)
+                              </span>
                             </small>
                           </td>
                           <td>
@@ -382,9 +547,45 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                             </span>
                           </td>
                           <td>
-                            <button className="btn btn-sm btn-outline-secondary">
-                              <FaEye className="mr-1" />Ver
-                            </button>
+                            <div className="btn-group-vertical w-100">
+                              <button
+                                className="btn btn-success btn-sm mb-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLoteSeleccionado(item);
+                                  setMostrarFormIngreso(true);
+                                }}
+                                title="Registrar Ingreso"
+                              >
+                                INGRESO
+                              </button>
+                              <button
+                                className="btn btn-warning btn-sm mb-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLoteSeleccionado(item);
+                                  setMostrarFormEgreso(true);
+                                }}
+                                disabled={frascosActuales <= 0}
+                                title="Registrar Egreso"
+                              >
+                                EGRESO
+                              </button>
+                              {frascosReservados > 0 && (
+                                <button
+                                  className="btn btn-info btn-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLoteSeleccionado(item);
+                                    setMostrarModalReservas(true);
+                                  }}
+                                  title="Ver reservas de este lote"
+                                >
+                                  <FaEye className="me-1" />
+                                  RESERVAS ({frascosReservados})
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -394,6 +595,50 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
               })}
             </tbody>
           </table>
+
+          {/* Controles de paginación */}
+          {totalPaginas > 1 && (
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <div className="text-muted">
+                Mostrando {indiceInicio + 1} - {Math.min(indiceFin, vacunasAgrupadas.length)} de {vacunasAgrupadas.length} vacunas
+              </div>
+              <nav>
+                <ul className="pagination mb-0">
+                  <li className={`page-item ${paginaActual === 1 ? 'disabled' : ''}`}>
+                    <button 
+                      className="page-link" 
+                      onClick={() => setPaginaActual(paginaActual - 1)}
+                      disabled={paginaActual === 1}
+                    >
+                      Anterior
+                    </button>
+                  </li>
+                  {[...Array(totalPaginas)].map((_, index) => (
+                    <li 
+                      key={index + 1} 
+                      className={`page-item ${paginaActual === index + 1 ? 'active' : ''}`}
+                    >
+                      <button 
+                        className="page-link" 
+                        onClick={() => setPaginaActual(index + 1)}
+                      >
+                        {index + 1}
+                      </button>
+                    </li>
+                  ))}
+                  <li className={`page-item ${paginaActual === totalPaginas ? 'disabled' : ''}`}>
+                    <button 
+                      className="page-link" 
+                      onClick={() => setPaginaActual(paginaActual + 1)}
+                      disabled={paginaActual === totalPaginas}
+                    >
+                      Siguiente
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          )}
         </div>
       )}
 
@@ -430,6 +675,47 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
           <p><FaInbox className="mr-2" />No se encontraron registros de stock</p>
         </div>
       )}
+
+      {/* Formularios modales */}
+      <FormularioIngresoStock
+        lote={loteSeleccionado}
+        show={mostrarFormIngreso}
+        onClose={() => {
+          setMostrarFormIngreso(false);
+          setLoteSeleccionado(null);
+        }}
+        onSubmit={manejarIngresoStock}
+      />
+
+      <FormularioEgresoStock
+        lote={loteSeleccionado}
+        show={mostrarFormEgreso}
+        onClose={() => {
+          setMostrarFormEgreso(false);
+          setLoteSeleccionado(null);
+        }}
+        onSubmit={manejarEgresoStock}
+      />
+
+      <FormularioNuevoLote
+        vacunas={vacunas}
+        show={mostrarFormNuevoLote}
+        onClose={() => {
+          setMostrarFormNuevoLote(false);
+          setLoteSeleccionado(null);
+        }}
+        onSubmit={manejarNuevoLote}
+        vacunaPreseleccionada={loteSeleccionado}
+      />
+
+      <ModalReservasLote
+        show={mostrarModalReservas}
+        onClose={() => {
+          setMostrarModalReservas(false);
+          setLoteSeleccionado(null);
+        }}
+        lote={loteSeleccionado}
+      />
     </div>
   );
 }

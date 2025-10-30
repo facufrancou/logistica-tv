@@ -205,7 +205,7 @@ const VentasDirectasVacunasView = () => {
     const stock = stocksVacunas.find(s => s.id === stockId);
     
     if (nuevaCantidad > stock.cantidadDisponible) {
-      showWarning(`Solo hay ${stock.cantidadDisponible} dosis disponibles`);
+      showWarning(`Solo hay ${stock.cantidadDisponible} frascos disponibles`);
       return;
     }
 
@@ -517,7 +517,7 @@ const VentasDirectasVacunasView = () => {
                   <div className="stock-header">
                     <h4>{typeof stock.vacuna?.nombre === 'string' ? stock.vacuna.nombre : 'Vacuna sin nombre'}</h4>
                     <span className="stock-disponible">
-                      {stock.cantidadDisponible || 0} disponibles
+                      {stock.cantidadDisponible || 0} frascos disponibles
                     </span>
                   </div>
                   
@@ -613,7 +613,7 @@ const VentasDirectasVacunasView = () => {
               {/* Totales */}
               <div className="cart-totals">
                 <div className="total-line">
-                  <span>Subtotal ({cantidadTotal} dosis):</span>
+                  <span>Subtotal ({cantidadTotal} frascos):</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
                 {listaPrecioSeleccionada && recargo > 0 && (
@@ -716,7 +716,7 @@ const VentasDirectasVacunasView = () => {
                 <h4>Resumen de la Venta</h4>
                 <p><strong>Cliente:</strong> {clienteSeleccionado?.nombre || 'Cliente sin nombre'}</p>
                 <p><strong>Total de productos:</strong> {carrito.length}</p>
-                <p><strong>Total de dosis:</strong> {cantidadTotal}</p>
+                <p><strong>Total de frascos:</strong> {cantidadTotal}</p>
                 <p><strong>Subtotal:</strong> ${subtotal.toFixed(2)}</p>
                 {listaPrecioSeleccionada && recargo > 0 && (
                   <p><strong>Recargo {listaPrecioSeleccionada.tipo}:</strong> ${recargo.toFixed(2)}</p>

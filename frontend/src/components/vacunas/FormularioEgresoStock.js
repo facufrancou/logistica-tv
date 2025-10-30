@@ -8,41 +8,73 @@ function FormularioEgresoStock({
   onSubmit 
 }) {
   const [formData, setFormData] = useState({
-    cantidad: '',
+    cantidad_frascos: '',
     motivo: 'Venta directa',
     observaciones: '',
     cliente: ''
   });
   const [loading, setLoading] = useState(false);
 
-  const stockDisponible = lote ? lote.stock_actual - lote.stock_reservado : 0;
+  // Obtener dosis por frasco y calcular disponibilidad
+  const dosisPorFrasco = lote?.dosis_por_frasco || lote?.vacuna?.presentacion?.dosis_por_frasco || 1;
+  
+  // Stock total actual (no solo disponible)
+  const frascosActuales = lote ? (lote.frascos_actuales || Math.floor(lote.stock_actual / dosisPorFrasco)) : 0;
+  const dosisActuales = lote ? lote.stock_actual : 0;
+  
+  // Stock disponible (no reservado)
+  const dosisDisponibles = lote ? lote.stock_actual - lote.stock_reservado : 0;
+  const frascosDisponibles = Math.floor(dosisDisponibles / dosisPorFrasco);
+  
+  // Stock reservado
+  const dosisReservadas = lote ? lote.stock_reservado : 0;
+  const frascosReservados = Math.floor(dosisReservadas / dosisPorFrasco);
+  
+  const dosisCalculadas = formData.cantidad_frascos ? parseInt(formData.cantidad_frascos) * dosisPorFrasco : 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const cantidad = parseInt(formData.cantidad);
+    const cantidadFrascos = parseInt(formData.cantidad_frascos);
     
-    if (!cantidad || cantidad <= 0) {
-      alert('La cantidad debe ser mayor a 0');
+    if (!cantidadFrascos || cantidadFrascos <= 0) {
+      alert('La cantidad de frascos debe ser mayor a 0');
       return;
     }
 
-    if (cantidad > stockDisponible) {
-      alert(`No hay suficiente stock disponible. Disponible: ${stockDisponible}`);
+    // Validar contra stock TOTAL (actuales), no solo disponibles
+    if (cantidadFrascos > frascosActuales) {
+      alert(`No hay suficiente stock. Stock actual: ${frascosActuales} frascos (${dosisActuales} dosis)`);
       return;
+    }
+    
+    // Advertir si se están usando frascos reservados
+    if (cantidadFrascos > frascosDisponibles) {
+      const frascosDeReserva = cantidadFrascos - frascosDisponibles;
+      const confirmar = window.confirm(
+        `ATENCIÓN: Está utilizando ${frascosDeReserva} frasco(s) RESERVADO(S).\n\n` +
+        `Stock disponible: ${frascosDisponibles} frascos\n` +
+        `Stock reservado: ${frascosReservados} frascos\n` +
+        `Cantidad solicitada: ${cantidadFrascos} frascos\n\n` +
+        `¿Desea continuar con el egreso?`
+      );
+      
+      if (!confirmar) {
+        return;
+      }
     }
 
     setLoading(true);
     try {
       await onSubmit({
-        cantidad: cantidad,
+        cantidad_frascos: cantidadFrascos,
         motivo: formData.motivo,
         observaciones: formData.observaciones || null
       });
       
       // Limpiar formulario
       setFormData({
-        cantidad: '',
+        cantidad_frascos: '',
         motivo: 'Venta directa',
         observaciones: '',
         cliente: ''
@@ -96,9 +128,20 @@ function FormularioEgresoStock({
                           {lote.lote}
                         </div>
                         <div className="mt-2">
-                          <div className="text-muted small">Stock total: <strong>{lote.stock_actual}</strong></div>
-                          <div className="text-muted small">Reservado: <strong>{lote.stock_reservado}</strong></div>
-                          <div className="text-success font-weight-bold">Disponible: {stockDisponible}</div>
+                          <div className="text-dark small mb-1">
+                            <i className="fas fa-box mr-1"></i>
+                            Stock total: <strong>{frascosActuales} frascos</strong>
+                            <span className="text-muted"> ({dosisActuales} dosis)</span>
+                          </div>
+                          <div className="text-warning small mb-1">
+                            <i className="fas fa-lock mr-1"></i>
+                            Reservado: <strong>{frascosReservados} frascos</strong>
+                            <span className="text-muted"> ({dosisReservadas} dosis)</span>
+                          </div>
+                          <div className="text-success font-weight-bold">
+                            <i className="fas fa-check-circle mr-1"></i>
+                            Disponible: {frascosDisponibles} frascos ({dosisDisponibles} dosis)
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -106,31 +149,52 @@ function FormularioEgresoStock({
                 </div>
               </div>
 
-              {/* Alerta si stock bajo */}
-              {stockDisponible <= 0 && (
+              {/* Alerta informativa */}
+              {frascosReservados > 0 && (
+                <div className="alert alert-warning">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  <strong>Nota:</strong> Este lote tiene {frascosReservados} frasco(s) reservado(s). 
+                  Puede hacer egreso de cualquier frasco, incluso los reservados (por rotura, pérdida, etc). 
+                  El sistema le advertirá si está usando frascos reservados.
+                </div>
+              )}
+
+              {frascosActuales <= 0 && (
                 <div className="alert alert-danger">
                   <i className="fas fa-exclamation-triangle mr-2"></i>
-                  No hay stock disponible para este lote.
+                  No hay stock disponible en este lote.
                 </div>
               )}
 
               {/* Formulario */}
               <div className="form-group">
-                <label>Cantidad a Retirar *</label>
+                <label>Cantidad de Frascos a Retirar *</label>
                 <input
                   type="number"
                   className="form-control"
-                  value={formData.cantidad}
-                  onChange={(e) => setFormData({...formData, cantidad: e.target.value})}
+                  value={formData.cantidad_frascos}
+                  onChange={(e) => setFormData({...formData, cantidad_frascos: e.target.value})}
                   min="1"
-                  max={stockDisponible}
+                  max={frascosActuales}
                   required
-                  placeholder="Ingrese la cantidad"
-                  disabled={stockDisponible <= 0}
+                  placeholder="Ingrese la cantidad de frascos"
+                  disabled={frascosActuales <= 0}
                 />
                 <small className="form-text text-muted">
-                  Máximo disponible: {stockDisponible} dosis
+                  Stock total: {frascosActuales} frascos ({dosisActuales} dosis)
+                  {frascosDisponibles < frascosActuales && (
+                    <span className="text-warning d-block">
+                      <i className="fas fa-exclamation-triangle mr-1"></i>
+                      {frascosReservados} frasco(s) reservado(s) - Se advertirá si los usa
+                    </span>
+                  )}
                 </small>
+                {formData.cantidad_frascos && (
+                  <small className="form-text text-info">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    {formData.cantidad_frascos} frascos = <strong>{dosisCalculadas.toLocaleString()} dosis</strong>
+                  </small>
+                )}
               </div>
 
               <div className="form-group">
@@ -177,7 +241,7 @@ function FormularioEgresoStock({
               </div>
 
               {/* Resumen */}
-              {formData.cantidad && (
+              {formData.cantidad_frascos && (
                 <div className="alert alert-warning border-warning">
                   <h6 className="alert-heading">
                     <i className="fas fa-calculator mr-2"></i>
@@ -186,12 +250,16 @@ function FormularioEgresoStock({
                   <hr />
                   <div className="row">
                     <div className="col-6">
-                      <div><strong>Stock disponible:</strong> {stockDisponible}</div>
-                      <div><strong>Stock total:</strong> {lote.stock_actual}</div>
+                      <div><strong>Stock disponible:</strong> {frascosDisponibles} frascos</div>
+                      <div className="text-muted small">({dosisDisponibles} dosis)</div>
+                      <div className="mt-2"><strong>Stock total:</strong> {Math.floor(lote.stock_actual / dosisPorFrasco)} frascos</div>
+                      <div className="text-muted small">({lote.stock_actual} dosis)</div>
                     </div>
                     <div className="col-6">
-                      <div><strong>Nuevo disponible:</strong> {stockDisponible - parseInt(formData.cantidad || 0)}</div>
-                      <div><strong>Nuevo total:</strong> {lote.stock_actual - parseInt(formData.cantidad || 0)}</div>
+                      <div><strong>Nuevo disponible:</strong> {frascosDisponibles - parseInt(formData.cantidad_frascos || 0)} frascos</div>
+                      <div className="text-muted small">({dosisDisponibles - dosisCalculadas} dosis)</div>
+                      <div className="mt-2"><strong>Nuevo total:</strong> {Math.floor(lote.stock_actual / dosisPorFrasco) - parseInt(formData.cantidad_frascos || 0)} frascos</div>
+                      <div className="text-muted small">({lote.stock_actual - dosisCalculadas} dosis)</div>
                     </div>
                   </div>
                 </div>
@@ -211,7 +279,7 @@ function FormularioEgresoStock({
               <button 
                 type="submit" 
                 className="btn btn-warning btn-lg"
-                disabled={loading || stockDisponible <= 0}
+                disabled={loading || frascosActuales <= 0}
               >
                 {loading ? (
                   <>

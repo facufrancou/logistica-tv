@@ -234,11 +234,10 @@ async function asignarLoteManual(idCalendario, idStockVacuna, cantidadAsignar, i
         await liberarReservaStock(calendarioItem.id_stock_vacuna, calendarioItem.cantidad_dosis, tx);
       }
 
-      // Asignar nuevo stock
+      // Asignar nuevo stock (solo incrementar reserva, NO decrementar stock_actual)
       await tx.stockVacuna.update({
         where: { id_stock_vacuna: idStockVacuna },
         data: {
-          stock_actual: { decrement: cantidadAsignar },
           stock_reservado: { increment: cantidadAsignar }
         }
       });
@@ -282,10 +281,10 @@ async function asignarLoteManual(idCalendario, idStockVacuna, cantidadAsignar, i
 
 // Función para liberar reserva de stock
 async function liberarReservaStock(idStockVacuna, cantidad, tx = prisma) {
+  // Solo decrementar la reserva, NO incrementar stock_actual
   await tx.stockVacuna.update({
     where: { id_stock_vacuna: idStockVacuna },
     data: {
-      stock_actual: { increment: cantidad },
       stock_reservado: { decrement: cantidad }
     }
   });
@@ -421,11 +420,10 @@ async function asignarMultiplesLotes(idCalendario, idUsuario = null) {
 
         const cantidadDelLote = Math.min(stock.stock_actual, cantidadRestante);
 
-        // Reservar stock de este lote
+        // Reservar stock de este lote (solo incrementar reserva, NO decrementar stock_actual)
         await tx.stockVacuna.update({
           where: { id_stock_vacuna: stock.id_stock_vacuna },
           data: {
-            stock_actual: { decrement: cantidadDelLote },
             stock_reservado: { increment: cantidadDelLote }
           }
         });
@@ -658,7 +656,9 @@ async function reservarStockParaCotizacion(cotizacionId, vacunasDelPlan, idUsuar
     });
 
     if (stocksVacuna.length > 0) {
-      const totalDosisRequeridas = planVacuna.cantidad_total * planVacuna.dosis_por_semana;
+      // cantidad_total son FRASCOS, necesitamos convertir a dosis
+      const dosisPorFrasco = planVacuna.vacuna?.presentacion?.dosis_por_frasco || 1000;
+      const totalDosisRequeridas = planVacuna.cantidad_total * dosisPorFrasco;
       
       // Calcular stock total disponible
       const stockTotalDisponible = stocksVacuna.reduce((total, stock) => {
@@ -1132,7 +1132,15 @@ exports.createCotizacion = async (req, res) => {
       include: {
         vacunas_plan: {
           include: {
-            vacuna: true
+            vacuna: {
+              include: {
+                presentacion: {
+                  select: {
+                    dosis_por_frasco: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1200,10 +1208,11 @@ exports.createCotizacion = async (req, res) => {
 
         // Calcular cantidad basada en dosis por animal (1 dosis por animal)
         const dosisNecesarias = cantidadAnimalesNum; // 1 dosis por animal
-        const dosisPorFrasco = planVacuna.vacuna.dosis_por_frasco || 1000;
+        const dosisPorFrasco = planVacuna.vacuna?.presentacion?.dosis_por_frasco || 1;
         const frascosNecesarios = Math.ceil(dosisNecesarias / dosisPorFrasco);
         
-        const subtotal = precioFinal * frascosNecesarios; // Precio por frascos necesarios
+        // El precio_lista es el precio POR FRASCO
+        const subtotal = precioFinal * frascosNecesarios; // Precio por frasco * cantidad de frascos
         precioTotal += subtotal;
 
         // Crear detalle usando id_producto para compatibilidad con la tabla actual
@@ -1259,28 +1268,72 @@ exports.createCotizacion = async (req, res) => {
       return cotizacion;
     });
 
-    // NUEVA FUNCIONALIDAD: Crear reservas automáticamente al crear la cotización
-    // Esto asegura que el stock se reserve desde el momento de creación
+    // RESERVAS AUTOMÁTICAS: Crear reservas al crear la cotización
+    // Las reservas se crean SIEMPRE, sin importar si hay stock disponible
     try {
       console.log('Creando reservas automáticas para nueva cotización...');
       
-      // Reservar SOLO vacunas (sistema únicamente de vacunas)
       const vacunasDelPlan = await prisma.planVacuna.findMany({
         where: { id_plan: parseInt(id_plan) },
         include: {
-          vacuna: true
+          vacuna: {
+            include: {
+              presentacion: {
+                select: {
+                  dosis_por_frasco: true
+                }
+              }
+            }
+          }
         }
       });
       
-      if (vacunasDelPlan.length > 0) {
-        // TODO: Implementar reservarStockVacunasParaCotizacion cuando esté disponible
-        console.log(`Vacunas del plan encontradas: ${vacunasDelPlan.length} (reservas pendientes de implementar)`);
+      for (const planVacuna of vacunasDelPlan) {
+        const dosisPorFrasco = planVacuna.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const totalDosisNecesarias = planVacuna.cantidad_total * dosisPorFrasco;
+        
+        console.log(`Reservando ${totalDosisNecesarias} dosis de ${planVacuna.vacuna.nombre} (${planVacuna.cantidad_total} frascos)`);
+        
+        // Buscar stocks disponibles (FIFO por vencimiento)
+        const stocksVacuna = await prisma.stockVacuna.findMany({
+          where: {
+            id_vacuna: planVacuna.id_vacuna,
+            estado_stock: 'disponible'
+          },
+          orderBy: {
+            fecha_vencimiento: 'asc'
+          }
+        });
+        
+        // Reservar en los lotes disponibles (aunque no haya stock suficiente)
+        let dosisRestantes = totalDosisNecesarias;
+        
+        for (const stock of stocksVacuna) {
+          if (dosisRestantes <= 0) break;
+          
+          const dosisAReservar = Math.min(dosisRestantes, totalDosisNecesarias);
+          
+          await prisma.stockVacuna.update({
+            where: { id_stock_vacuna: stock.id_stock_vacuna },
+            data: {
+              stock_reservado: {
+                increment: dosisAReservar
+              }
+            }
+          });
+          
+          dosisRestantes -= dosisAReservar;
+          console.log(`  ✓ Reservadas ${dosisAReservar} dosis en lote ${stock.lote}`);
+        }
+        
+        if (dosisRestantes > 0) {
+          console.warn(`  ⚠️  Faltan ${dosisRestantes} dosis de ${planVacuna.vacuna.nombre} - se reservó lo disponible`);
+        }
       }
       
     } catch (stockError) {
-      console.warn('Advertencia al crear reservas automáticas:', stockError.message);
-      // No fallar la creación de la cotización por falta de stock
-      // Solo registrar la advertencia
+      console.warn('Advertencia al crear reservas:', stockError.message);
+      // No fallar la creación - las reservas son indicativas
     }
 
     res.status(201).json({
@@ -1399,7 +1452,9 @@ exports.updateEstadoCotizacion = async (req, res) => {
         
         if (stocksConReservas.length > 0) {
           const totalReservado = stocksConReservas.reduce((total, stock) => total + (stock.stock_reservado || 0), 0);
-          const totalRequerido = planVacuna.cantidad_total * planVacuna.dosis_por_semana;
+          // cantidad_total son FRASCOS, necesitamos convertir a dosis
+          const dosisPorFrasco = planVacuna.vacuna?.presentacion?.dosis_por_frasco || 1000;
+          const totalRequerido = planVacuna.cantidad_total * dosisPorFrasco;
           
           console.log(`Vacuna ${planVacuna.vacuna.nombre}: ${totalReservado} dosis reservadas, ${totalRequerido} requeridas`);
           
@@ -1414,102 +1469,15 @@ exports.updateEstadoCotizacion = async (req, res) => {
         reservasCreadas = []; // Marcar como que ya existen reservas
         
       } else {
-        // No existen reservas - crear nuevas (flujo normal)
-        console.log('No hay reservas existentes. Creando nuevas reservas...');
+        // No existen reservas - NO VERIFICAR STOCK
+        // La asignación de lotes se hará posteriormente en el calendario
+        console.log('Cotización aceptada sin verificación de stock. Los lotes se asignarán en el calendario.');
         
-        // Verificar si se debe forzar la aceptación (omitir verificación de stock)
-        const forzarAceptacion = req.body.forzar_aceptacion === true;
+        // NO crear reservas automáticas
+        // Las reservas se crearán cuando se asignen los lotes en el calendario
+        reservasCreadas = [];
         
-        if (!forzarAceptacion) {
-          // Verificar disponibilidad de stock de vacunas antes de aceptar
-          const vacunasConStockInsuficiente = [];
-          
-          // Obtener las vacunas del plan de la cotización
-          const vacunasDelPlan = await prisma.planVacuna.findMany({
-            where: { id_plan: cotizacionExistente.id_plan },
-            include: {
-              vacuna: true
-            }
-          });
-          
-          for (const planVacuna of vacunasDelPlan) {
-            // Buscar stock específico de la vacuna
-            const stocksVacuna = await prisma.stockVacuna.findMany({
-              where: {
-                id_vacuna: planVacuna.id_vacuna,
-                estado_stock: 'disponible'
-              }
-            });
-            
-            // Calcular stock total disponible sumando todos los lotes
-            const stockTotalDisponible = stocksVacuna.reduce((total, stock) => {
-              return total + ((stock.stock_actual || 0) - (stock.stock_reservado || 0));
-            }, 0);
-            
-            const totalDosisRequeridas = planVacuna.cantidad_total * planVacuna.dosis_por_semana;
-            
-            console.log(`Stock check - Vacuna: ${planVacuna.vacuna.nombre}, Disponible: ${stockTotalDisponible}, Requerido: ${totalDosisRequeridas}`);
-            
-            if (stockTotalDisponible < totalDosisRequeridas) {
-              vacunasConStockInsuficiente.push({
-                id_vacuna: planVacuna.id_vacuna,
-                nombre: planVacuna.vacuna.nombre,
-                descripcion: planVacuna.vacuna.descripcion,
-                stock_disponible: stockTotalDisponible,
-                cantidad_requerida: totalDosisRequeridas,
-                deficit: totalDosisRequeridas - stockTotalDisponible
-              });
-            }
-          }
-          
-          // Si hay vacunas con stock insuficiente, devolver error detallado
-          if (vacunasConStockInsuficiente.length > 0) {
-            return res.status(400).json({
-              error: 'STOCK_INSUFICIENTE',
-              message: 'No hay stock suficiente para una o más vacunas de la cotización',
-              productos_insuficientes: vacunasConStockInsuficiente,
-              puede_forzar: true,
-              total_productos_afectados: vacunasConStockInsuficiente.length
-            });
-          }
-        } else {
-          console.log('Aceptación forzada: omitiendo verificación de stock');
-        }
-
-        // Crear reservas automáticas de stock (siempre, incluso si stock es insuficiente)
-        try {
-          console.log('Creando reservas de stock...');
-          
-          // Obtener vacunas del plan en lugar del detalle de cotización
-          const vacunasDelPlan = await prisma.planVacuna.findMany({
-            where: { id_plan: cotizacionExistente.id_plan },
-            include: {
-              vacuna: true
-            }
-          });
-          
-          console.log(`Vacunas del plan encontradas: ${vacunasDelPlan.length}`);
-          vacunasDelPlan.forEach(pv => {
-            const totalDosis = pv.cantidad_total * pv.dosis_por_semana;
-            console.log(`  - ${pv.vacuna.nombre}: ${pv.cantidad_total} × ${pv.dosis_por_semana} = ${totalDosis} dosis`);
-          });
-          
-          reservasCreadas = await reservarStockParaCotizacion(
-            cotizacionExistente.id_cotizacion, 
-            vacunasDelPlan, // Usar vacunas del plan
-            idUsuario
-          );
-          console.log('Reservas creadas exitosamente:', reservasCreadas?.length || 0);
-        } catch (stockError) {
-          console.error('Error al crear reservas:', stockError.message);
-          // Si se está forzando la aceptación, permitir continuar incluso con errores de reserva
-          if (!forzarAceptacion) {
-            return res.status(400).json({ error: stockError.message });
-          } else {
-            console.log('Continuando a pesar del error de reserva (aceptación forzada)');
-            reservasCreadas = [];
-          }
-        }
+        console.log('Stock se gestionará posteriormente al asignar lotes en el calendario.');
       }
     }
 
@@ -1526,7 +1494,9 @@ exports.updateEstadoCotizacion = async (req, res) => {
       });
 
       for (const planVacuna of vacunasDelPlan) {
-        const totalDosisReservadas = planVacuna.cantidad_total * planVacuna.dosis_por_semana;
+        // cantidad_total son FRASCOS, necesitamos convertir a dosis
+        const dosisPorFrasco = planVacuna.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const totalDosisReservadas = planVacuna.cantidad_total * dosisPorFrasco;
         
         // Buscar stocks de esta vacuna que tengan reservas
         const stocksConReservas = await prisma.stockVacuna.findMany({
@@ -2119,25 +2089,45 @@ exports.marcarEntregaDosis = async (req, res) => {
 
     // Verificar stock disponible (solo si requiere control)
     if (calendarioExistente.producto.requiere_control_stock) {
-      let stockDisponible = 0;
-      
       // Si es un plan de vacunación y tiene stock_vacuna asignado, usar ese stock
       if (calendarioExistente.cotizacion.id_plan && calendarioExistente.stock_vacuna) {
-        stockDisponible = (calendarioExistente.stock_vacuna.stock_actual || 0) - (calendarioExistente.stock_vacuna.stock_reservado || 0);
-        console.log(`Verificando stock de vacuna - Lote: ${calendarioExistente.stock_vacuna.lote}, Disponible: ${stockDisponible}, Solicitado: ${cantidad_entregada}`);
+        const stockActual = calendarioExistente.stock_vacuna.stock_actual || 0;
+        const stockReservado = calendarioExistente.stock_vacuna.stock_reservado || 0;
+        
+        console.log(`Verificando stock de vacuna - Lote: ${calendarioExistente.stock_vacuna.lote}`);
+        console.log(`  Stock actual: ${stockActual}, Stock reservado: ${stockReservado}, Solicitado: ${cantidad_entregada}`);
+        
+        // Validar que haya stock_actual Y que esté reservado
+        if (stockActual < cantidad_entregada) {
+          return res.status(400).json({ 
+            error: 'Stock insuficiente para la entrega',
+            stock_actual: stockActual,
+            solicitado: cantidad_entregada,
+            lote: calendarioExistente.stock_vacuna.lote
+          });
+        }
+        
+        if (stockReservado < cantidad_entregada) {
+          return res.status(400).json({ 
+            error: 'Stock reservado insuficiente. Debe reasignar lotes en el calendario.',
+            stock_reservado: stockReservado,
+            solicitado: cantidad_entregada,
+            lote: calendarioExistente.stock_vacuna.lote,
+            sugerencia: 'Verifique si hubo egresos que afectaron las reservas y reasigne lotes'
+          });
+        }
       } else {
         // Si no tiene stock de vacuna específico, usar stock de producto
-        stockDisponible = (calendarioExistente.producto.stock || 0) - (calendarioExistente.producto.stock_reservado || 0);
+        const stockDisponible = (calendarioExistente.producto.stock || 0) - (calendarioExistente.producto.stock_reservado || 0);
         console.log(`Verificando stock de producto - ${calendarioExistente.producto.nombre}, Disponible: ${stockDisponible}, Solicitado: ${cantidad_entregada}`);
-      }
-      
-      if (stockDisponible < cantidad_entregada) {
-        return res.status(400).json({ 
-          error: 'Stock insuficiente para la entrega',
-          disponible: stockDisponible,
-          solicitado: cantidad_entregada,
-          lote: calendarioExistente.stock_vacuna?.lote || 'Sin lote específico'
-        });
+        
+        if (stockDisponible < cantidad_entregada) {
+          return res.status(400).json({ 
+            error: 'Stock insuficiente para la entrega',
+            disponible: stockDisponible,
+            solicitado: cantidad_entregada
+          });
+        }
       }
     }
 
@@ -2166,16 +2156,25 @@ exports.marcarEntregaDosis = async (req, res) => {
       if (calendarioExistente.producto.requiere_control_stock) {
         // Si es un plan de vacunación y tiene stock_vacuna asignado, actualizar ese stock
         if (calendarioExistente.cotizacion.id_plan && calendarioExistente.stock_vacuna) {
+          // Calcular stock posterior
+          const stockAnterior = calendarioExistente.stock_vacuna.stock_actual;
+          const stockReservadoAnterior = calendarioExistente.stock_vacuna.stock_reservado || 0;
+          const stockPosterior = stockAnterior - cantidad_entregada;
+          const stockReservadoPosterior = Math.max(0, stockReservadoAnterior - cantidad_entregada);
+          
+          console.log(`📦 Entrega de dosis - Lote ${calendarioExistente.stock_vacuna.lote}:`);
+          console.log(`  Stock anterior: ${stockAnterior} dosis`);
+          console.log(`  Reservado anterior: ${stockReservadoAnterior} dosis`);
+          console.log(`  Cantidad entregada: ${cantidad_entregada} dosis`);
+          console.log(`  Stock posterior: ${stockPosterior} dosis`);
+          console.log(`  Reservado posterior: ${stockReservadoPosterior} dosis`);
+          
           // Reducir stock reservado y actual del lote específico
           await tx.stockVacuna.update({
             where: { id_stock_vacuna: calendarioExistente.id_stock_vacuna },
             data: {
-              stock_reservado: {
-                decrement: cantidad_entregada
-              },
-              stock_actual: {
-                decrement: cantidad_entregada
-              },
+              stock_reservado: stockReservadoPosterior,
+              stock_actual: stockPosterior,
               updated_at: new Date()
             }
           });
@@ -2186,8 +2185,8 @@ exports.marcarEntregaDosis = async (req, res) => {
               id_stock_vacuna: calendarioExistente.id_stock_vacuna,
               tipo_movimiento: 'egreso',
               cantidad: cantidad_entregada,
-              stock_anterior: calendarioExistente.stock_vacuna.stock_actual,
-              stock_posterior: calendarioExistente.stock_vacuna.stock_actual - cantidad_entregada,
+              stock_anterior: stockAnterior,
+              stock_posterior: stockPosterior,
               motivo: 'Entrega de dosis programada',
               observaciones: `Entrega: ${cantidad_entregada} dosis - ${responsableCompleto}`,
               id_calendario: parseInt(id_calendario),
@@ -2196,7 +2195,7 @@ exports.marcarEntregaDosis = async (req, res) => {
             }
           });
           
-          console.log(`Stock actualizado - Lote ${calendarioExistente.stock_vacuna.lote}: -${cantidad_entregada} dosis`);
+          console.log(`✅ Stock actualizado correctamente`);
         } else {
           // Si no tiene stock de vacuna específico, usar stock de producto
           await tx.producto.update({
