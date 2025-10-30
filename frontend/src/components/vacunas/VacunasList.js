@@ -137,13 +137,13 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="mb-0"><FaList className="mr-2" />Lista de Vacunas</h4>
+      <div className="card-header d-flex justify-content-between align-items-center">
+        <h3 className="mb-0"><FaList className="me-2 text-primary" />Administración de Vacunas</h3>
         <button
           className="btn btn-success"
           onClick={() => abrirModal()}
         >
-          <FaPlus className="mr-1" />Nueva Vacuna
+          <FaPlus className="me-1" />Nueva Vacuna
         </button>
       </div>
 

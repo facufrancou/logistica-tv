@@ -475,28 +475,25 @@ const VentasDirectasVacunasView = () => {
   return (
     <div className="ventas-directas-vacunas-container">
       {/* Header */}
-      <div className="header-section">
-        <div className="title-section">
-          <h1>
-            <FaSyringe className="title-icon" />
-            Entregas Fuera de Plan
-          </h1>
-          <p className="subtitle">Ventas directas de vacunas sin plan previo</p>
-        </div>
+      <div className="card-header d-flex justify-content-between align-items-center mb-4">
+        <h3 className="mb-0">
+          <FaSyringe className="me-2 text-primary" />
+          Entregas Fuera de Plan
+        </h3>
         
-        <div className="header-actions">
+        <div className="d-flex gap-2">
           <button 
-            className="btn btn-outline"
+            className="btn btn-outline-primary"
             onClick={() => {
               setBusquedaVentas('');
               cargarVentasDirectas();
               setShowVentasModal(true);
             }}
           >
-            <FaBoxOpen /> Ver Ventas Directas
+            <FaBoxOpen className="me-1" /> Ver Ventas Directas
           </button>
           <button 
-            className="btn btn-outline"
+            className="btn btn-outline-secondary"
             onClick={() => navigate('/dashboard')}
           >
             Volver al Dashboard
@@ -684,6 +681,14 @@ const VentasDirectasVacunasView = () => {
                                   <strong>Ubic:</strong> {stock.ubicacion_fisica || '—'}
                                   <br />
                                   <strong>Precio:</strong> ${stock.precioVenta || 0}
+                                  {stock.stock_reservado > 0 && (
+                                    <>
+                                      <br />
+                                      <span className="badge bg-warning text-dark mt-1">
+                                        <FaInfoCircle /> {Math.floor(stock.stock_reservado / stock.dosisPorFrasco)} frascos reservados para planes
+                                      </span>
+                                    </>
+                                  )}
                                 </small>
                               </td>
                               <td>

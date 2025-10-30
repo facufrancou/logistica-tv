@@ -888,8 +888,6 @@ const CalendarioVacunacion = () => {
         'DÍA', 
         'SEM', 
         'VACUNA (PRODUCTO)', 
-        'LOTE',
-        'VENCIMIENTO',
         'PATOLOGÍA', 
         'VÍA', 
         'FRASCOS'
@@ -908,8 +906,18 @@ const CalendarioVacunacion = () => {
         const dosisPorFrasco = item.vacuna_descripcion?.includes('OLEOSA') ? 500 : 1000; // Vacunas oleosas suelen tener menos dosis
         const frascos = Math.ceil(cantidadAnimales / dosisPorFrasco);
         
-        // Formatear nombre del producto más compacto
-        const nombreProducto = `${item.producto_nombre || item.vacuna_nombre} | Vacuna ${item.vacuna_descripcion || item.vacuna_nombre}`;
+        // Formatear nombre del producto: vacuna || presentación || proveedor
+        const nombreVacuna = item.vacuna_nombre || item.producto_nombre;
+        const presentacion = item.presentacion || '';
+        const proveedor = item.proveedor_nombre || item.proveedor || '';
+        
+        let nombreProducto = nombreVacuna;
+        if (presentacion) {
+          nombreProducto += ` || ${presentacion}`;
+        }
+        if (proveedor) {
+          nombreProducto += ` || ${proveedor}`;
+        }
         
         // Obtener patología del item - revisar múltiples posibles campos
         const patologia = item.patologia_nombre || 
@@ -925,17 +933,12 @@ const CalendarioVacunacion = () => {
         return [
           fecha.toLocaleDateString('es-ES', { 
             day: '2-digit', 
-            month: '2-digit'
+            month: '2-digit',
+            year: 'numeric'
           }),
           diffDays.toString(),
           item.semana_aplicacion.toString(),
-          nombreProducto.substring(0, 55) + (nombreProducto.length > 55 ? '...' : ''),
-          item.lote_asignado || '',
-          item.fecha_vencimiento_lote ? new Date(item.fecha_vencimiento_lote).toLocaleDateString('es-ES', { 
-            day: '2-digit', 
-            month: '2-digit',
-            year: '2-digit'
-          }) : '',
+          nombreProducto.substring(0, 70) + (nombreProducto.length > 70 ? '...' : ''),
           patologia,
           'IM',
           frascos.toString()
@@ -974,15 +977,13 @@ const CalendarioVacunacion = () => {
           fillColor: [248, 248, 248]
         },
         columnStyles: {
-          0: { cellWidth: tableWidth * 0.08, halign: 'center' }, // FECHA
-          1: { cellWidth: tableWidth * 0.06, halign: 'center' }, // DÍA
-          2: { cellWidth: tableWidth * 0.06, halign: 'center' }, // SEM
-          3: { cellWidth: tableWidth * 0.38, halign: 'left', fontSize: 7 }, // VACUNA - reducir un poco
-          4: { cellWidth: tableWidth * 0.11, halign: 'center', fontSize: 7 }, // LOTE
-          5: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 7 }, // VENCIMIENTO
-          6: { cellWidth: tableWidth * 0.13, halign: 'center', fontSize: 7 }, // PATOLOGÍA - más espacio
-          7: { cellWidth: tableWidth * 0.04, halign: 'center' }, // VÍA
-          8: { cellWidth: tableWidth * 0.04, halign: 'center' }  // FRASCOS - más espacio
+          0: { cellWidth: tableWidth * 0.10, halign: 'center' }, // FECHA
+          1: { cellWidth: tableWidth * 0.05, halign: 'center' }, // DÍA
+          2: { cellWidth: tableWidth * 0.05, halign: 'center' }, // SEM
+          3: { cellWidth: tableWidth * 0.50, halign: 'left', fontSize: 7 }, // VACUNA (más espacio)
+          4: { cellWidth: tableWidth * 0.18, halign: 'center', fontSize: 7 }, // PATOLOGÍA
+          5: { cellWidth: tableWidth * 0.05, halign: 'center' }, // VÍA
+          6: { cellWidth: tableWidth * 0.07, halign: 'center' }  // FRASCOS (más ancho)
         },
         didDrawPage: function (data) {
           // Agregar números de página

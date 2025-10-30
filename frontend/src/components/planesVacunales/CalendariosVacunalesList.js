@@ -217,24 +217,23 @@ const CalendariosVacunalesList = () => {
   }
 
   return (
-    <div className="container-fluid mt-4">
+    <div className="container-fluid">
       {/* Header */}
-      <div className="row mb-4">
-        <div className="col">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h2 className="mb-0 d-flex align-items-center">
-                <FaCalendarAlt className="me-2 text-primary" />
-                Calendarios Vacunales
-              </h2>
-              <p className="text-muted mb-0">Gestión y seguimiento de calendarios de vacunación</p>
-            </div>
+      <div className="card mb-4">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <div className="d-flex align-items-center">
+            <FaCalendarAlt className="me-2 text-primary" />
+            <h3 className="mb-0">Calendarios Vacunales</h3>
           </div>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="card mb-4">
+        <div className="card-header">
+          <FaFilter className="me-2" />
+          Filtros
+        </div>
         <div className="card-body">
           <div className="row g-3">
             <div className="col-md-3">

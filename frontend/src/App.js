@@ -191,13 +191,14 @@ function Navbar() {
                 <span>Planes Vacunales</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="planesDropdown">
+                {/* <li><hr className="dropdown-divider" /></li> */}
+                <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> <strong>Administrar Vacunas</strong></Link></li>
+                <li><hr className="dropdown-divider" /></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaStethoscope className="me-2" /> Gestión de Planes</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/calendarios-vacunales"><FaCalendarAlt className="me-2" /> Calendarios Vacunales</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
-                <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> <strong>Administrar Vacunas</strong></Link></li>
-                <li><hr className="dropdown-divider" /></li>
+                
                 <li><Link className="dropdown-item d-flex align-items-center" to="/remitos/generar"><FaFileInvoice className="me-2" /> Generar Remitos</Link></li>
                 {/* <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li> */}
                 <li><Link className="dropdown-item d-flex align-items-center" to="/entregas-fuera-de-plan"><FaSyringe className="me-2" /> Entregas Fuera de Plan</Link></li>
@@ -206,7 +207,7 @@ function Navbar() {
             </li>
 
             {/* 📦 Stock & Inventario (Sprint 3) */}
-            <li className="nav-item dropdown">
+            {/* <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
@@ -225,7 +226,7 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/stock/reservas"><FaClipboardList className="me-2" /> Reservas</Link></li>
               </ul>
             </li>
-
+ */}
             {/* 💉 Vacunas */}
           {/*   <li className="nav-item dropdown">
               <a

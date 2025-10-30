@@ -231,9 +231,10 @@ exports.crearVentaDirecta = async (req, res) => {
           throw new Error(`Stock de ${stock.vacuna.nombre} no está disponible`);
         }
 
-        const stockDisponible = stock.stock_actual - stock.stock_reservado;
-        if (stockDisponible < item.cantidad) {
-          throw new Error(`Stock insuficiente para ${stock.vacuna.nombre}. Disponible: ${stockDisponible}, Solicitado: ${item.cantidad}`);
+        // Para ventas fuera de plan, validar contra el stock físico total (stock_actual)
+        // Las reservas son solo organizativas y no impiden ventas directas
+        if (stock.stock_actual < item.cantidad) {
+          throw new Error(`Stock insuficiente para ${stock.vacuna.nombre}. Stock físico: ${stock.stock_actual}, Solicitado: ${item.cantidad}`);
         }
       }
 
