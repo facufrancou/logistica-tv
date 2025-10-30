@@ -191,6 +191,10 @@ exports.crearVentaDirecta = async (req, res) => {
       responsable_recibe
     } = req.body;
 
+    // Log para depuración
+    console.log('=== CREAR VENTA DIRECTA ===');
+    console.log('Vacunas recibidas:', JSON.stringify(vacunas, null, 2));
+
     // Validaciones básicas
     if (!id_cliente || !vacunas || vacunas.length === 0) {
       return res.status(400).json({
@@ -242,12 +246,64 @@ exports.crearVentaDirecta = async (req, res) => {
         numeroExiste = !!existente;
       }
 
-      // Calcular precio total
-      const precioTotal = vacunas.reduce((total, item) => {
-        return total + (parseFloat(item.precio_unitario || 0) * parseInt(item.cantidad));
-      }, 0);
+      // Obtener lista de precios si fue seleccionada
+      let listaPrecio = null;
+      let porcentajeRecargo = 0;
+      
+      if (id_lista_precio) {
+        listaPrecio = await tx.listaPrecio.findUnique({
+          where: { id_lista: parseInt(id_lista_precio) }
+        });
+        
+        if (listaPrecio) {
+          porcentajeRecargo = parseFloat(listaPrecio.porcentaje_recargo);
+        }
+      }
 
-      // Crear la venta directa
+      // Crear detalles de la venta y calcular precio total
+      const detallesData = [];
+      let precioTotal = 0;
+      
+      for (const item of vacunas) {
+        const stock = await tx.stockVacuna.findUnique({
+          where: { id_stock_vacuna: parseInt(item.id_stock_vacuna) },
+          include: { 
+            vacuna: {
+              include: {
+                presentacion: true
+              }
+            }
+          }
+        });
+
+        // Convertir cantidad de FRASCOS a DOSIS
+        const cantidadFrascos = parseInt(item.cantidad);
+        const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const cantidadDosis = cantidadFrascos * dosisPorFrasco;
+
+        // Precio base del stock
+        const precioBase = parseFloat(item.precio_unitario || stock.precio_venta || 0);
+        
+        // Aplicar recargo de lista de precios al precio unitario
+        const precioConRecargo = precioBase * (1 + porcentajeRecargo / 100);
+        
+        // Calcular subtotal (precio es por frasco, cantidad es en frascos)
+        const subtotal = precioConRecargo * cantidadFrascos;
+        precioTotal += subtotal;
+
+        console.log(`Item - Stock ID: ${item.id_stock_vacuna}, Frascos: ${cantidadFrascos}, Dosis: ${cantidadDosis}, Precio base: ${precioBase}, Precio con recargo: ${precioConRecargo}, Subtotal: ${subtotal}`);
+
+        detallesData.push({
+          id_venta_directa: null, // Se asignará después de crear la venta
+          id_producto: stock.id_vacuna, // Usar id_vacuna como id_producto para compatibilidad
+          cantidad: cantidadFrascos, // Guardar cantidad en frascos
+          precio_unitario: precioConRecargo, // Guardar el precio con recargo aplicado (por frasco)
+          subtotal: subtotal,
+          observaciones: item.observaciones || `Lote: ${stock.lote}`
+        });
+      }
+
+      // Crear la venta directa con el precio total calculado
       const ventaDirecta = await tx.ventaDirecta.create({
         data: {
           numero_venta: numeroVenta,
@@ -263,56 +319,53 @@ exports.crearVentaDirecta = async (req, res) => {
         }
       });
 
-      // Crear detalles de la venta
-      const detallesData = [];
-      for (const item of vacunas) {
-        const stock = await tx.stockVacuna.findUnique({
-          where: { id_stock_vacuna: parseInt(item.id_stock_vacuna) },
-          include: { vacuna: true }
-        });
-
-        const subtotal = parseFloat(item.precio_unitario || stock.vacuna.precio_lista || 0) * parseInt(item.cantidad);
-
-        detallesData.push({
-          id_venta_directa: ventaDirecta.id_venta_directa,
-          id_producto: stock.id_vacuna, // Usar id_vacuna como id_producto para compatibilidad
-          cantidad: parseInt(item.cantidad),
-          precio_unitario: parseFloat(item.precio_unitario || stock.vacuna.precio_lista || 0),
-          subtotal: subtotal,
-          observaciones: item.observaciones || `Lote: ${stock.lote}`
-        });
-      }
+      // Asignar el id de la venta a los detalles
+      detallesData.forEach(detalle => {
+        detalle.id_venta_directa = ventaDirecta.id_venta_directa;
+      });
 
       await tx.detalleVentaDirecta.createMany({
         data: detallesData
       });
 
-      // Actualizar stocks con lógica FIFO
+      // Actualizar stocks - descontar en DOSIS (no frascos)
       for (const item of vacunas) {
         const stock = await tx.stockVacuna.findUnique({
-          where: { id_stock_vacuna: parseInt(item.id_stock_vacuna) }
-        });
-
-        // Actualizar stock actual
-        await tx.stockVacuna.update({
           where: { id_stock_vacuna: parseInt(item.id_stock_vacuna) },
-          data: {
-            stock_actual: {
-              decrement: parseInt(item.cantidad)
+          include: {
+            vacuna: {
+              include: { presentacion: true }
             }
           }
         });
 
-        // Registrar movimiento de stock
+        // Convertir frascos a dosis para descontar
+        const cantidadFrascos = parseInt(item.cantidad);
+        const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const cantidadDosisADescontar = cantidadFrascos * dosisPorFrasco;
+        
+        console.log(`Descontando stock - ID: ${item.id_stock_vacuna}, Frascos: ${cantidadFrascos}, Dosis a descontar: ${cantidadDosisADescontar}, Stock anterior: ${stock.stock_actual}`);
+
+        // Actualizar stock actual (descontar DOSIS)
+        await tx.stockVacuna.update({
+          where: { id_stock_vacuna: parseInt(item.id_stock_vacuna) },
+          data: {
+            stock_actual: {
+              decrement: cantidadDosisADescontar
+            }
+          }
+        });
+
+        // Registrar movimiento de stock (en DOSIS)
         await tx.movimientoStockVacuna.create({
           data: {
             id_stock_vacuna: parseInt(item.id_stock_vacuna),
             tipo_movimiento: 'egreso',
-            cantidad: parseInt(item.cantidad),
+            cantidad: cantidadDosisADescontar,
             stock_anterior: stock.stock_actual,
-            stock_posterior: stock.stock_actual - parseInt(item.cantidad),
+            stock_posterior: stock.stock_actual - cantidadDosisADescontar,
             motivo: 'Venta directa',
-            observaciones: `Venta directa ${numeroVenta} - Cliente: ${cliente.nombre}`,
+            observaciones: `Venta directa ${numeroVenta} - ${cantidadFrascos} frascos (${cantidadDosisADescontar} dosis) - Cliente: ${cliente.nombre}`,
             id_usuario: req.user?.id_usuario || null
           }
         });

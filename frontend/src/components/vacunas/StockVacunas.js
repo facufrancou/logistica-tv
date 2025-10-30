@@ -145,11 +145,13 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   const stockAgrupado = stockFiltrado.reduce((grupos, item) => {
     const nombreVacuna = getNombreVacuna(item.id_vacuna);
     const dosisPorFrasco = item.dosis_por_frasco || 1;
+    const presentacion = item.vacuna?.presentacion?.nombre || item.presentacion_nombre || `${dosisPorFrasco} dosis/frasco`;
     
     if (!grupos[nombreVacuna]) {
       grupos[nombreVacuna] = {
         nombre: nombreVacuna,
         id_vacuna: item.id_vacuna,
+        presentacion: presentacion,
         lotes: [],
         stockTotalDosis: 0,
         stockMinimoDosis: 0,
@@ -173,10 +175,10 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
     grupos[nombreVacuna].frascosMinimo += frascosMinimos;
     grupos[nombreVacuna].frascosReservados += frascosReservados;
     
-    // Usar SIEMPRE el stock real en dosis (no recalcular desde frascos)
-    grupos[nombreVacuna].stockTotalDosis += (item.stock_actual || 0);
-    grupos[nombreVacuna].stockMinimoDosis += (item.stock_minimo || 0);
-    grupos[nombreVacuna].stockReservadoDosis += (item.stock_reservado || 0);
+    // Calcular dosis correctamente desde frascos: frascos × dosis_por_frasco
+    grupos[nombreVacuna].stockTotalDosis += frascosActuales * dosisPorFrasco;
+    grupos[nombreVacuna].stockMinimoDosis += frascosMinimos * dosisPorFrasco;
+    grupos[nombreVacuna].stockReservadoDosis += frascosReservados * dosisPorFrasco;
     
     // Determinar el estado general de la vacuna (el más crítico de todos sus lotes)
     const estadoLote = getEstadoStock(item);
@@ -375,9 +377,10 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
               <tr>
                 <th className="text-dark" style={{width: '30px'}}></th>
                 <th className="text-dark">Vacuna</th>
+                <th className="text-dark">Lotes</th>
                 <th className="text-dark">Frascos Totales</th>
                 <th className="text-dark">Frascos Reservados</th>
-                <th className="text-dark" colSpan="2">Frascos Faltante</th>
+                <th className="text-dark">Frascos Faltante</th>
                 <th className="text-dark">Estado General</th>
                 <th className="text-dark">Acciones</th>
               </tr>
@@ -417,11 +420,16 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                         <strong>{vacunaGroup.nombre}</strong>
                         <br />
                         <small className="text-muted">
-                          {vacunaGroup.lotes.length} lote{vacunaGroup.lotes.length !== 1 ? 's' : ''}
+                          {vacunaGroup.presentacion}
                         </small>
                       </td>
                       <td>
-                        <span className="badge bg-primary text-white fs-6">
+                        <span className="badge bg-dark text-white">
+                          {vacunaGroup.lotes.length}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge bg-dark text-white fs-6">
                           {vacunaGroup.frascosTotal.toLocaleString()} frascos
                         </span>
                         <br />
@@ -430,7 +438,7 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                         </small>
                       </td>
                       <td>
-                        <span className={`badge ${vacunaGroup.frascosReservados > 0 ? 'bg-warning' : 'bg-secondary'} text-white`}>
+                        <span className="badge bg-secondary text-white">
                           {vacunaGroup.frascosReservados.toLocaleString()} frascos
                         </span>
                         <br />
@@ -456,11 +464,6 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                             Sin faltante
                           </span>
                         )}
-                      </td>
-                      <td>
-                        <span className="badge bg-info text-white">
-                          {vacunaGroup.lotes.length}
-                        </span>
                       </td>
                       <td>
                         <span className={`badge bg-${estadoGeneral.clase} text-white`}>
@@ -513,24 +516,24 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
                             <br />
                             <code>{item.lote}</code>
                           </td>
+                          <td></td>
                           <td>
                             <span className="badge bg-dark text-white">
                               {item.frascos_actuales || 0} frascos
                             </span>
                             <br />
                             <small className="text-muted">
-                              {item.stock_actual} dosis
-                              {item.dosis_sobrantes > 0 && ` (+${item.dosis_sobrantes})`}
+                              ({(item.frascos_actuales || 0) * (item.dosis_por_frasco || 1)} dosis)
                             </small>
                           </td>
                           <td>
-                            <span className="badge bg-warning text-dark">
+                            <span className="badge bg-secondary text-white">
                               {frascosReservados} frascos
                             </span>
                             <br />
-                            <small className="text-muted">{item.stock_reservado || 0} dosis</small>
+                            <small className="text-muted">({frascosReservados * (item.dosis_por_frasco || 1)} dosis)</small>
                           </td>
-                          <td colSpan="2">
+                          <td>
                             <small>
                               <strong>Venc:</strong> {formatearFecha(item.fecha_vencimiento)}
                               <br />

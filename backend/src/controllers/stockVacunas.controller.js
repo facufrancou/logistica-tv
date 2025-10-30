@@ -1090,7 +1090,7 @@ exports.getReservasLote = async (req, res) => {
       cotizacionesMap.get(idCotizacion).entregas.push({
         id_calendario: calendario.id_calendario,
         fecha_programada: calendario.fecha_programada,
-        producto: calendario.producto?.nombre || lote.vacuna.nombre,
+        producto: lote.vacuna.nombre, // Mostrar nombre de la vacuna del lote, no el producto genérico
         cantidad_total: calendario.cantidad_dosis,
         dosis_entregadas: calendario.dosis_entregadas || 0,
         dosis_pendientes: dosisReservadas,

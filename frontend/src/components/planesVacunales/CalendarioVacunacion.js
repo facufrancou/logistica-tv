@@ -1294,7 +1294,21 @@ const CalendarioVacunacion = () => {
                           <div>
                             {item.lote_asignado ? (
                               <>
-                                <strong className="text-primary">{item.lote_asignado}</strong>
+                                <div className="d-flex align-items-center">
+                                  <strong className="text-primary">{item.lote_asignado}</strong>
+                                  {item.lote_asignado.includes('+') && (
+                                    <button
+                                      className="btn btn-sm btn-outline-info ms-2"
+                                      onClick={() => {
+                                        setItemGestionLotes(item);
+                                        setShowModalGestionLotes(true);
+                                      }}
+                                      title="Ver todos los lotes asignados"
+                                    >
+                                      <FaEye />
+                                    </button>
+                                  )}
+                                </div>
                                 {item.fecha_vencimiento_lote && (
                                   <small className="d-block text-muted">
                                     <FaClock className="me-1" />

@@ -263,7 +263,7 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
                   <tr>
                     <th>Semana</th>
                     <th>Fecha</th>
-                    <th>Producto</th>
+                    <th>Vacuna</th>
                     <th>Cantidad</th>
                     <th>Problemas</th>
                   </tr>
@@ -308,7 +308,7 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
                   <tr>
                     <th>Semana</th>
                     <th>Fecha</th>
-                    <th>Producto</th>
+                    <th>Vacuna</th>
                     <th>Alerta</th>
                   </tr>
                 </thead>

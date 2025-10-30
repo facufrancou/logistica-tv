@@ -21,7 +21,9 @@ import {
   FaClock,
   FaBan,
   FaShoppingCart,
-  FaBox
+  FaBox,
+  FaChevronDown,
+  FaChevronRight
 } from 'react-icons/fa';
 import { useNotification } from '../../context/NotificationContext';
 import './VentasDirectasVacunas.css';
@@ -58,6 +60,9 @@ const VentasDirectasVacunasView = () => {
   // Estados para filtros
   const [filtroProveedor, setFiltroProveedor] = useState('');
   const [filtroVencimiento, setFiltroVencimiento] = useState('');
+  
+  // Estados para expansión de vacunas (igual que StockVacunas)
+  const [vacunasExpandidas, setVacunasExpandidas] = useState(new Set());
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -389,6 +394,40 @@ const VentasDirectasVacunasView = () => {
     return matchNombre && matchProveedor && matchVencimiento;
   });
 
+  // Agrupar stocks por vacuna (igual que en StockVacunas)
+  const stocksAgrupados = stocksFiltrados.reduce((grupos, stock) => {
+    const nombreVacuna = stock.vacuna?.nombre || "Sin nombre";
+    
+    if (!grupos[nombreVacuna]) {
+      grupos[nombreVacuna] = {
+        nombre: nombreVacuna,
+        id_vacuna: stock.id_vacuna,
+        lotes: [],
+        frascosDisponiblesTotal: 0,
+        dosisDisponiblesTotal: 0
+      };
+    }
+    
+    grupos[nombreVacuna].lotes.push(stock);
+    grupos[nombreVacuna].frascosDisponiblesTotal += (stock.cantidadDisponible || 0);
+    grupos[nombreVacuna].dosisDisponiblesTotal += (stock.dosisDisponibles || 0);
+    
+    return grupos;
+  }, {});
+
+  const vacunasAgrupadas = Object.values(stocksAgrupados);
+
+  // Función para expandir/contraer vacunas
+  const toggleVacunaExpansion = (nombreVacuna) => {
+    const nuevasExpandidas = new Set(vacunasExpandidas);
+    if (nuevasExpandidas.has(nombreVacuna)) {
+      nuevasExpandidas.delete(nombreVacuna);
+    } else {
+      nuevasExpandidas.add(nombreVacuna);
+    }
+    setVacunasExpandidas(nuevasExpandidas);
+  };
+
   // Filtros para clientes
   const clientesFiltrados = clientes.filter(cliente => {
     const nombre = typeof cliente.nombre === 'string' ? cliente.nombre : '';
@@ -502,44 +541,130 @@ const VentasDirectasVacunasView = () => {
             </select>
           </div>
 
-          {/* Lista de stocks */}
-          <div className="stocks-grid">
+          {/* Tabla de stocks agrupados */}
+          <div className="table-responsive">
             {loading ? (
               <div className="loading-state">Cargando inventario...</div>
-            ) : stocksFiltrados.length === 0 ? (
+            ) : vacunasAgrupadas.length === 0 ? (
               <div className="empty-state">
                 <FaExclamationTriangle />
                 <p>No hay vacunas disponibles que coincidan con los filtros</p>
               </div>
             ) : (
-              stocksFiltrados.map(stock => (
-                <div key={stock.id} className="stock-card">
-                  <div className="stock-header">
-                    <h4>{typeof stock.vacuna?.nombre === 'string' ? stock.vacuna.nombre : 'Vacuna sin nombre'}</h4>
-                    <span className="stock-disponible">
-                      {stock.cantidadDisponible || 0} frascos disponibles
-                    </span>
-                  </div>
-                  
-                  <div className="stock-details">
-                    <p><strong>Código:</strong> {typeof stock.vacuna?.codigo === 'string' ? stock.vacuna.codigo : 'Sin código'}</p>
-                    <p><strong>Lote:</strong> {typeof stock.lote === 'string' ? stock.lote : 'Sin lote'}</p>
-                    <p><strong>Vencimiento:</strong> {stock.fechaVencimiento ? new Date(stock.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}</p>
-                    <p><strong>Proveedor:</strong> {typeof stock.vacuna?.proveedor === 'string' ? stock.vacuna.proveedor : 'Sin proveedor'}</p>
-                    <p><strong>Precio:</strong> ${stock.precioVenta || 0}</p>
-                  </div>
+              <table className="table table-striped table-hover">
+                <thead className="thead-light">
+                  <tr>
+                    <th style={{width: '30px'}}></th>
+                    <th>Vacuna</th>
+                    <th>Frascos Disponibles</th>
+                    <th>Lotes</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vacunasAgrupadas.map((vacunaGroup) => {
+                    const estaExpandida = vacunasExpandidas.has(vacunaGroup.nombre);
+                    
+                    return (
+                      <React.Fragment key={vacunaGroup.nombre}>
+                        {/* Fila principal con totales */}
+                        <tr
+                          style={{
+                            backgroundColor: estaExpandida ? '#f8f9fa' : 'inherit',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => toggleVacunaExpansion(vacunaGroup.nombre)}
+                        >
+                          <td>
+                            <button
+                              className="btn btn-sm btn-link p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleVacunaExpansion(vacunaGroup.nombre);
+                              }}
+                              style={{textDecoration: 'none'}}
+                            >
+                              {estaExpandida ? <FaChevronDown /> : <FaChevronRight />}
+                            </button>
+                          </td>
+                          <td>
+                            <strong>{vacunaGroup.nombre}</strong>
+                            <br />
+                            <small className="text-muted">
+                              {vacunaGroup.lotes.length} lote{vacunaGroup.lotes.length !== 1 ? 's' : ''}
+                            </small>
+                          </td>
+                          <td>
+                            <span className="badge bg-success text-white fs-6">
+                              {vacunaGroup.frascosDisponiblesTotal.toLocaleString()} frascos
+                            </span>
+                            <br />
+                            <small className="text-muted">
+                              ({vacunaGroup.dosisDisponiblesTotal.toLocaleString()} dosis)
+                            </small>
+                          </td>
+                          <td>
+                            <span className="badge bg-info text-white">
+                              {vacunaGroup.lotes.length}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleVacunaExpansion(vacunaGroup.nombre);
+                              }}
+                            >
+                              {estaExpandida ? 'Contraer' : 'Expandir'}
+                            </button>
+                          </td>
+                        </tr>
 
-                  <div className="stock-actions">
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => agregarAlCarrito(stock)}
-                      disabled={stock.cantidadDisponible === 0}
-                    >
-                      <FaPlus /> Agregar
-                    </button>
-                  </div>
-                </div>
-              ))
+                        {/* Filas de detalle de lotes */}
+                        {estaExpandida && vacunaGroup.lotes.map((stock) => (
+                          <tr key={stock.id} className="bg-light" style={{borderLeft: '4px solid #007bff'}}>
+                            <td></td>
+                            <td style={{paddingLeft: '2rem'}}>
+                              <small className="text-muted">Lote:</small>
+                              <br />
+                              <code>{stock.lote}</code>
+                            </td>
+                            <td>
+                              <span className="badge bg-success text-white">
+                                {stock.cantidadDisponible || 0} frascos
+                              </span>
+                              <br />
+                              <small className="text-muted">
+                                {stock.dosisDisponibles || 0} dosis
+                              </small>
+                            </td>
+                            <td colSpan="1">
+                              <small>
+                                <strong>Venc:</strong> {stock.fechaVencimiento ? new Date(stock.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}
+                                <br />
+                                <strong>Precio:</strong> ${stock.precioVenta || 0}
+                              </small>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-primary btn-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  agregarAlCarrito(stock);
+                                }}
+                                disabled={stock.cantidadDisponible === 0}
+                              >
+                                <FaPlus /> Agregar al Carrito
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
