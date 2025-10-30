@@ -33,6 +33,8 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   const [alertas, setAlertas] = useState({});
   const [vacunas, setVacunas] = useState([]);
   const [vistaActiva, setVistaActiva] = useState("stock");
+  const [movimientos, setMovimientos] = useState([]);
+  const [loadingMovimientos, setLoadingMovimientos] = useState(false);
 
   const [filtros, setFiltros] = useState({
     busqueda: "",
@@ -99,10 +101,35 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
     }
   };
 
+  const cargarMovimientos = async () => {
+    setLoadingMovimientos(true);
+    try {
+      const response = await fetch('http://localhost:3001/stock-vacunas/movimientos', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      setMovimientos(data.data || data || []);
+    } catch (error) {
+      console.error("Error cargando movimientos:", error);
+    } finally {
+      setLoadingMovimientos(false);
+    }
+  };
+
+  // Cargar movimientos cuando se cambia a esa vista
+  useEffect(() => {
+    if (vistaActiva === "movimientos") {
+      cargarMovimientos();
+    }
+  }, [vistaActiva]);
+
   const stockFiltrado = stock.filter((item) => {
+    // Obtener el nombre de la vacuna para buscar
+    const nombreVacuna = vacunas.find(v => v.id_vacuna === item.id_vacuna)?.nombre || '';
+    
     const cumpleBusqueda = !filtros.busqueda || 
       item.lote?.toLowerCase().includes(filtros.busqueda.toLowerCase()) ||
-      item.vacuna_nombre?.toLowerCase().includes(filtros.busqueda.toLowerCase());
+      nombreVacuna.toLowerCase().includes(filtros.busqueda.toLowerCase());
     
     const cumpleVacuna = !filtros.vacuna || 
       item.id_vacuna?.toString() === filtros.vacuna;
@@ -313,62 +340,70 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
             >
               <FaExclamationTriangle className="mr-1" />Alertas ({Object.keys(alertas).length})
             </button>
+            <button
+              className={`btn ${vistaActiva === "movimientos" ? "btn-info" : "btn-outline-info"}`}
+              onClick={() => setVistaActiva("movimientos")}
+            >
+              <FaInbox className="mr-1" />Movimientos
+            </button>
           </div>
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="row mb-3">
-        <div className="col-md-3">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Buscar por lote o vacuna..."
-            value={filtros.busqueda}
-            onChange={(e) => setFiltros({...filtros, busqueda: e.target.value})}
-          />
+      {(vistaActiva === "stock" || vistaActiva === "movimientos") && (
+        <div className="row mb-3">
+          <div className="col-md-3">
+            <input
+              type="text"
+              className="form-control"
+              placeholder={vistaActiva === "movimientos" ? "Buscar por vacuna, lote, tipo o usuario..." : "Buscar por lote o vacuna..."}
+              value={filtros.busqueda}
+              onChange={(e) => setFiltros({...filtros, busqueda: e.target.value})}
+            />
+          </div>
+          <div className="col-md-2">
+            <select
+              className="form-control"
+              value={filtros.vacuna}
+              onChange={(e) => setFiltros({...filtros, vacuna: e.target.value})}
+            >
+              <option value="">Todas las vacunas</option>
+              {vacunas.map(vacuna => (
+                <option key={vacuna.id_vacuna} value={vacuna.id_vacuna}>
+                  {vacuna.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-2">
+            <select
+              className="form-control"
+              value={filtros.estado}
+              onChange={(e) => setFiltros({...filtros, estado: e.target.value})}
+            >
+              <option value="">Todos los estados</option>
+              <option value="ok"><i className="fas fa-check"></i> OK</option>
+              <option value="critico"><i className="fas fa-exclamation-triangle"></i> Stock Crítico</option>
+              <option value="vencido"><i className="fas fa-times"></i> Vencido</option>
+            </select>
+          </div>
+          <div className="col-md-3">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Filtrar por ubicación..."
+              value={filtros.ubicacion}
+              onChange={(e) => setFiltros({...filtros, ubicacion: e.target.value})}
+            />
+          </div>
+          <div className="col-md-2 text-right">
+            <button className="btn btn-outline-secondary" onClick={handleRefresh}>
+              <FaSyncAlt className="mr-1" />Actualizar
+            </button>
+          </div>
         </div>
-        <div className="col-md-2">
-          <select
-            className="form-control"
-            value={filtros.vacuna}
-            onChange={(e) => setFiltros({...filtros, vacuna: e.target.value})}
-          >
-            <option value="">Todas las vacunas</option>
-            {vacunas.map(vacuna => (
-              <option key={vacuna.id_vacuna} value={vacuna.id_vacuna}>
-                {vacuna.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-md-2">
-          <select
-            className="form-control"
-            value={filtros.estado}
-            onChange={(e) => setFiltros({...filtros, estado: e.target.value})}
-          >
-            <option value="">Todos los estados</option>
-            <option value="ok"><i className="fas fa-check"></i> OK</option>
-            <option value="critico"><i className="fas fa-exclamation-triangle"></i> Stock Crítico</option>
-            <option value="vencido"><i className="fas fa-times"></i> Vencido</option>
-          </select>
-        </div>
-        <div className="col-md-3">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Filtrar por ubicación..."
-            value={filtros.ubicacion}
-            onChange={(e) => setFiltros({...filtros, ubicacion: e.target.value})}
-          />
-        </div>
-        <div className="col-md-2 text-right">
-          <button className="btn btn-outline-secondary" onClick={handleRefresh}>
-            <FaSyncAlt className="mr-1" />Actualizar
-          </button>
-        </div>
-      </div>
+      )}
 
       {vistaActiva === "stock" && (
         <div className="table-responsive">
@@ -670,6 +705,155 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {vistaActiva === "movimientos" && (
+        <div className="card">
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">
+              <FaInbox className="mr-2" />
+              Detalles de Movimientos de Stock
+            </h5>
+            <button 
+              className="btn btn-sm btn-primary"
+              onClick={cargarMovimientos}
+              disabled={loadingMovimientos}
+            >
+              <FaSyncAlt className={`mr-1 ${loadingMovimientos ? 'fa-spin' : ''}`} />
+              Actualizar
+            </button>
+          </div>
+          <div className="card-body p-0">
+            {loadingMovimientos ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="sr-only">Cargando movimientos...</span>
+                </div>
+                <p className="mt-2">Cargando movimientos...</p>
+              </div>
+            ) : movimientos.length === 0 ? (
+              <div className="text-center py-5 text-muted">
+                <FaInbox size={48} className="mb-3" />
+                <p>No hay movimientos registrados</p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover table-sm mb-0">
+                  <thead className="thead-light">
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Tipo</th>
+                      <th>Vacuna</th>
+                      <th>Lote</th>
+                      <th className="text-center">Cantidad</th>
+                      <th className="text-center">Stock Anterior</th>
+                      <th className="text-center">Stock Posterior</th>
+                      <th>Motivo</th>
+                      <th>Observaciones</th>
+                      <th>Usuario</th>
+                      <th>Cotización</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movimientos.filter(mov => {
+                      if (!filtros.busqueda) return true;
+                      const busqueda = filtros.busqueda.toLowerCase();
+                      return (
+                        mov.stock_vacuna?.vacuna?.nombre?.toLowerCase().includes(busqueda) ||
+                        mov.stock_vacuna?.lote?.toLowerCase().includes(busqueda) ||
+                        mov.tipo_movimiento?.toLowerCase().includes(busqueda) ||
+                        mov.motivo?.toLowerCase().includes(busqueda) ||
+                        mov.observaciones?.toLowerCase().includes(busqueda) ||
+                        mov.usuario?.nombre?.toLowerCase().includes(busqueda) ||
+                        mov.cotizacion?.numero_cotizacion?.toLowerCase().includes(busqueda)
+                      );
+                    }).map((mov, index) => {
+                      const esingreso = mov.tipo_movimiento === 'ingreso' || mov.tipo_movimiento === 'ajuste_positivo';
+                      const esEgreso = mov.tipo_movimiento === 'egreso' || mov.tipo_movimiento === 'ajuste_negativo';
+                      const esReserva = mov.tipo_movimiento === 'reserva';
+                      const esLiberacion = mov.tipo_movimiento === 'liberacion_reserva';
+                      
+                      let colorClass = '';
+                      let iconClass = '';
+                      
+                      if (esingreso) {
+                        colorClass = 'text-success';
+                        iconClass = 'text-success';
+                      } else if (esEgreso) {
+                        colorClass = 'text-danger';
+                        iconClass = 'text-danger';
+                      } else if (esReserva) {
+                        colorClass = 'text-warning';
+                        iconClass = 'text-warning';
+                      } else if (esLiberacion) {
+                        colorClass = 'text-info';
+                        iconClass = 'text-info';
+                      }
+                      
+                      return (
+                        <tr key={mov.id_movimiento || index}>
+                          <td>
+                            <div className="small">
+                              {new Date(mov.created_at).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </div>
+                            <div className="text-muted" style={{fontSize: '0.75rem'}}>
+                              {new Date(mov.created_at).toLocaleTimeString('es-ES', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`small ${colorClass}`}>
+                              {mov.tipo_movimiento.replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="font-weight-bold">{mov.stock_vacuna?.vacuna?.nombre || '-'}</div>
+                            <small className="text-muted">{mov.stock_vacuna?.vacuna?.detalle || ''}</small>
+                          </td>
+                          <td>
+                            <strong>{mov.stock_vacuna?.lote || '-'}</strong>
+                            {mov.stock_vacuna?.fecha_vencimiento && (
+                              <div className="text-muted small">
+                                Vence: {new Date(mov.stock_vacuna.fecha_vencimiento).toLocaleDateString('es-ES')}
+                              </div>
+                            )}
+                          </td>
+                          <td className={`text-center font-weight-bold ${iconClass}`}>
+                            {esingreso && '+'}
+                            {esEgreso && '-'}
+                            {mov.cantidad} dosis
+                          </td>
+                          <td className="text-center">{mov.stock_anterior} dosis</td>
+                          <td className="text-center">{mov.stock_posterior} dosis</td>
+                          <td>
+                            <small>{mov.motivo}</small>
+                          </td>
+                          <td>
+                            <small>{mov.observaciones || '-'}</small>
+                          </td>
+                          <td>
+                            <small>{mov.usuario?.nombre || '-'}</small>
+                          </td>
+                          <td>
+                            <small>
+                              {mov.cotizacion ? mov.cotizacion.numero_cotizacion : '-'}
+                            </small>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -143,7 +143,7 @@
 
       .entrega-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
         gap: 10px;
         text-align: center;
       }
@@ -309,8 +309,8 @@
             <div class="document-title">REMITO DE ENTREGA</div>
             <div class="document-number">N° {{numeroRemito}}</div>
             <div style="margin-top: 8px; font-size: 10px">
-              <strong>Fecha:</strong> {{fechaEmision}}<br />
-              <strong>Hora:</strong> {{horaEmision}}
+              <strong>Fecha:</strong> {{formatDate fechaEmision}}<br />
+              <strong>Hora:</strong> {{formatTime horaEmision}}
             </div>
           </div>
         </div>
@@ -363,7 +363,7 @@
               </div>
               <div class="info-item">
                 <span class="info-label">Fecha Plan:</span>
-                <span class="info-value">{{plan.fechaProgramada}}</span>
+                <span class="info-value">{{formatDate plan.fechaProgramada}}</span>
               </div>
             </div>
             <div>
@@ -374,14 +374,14 @@
               <div class="info-item">
                 <span class="info-label">Estado:</span>
                 <span class="info-value">
-                  <span class="badge badge-{{plan.estadoBadge}}"
+                  <span class="badge badge-{{estadoBadge plan.estado}}"
                     >{{plan.estado}}</span
                   >
                 </span>
               </div>
               <div class="info-item">
                 <span class="info-label">Inicio Plan:</span>
-                <span class="info-value">{{plan.fechaInicio}}</span>
+                <span class="info-value">{{formatDate plan.fechaInicio}}</span>
               </div>
             </div>
           </div>
@@ -391,9 +391,15 @@
           <div class="entrega-title">Detalles de la Entrega</div>
           <div class="entrega-grid">
             <div class="entrega-item">
+              <div class="entrega-item-label">Cantidad Programada</div>
+              <div class="entrega-item-value">
+                {{producto.cantidad_programada}} dosis
+              </div>
+            </div>
+            <div class="entrega-item">
               <div class="entrega-item-label">Cantidad Entregada</div>
               <div class="entrega-item-value">
-                {{entrega.cantidadEntregada}}
+                {{entrega.cantidadEntregada}} dosis
               </div>
             </div>
             <div class="entrega-item">
@@ -404,7 +410,7 @@
             </div>
             <div class="entrega-item">
               <div class="entrega-item-label">Fecha Entrega</div>
-              <div class="entrega-item-value">{{entrega.fechaEntrega}}</div>
+              <div class="entrega-item-value">{{formatDate entrega.fechaEntrega}}</div>
             </div>
           </div>
         </div>
@@ -416,26 +422,48 @@
               <tr>
                 <th>Vacuna</th>
                 <th>Código</th>
-                <th>Lote</th>
-                <th>Cantidad Programada</th>
-                <th>Cantidad Entregada</th>
+                <th style="text-align: center">Lote</th>
+                <th style="text-align: center">F. Vencimiento</th>
+                <th style="text-align: center">Cant. Lote</th>
                 <th>Tipo Entrega</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <strong>{{producto.nombre}}</strong>
-                  <br><small>{{producto.descripcion}}</small>
-                </td>
-                <td>{{producto.codigo}}</td>
-                <td>{{producto.lote}}</td>
-                <td class="cantidad">{{producto.cantidadProgramada}}</td>
-                <td class="cantidad">{{entrega.cantidadEntregada}}</td>
-                <td style="text-align: center">
-                  <span class="badge">{{entrega.tipoEntregaDisplay}}</span>
-                </td>
-              </tr>
+              {{#if producto.tiene_multiples_lotes}}
+                {{#each producto.lotes_entregados}}
+                <tr>
+                  {{#if @first}}
+                  <td rowspan="{{../producto.lotes_entregados.length}}">
+                    <strong>{{../producto.nombre}}</strong>
+                    <br><small>{{../producto.descripcion}}</small>
+                  </td>
+                  <td rowspan="{{../producto.lotes_entregados.length}}">{{../producto.codigo}}</td>
+                  {{/if}}
+                  <td style="text-align: center"><strong>{{this.lote}}</strong></td>
+                  <td style="text-align: center">{{formatDate this.fecha_vencimiento}}</td>
+                  <td class="cantidad">{{this.cantidad}} dosis</td>
+                  {{#if @first}}
+                  <td style="text-align: center" rowspan="{{../producto.lotes_entregados.length}}">
+                    <span class="badge">{{../entrega.tipoEntregaDisplay}}</span>
+                  </td>
+                  {{/if}}
+                </tr>
+                {{/each}}
+              {{else}}
+                <tr>
+                  <td>
+                    <strong>{{producto.nombre}}</strong>
+                    <br><small>{{producto.descripcion}}</small>
+                  </td>
+                  <td>{{producto.codigo}}</td>
+                  <td style="text-align: center">{{producto.lote}}</td>
+                  <td style="text-align: center">{{formatDate producto.fecha_vencimiento}}</td>
+                  <td class="cantidad">{{entrega.cantidadEntregada}} dosis</td>
+                  <td style="text-align: center">
+                    <span class="badge">{{entrega.tipoEntregaDisplay}}</span>
+                  </td>
+                </tr>
+              {{/if}}
             </tbody>
           </table>
         </div>
@@ -486,7 +514,7 @@
           Gestión Veterinaria
         </p>
         <p style="font-size: 9px; color: #000; margin-top: 5px">
-          Fecha de generación: {{fechaGeneracion}} | Hora: {{horaGeneracion}}
+          Fecha de generación: {{formatDate fechaGeneracion}} | Hora: {{formatTime horaGeneracion}}
         </p>
       </div>
     </div>

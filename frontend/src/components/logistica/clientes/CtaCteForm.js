@@ -13,7 +13,7 @@ function CtaCteForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Aquí iría la llamada al backend para crear la cuenta corriente vinculada al cliente
-    // fetch('/api/ctacte', { ... })
+    // fetch('/ctacte', { ... })
     alert("Cuenta Corriente creada (simulado)");
   };
 

@@ -33,7 +33,7 @@ function obtenerFechaComparacion(periodo = '30d') {
 
 // ===== CONTROLADORES =====
 
-// GET /api/dashboard/metricas-planes
+// GET /dashboard/metricas-planes
 const getMetricasPlanes = async (req, res) => {
   try {
     const { periodo = '30d' } = req.query;
@@ -176,7 +176,7 @@ const getMetricasPlanes = async (req, res) => {
   }
 };
 
-// GET /api/dashboard/metricas-operativas
+// GET /dashboard/metricas-operativas
 const getMetricasOperativas = async (req, res) => {
   try {
     const { periodo = '30d' } = req.query;
@@ -341,7 +341,7 @@ const getMetricasOperativas = async (req, res) => {
   }
 };
 
-// GET /api/dashboard/metricas-rendimiento
+// GET /dashboard/metricas-rendimiento
 const getMetricasRendimiento = async (req, res) => {
   try {
     // Métricas de rendimiento del sistema
@@ -379,11 +379,11 @@ const getMetricasRendimiento = async (req, res) => {
 
     // Métricas de uso por endpoint (simuladas - en prod vendrían de logs)
     const metricsEndpoints = [
-      { endpoint: '/api/cotizaciones', requests_dia: 1250, tiempo_promedio_ms: 340, errores: 12 },
-      { endpoint: '/api/productos', requests_dia: 2100, tiempo_promedio_ms: 180, errores: 8 },
-      { endpoint: '/api/facturas', requests_dia: 890, tiempo_promedio_ms: 420, errores: 15 },
-      { endpoint: '/api/planes-vacunales', requests_dia: 650, tiempo_promedio_ms: 220, errores: 3 },
-      { endpoint: '/api/stock', requests_dia: 430, tiempo_promedio_ms: 290, errores: 7 }
+      { endpoint: '/cotizaciones', requests_dia: 1250, tiempo_promedio_ms: 340, errores: 12 },
+      { endpoint: '/productos', requests_dia: 2100, tiempo_promedio_ms: 180, errores: 8 },
+      { endpoint: '/facturas', requests_dia: 890, tiempo_promedio_ms: 420, errores: 15 },
+      { endpoint: '/planes-vacunales', requests_dia: 650, tiempo_promedio_ms: 220, errores: 3 },
+      { endpoint: '/stock', requests_dia: 430, tiempo_promedio_ms: 290, errores: 7 }
     ];
 
     // Métricas de base de datos
@@ -466,7 +466,7 @@ const getMetricasRendimiento = async (req, res) => {
   }
 };
 
-// GET /api/dashboard/resumen-ejecutivo
+// GET /dashboard/resumen-ejecutivo
 const getResumenEjecutivo = async (req, res) => {
   try {
     const { periodo = '30d' } = req.query;

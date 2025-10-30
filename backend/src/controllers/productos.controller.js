@@ -40,7 +40,7 @@ exports.getProductos = async (req, res) => {
   }
 };
 
-// GET /api/productos/disponibles - Solo productos con stock > 0
+// GET /productos/disponibles - Solo productos con stock > 0
 exports.getProductosDisponibles = async (req, res) => {
   try {
     const { tipo_producto } = req.query;
@@ -184,7 +184,7 @@ exports.updateProducto = async (req, res) => {
 
 // ===== FUNCIONES SPRINT 6: HISTORIAL DE PRECIOS =====
 
-// GET /api/productos/:id/historial-precios
+// GET /productos/:id/historial-precios
 exports.getHistorialPrecios = async (req, res) => {
   try {
     const { id } = req.params;

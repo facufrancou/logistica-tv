@@ -38,14 +38,14 @@ app.use('/planes-vacunales', require('./routes/planesVacunales.routes'));
 app.use('/cotizaciones', require('./routes/cotizaciones.routes'));
 app.use('/stock', require('./routes/stock.routes'));
 app.use('/seguimiento', require('./routes/seguimiento.routes'));
-app.use('/api', require('./routes/facturacion.routes'));
+app.use('/facturacion', require('./routes/facturacion.routes'));
 
 // Sprint 6: Nuevas rutas para reportes y dashboard
-app.use('/api/reportes', require('./routes/reportes.routes'));
-app.use('/api/dashboard', require('./routes/dashboard.routes'));
+app.use('/reportes', require('./routes/reportes.routes'));
+app.use('/dashboard', require('./routes/dashboard.routes'));
 
 // Nuevas rutas para liquidaciones y clasificación fiscal
-app.use('/api/liquidaciones', require('./routes/liquidaciones.routes'));
+app.use('/liquidaciones', require('./routes/liquidaciones.routes'));
 
 // Nuevas funcionalidades Sprint 7-10: Remitos, Ventas Directas e Indicadores
 app.use('/remitos', require('./routes/remitos.routes'));
@@ -58,6 +58,6 @@ app.use('/catalogos', require('./routes/catalogos.routes'));
 app.use('/stock-vacunas', require('./routes/stockVacunas.routes'));
 
 // Nuevas rutas para ventas directas de vacunas (entregas fuera de plan)
-app.use('/api/ventas-directas-vacunas', require('./routes/ventasDirectasVacunas'));
+app.use('/ventas-directas-vacunas', require('./routes/ventasDirectasVacunas'));
 
 module.exports = app;

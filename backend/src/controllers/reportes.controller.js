@@ -48,7 +48,7 @@ function agruparPorPeriodo(datos, agrupacion = 'mes') {
 
 // ===== CONTROLADORES =====
 
-// GET /api/reportes/tendencias-precios
+// GET /reportes/tendencias-precios
 const getTendenciasPrecios = async (req, res) => {
   try {
     const {
@@ -214,7 +214,7 @@ function calcularVolatilidad(precios) {
   return Math.sqrt(varianza);
 }
 
-// GET /api/reportes/analisis-listas-precios
+// GET /reportes/analisis-listas-precios
 const getAnalisisListasPrecios = async (req, res) => {
   try {
     const { fecha_desde, fecha_hasta } = req.query;
@@ -339,7 +339,7 @@ const getAnalisisListasPrecios = async (req, res) => {
   }
 };
 
-// GET /api/reportes/productos-rentabilidad
+// GET /reportes/productos-rentabilidad
 const getProductosRentabilidad = async (req, res) => {
   try {
     const { limite = 50, orden = 'rentabilidad' } = req.query;

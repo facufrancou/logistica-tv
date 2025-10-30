@@ -116,7 +116,7 @@ async function calcularImpuestosYDescuentos(montoBase, configuracion, cliente) {
 
 // ===== CONTROLADORES =====
 
-// POST /api/facturas/generar
+// POST /facturas/generar
 const generarFactura = async (req, res) => {
   try {
     const { 
@@ -315,7 +315,7 @@ const generarFactura = async (req, res) => {
   }
 };
 
-// GET /api/facturas/:id/detalle
+// GET /facturas/:id/detalle
 const obtenerDetalleFactura = async (req, res) => {
   try {
     const { id } = req.params;
@@ -381,7 +381,7 @@ const obtenerDetalleFactura = async (req, res) => {
   }
 };
 
-// PUT /api/cotizaciones/:id/configurar-facturacion
+// PUT /cotizaciones/:id/configurar-facturacion
 const configurarFacturacion = async (req, res) => {
   try {
     const { id } = req.params;
@@ -437,7 +437,7 @@ const configurarFacturacion = async (req, res) => {
   }
 };
 
-// GET /api/facturas
+// GET /facturas
 const listarFacturas = async (req, res) => {
   try {
     const { 
@@ -509,7 +509,7 @@ const listarFacturas = async (req, res) => {
   }
 };
 
-// PUT /api/facturas/:id/estado
+// PUT /facturas/:id/estado
 const cambiarEstadoFactura = async (req, res) => {
   try {
     const { id } = req.params;
@@ -569,7 +569,7 @@ const cambiarEstadoFactura = async (req, res) => {
   }
 };
 
-// GET /api/facturas/reportes/financiero
+// GET /facturas/reportes/financiero
 const generarReporteFinanciero = async (req, res) => {
   try {
     const { 

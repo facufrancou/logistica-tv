@@ -483,7 +483,20 @@ const CalendarioVacunacion = () => {
       console.log('CalendarioItem completo:', calendarioItem);
       console.log('Modo selección:', modo);
       
-      setCalendarioParaReasignacion(calendarioItem);
+      // Si el modo es 'faltante', calcular cuánto falta
+      let cantidadRequerida = calendarioItem.cantidad_dosis;
+      if (modo === 'faltante') {
+        const dosisEntregadas = calendarioItem.dosis_entregadas || 0;
+        cantidadRequerida = calendarioItem.cantidad_dosis - dosisEntregadas;
+        console.log(`Modo FALTANTE: Total: ${calendarioItem.cantidad_dosis}, Entregadas: ${dosisEntregadas}, Faltante: ${cantidadRequerida}`);
+      }
+      
+      const calendarioModificado = {
+        ...calendarioItem,
+        cantidad_dosis: cantidadRequerida
+      };
+      
+      setCalendarioParaReasignacion(calendarioModificado);
       setModoSeleccion(modo);
       setLotesSeleccionados([]);
       setStockSeleccionado(null);
@@ -576,8 +589,8 @@ const CalendarioVacunacion = () => {
         });
 
         showSuccess('Éxito', `Lote ${stockSeleccionado.lote} asignado correctamente`);
-      } else {
-        // Modo múltiple: varios lotes
+      } else if (modoSeleccion === 'multiple' || modoSeleccion === 'faltante') {
+        // Modo múltiple o faltante: varios lotes
         if (lotesSeleccionados.length === 0) {
           showError('Error', 'Debe seleccionar al menos un lote');
           return;
@@ -595,10 +608,15 @@ const CalendarioVacunacion = () => {
           lotes: lotesSeleccionados.map(l => ({
             id_stock_vacuna: l.id_stock_vacuna,
             cantidad: l.cantidad
-          }))
+          })),
+          es_faltante: modoSeleccion === 'faltante' // Indicador para el backend
         });
 
-        showSuccess('Éxito', `${lotesSeleccionados.length} lote(s) asignados correctamente`);
+        const mensaje = modoSeleccion === 'faltante' 
+          ? `Faltante completado: ${lotesSeleccionados.length} lote(s) asignados`
+          : `${lotesSeleccionados.length} lote(s) asignados correctamente`;
+        
+        showSuccess('Éxito', mensaje);
       }
       
       setShowReasignacionModal(false);
@@ -1993,7 +2011,11 @@ const CalendarioVacunacion = () => {
               <div className="modal-header" style={{ padding: '1rem 1.5rem' }}>
                 <h4 className="modal-title mb-0" style={{ fontSize: '1.1rem' }}>
                   <FaBoxOpen className="me-2" size={18} />
-                  {modoSeleccion === 'simple' ? 'Asignar Lote' : 'Asignar Múltiples Lotes'} - {calendarioParaReasignacion?.vacuna_nombre}
+                  {modoSeleccion === 'faltante' 
+                    ? '⚠️ Asignar Faltante' 
+                    : modoSeleccion === 'simple' 
+                      ? 'Asignar Lote' 
+                      : 'Asignar Múltiples Lotes'} - {calendarioParaReasignacion?.vacuna_nombre}
                 </h4>
                 <button
                   type="button"
@@ -2035,33 +2057,48 @@ const CalendarioVacunacion = () => {
                   </div>
                 </div>
 
-                {/* Botones de modo */}
-                <div className="btn-group mb-3 w-100 shadow-sm" role="group" style={{ height: '45px' }}>
-                  <button
-                    type="button"
-                    className={`btn btn-lg ${modoSeleccion === 'simple' ? 'btn-dark' : 'btn-outline-dark'}`}
-                    style={{ fontSize: '0.95rem' }}
-                    onClick={() => {
-                      setModoSeleccion('simple');
-                      setLotesSeleccionados([]);
-                    }}
-                  >
-                    <FaBoxOpen className="me-2" size={16} />
-                    Lote Único
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-lg ${modoSeleccion === 'multiple' ? 'btn-dark' : 'btn-outline-dark'}`}
-                    style={{ fontSize: '0.95rem' }}
-                    onClick={() => {
-                      setModoSeleccion('multiple');
-                      setStockSeleccionado(null);
-                    }}
-                  >
-                    <FaPlus className="me-2" size={16} />
-                    Múltiples Lotes
-                  </button>
-                </div>
+                {/* Alerta para modo faltante */}
+                {modoSeleccion === 'faltante' && (
+                  <div className="alert alert-warning d-flex align-items-center mb-3" role="alert">
+                    <FaExclamationTriangle className="me-3" size={20} />
+                    <div>
+                      <strong>Modo: Asignar Faltante</strong>
+                      <p className="mb-0 mt-1">
+                        Solo necesita asignar <strong>{calendarioParaReasignacion?.cantidad_dosis?.toLocaleString()} dosis faltantes</strong> para completar la entrega.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Botones de modo - Solo si NO es modo faltante */}
+                {modoSeleccion !== 'faltante' && (
+                  <div className="btn-group mb-3 w-100 shadow-sm" role="group" style={{ height: '45px' }}>
+                    <button
+                      type="button"
+                      className={`btn btn-lg ${modoSeleccion === 'simple' ? 'btn-dark' : 'btn-outline-dark'}`}
+                      style={{ fontSize: '0.95rem' }}
+                      onClick={() => {
+                        setModoSeleccion('simple');
+                        setLotesSeleccionados([]);
+                      }}
+                    >
+                      <FaBoxOpen className="me-2" size={16} />
+                      Lote Único
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-lg ${modoSeleccion === 'multiple' ? 'btn-dark' : 'btn-outline-dark'}`}
+                      style={{ fontSize: '0.95rem' }}
+                      onClick={() => {
+                        setModoSeleccion('multiple');
+                        setStockSeleccionado(null);
+                      }}
+                    >
+                      <FaPlus className="me-2" size={16} />
+                      Múltiples Lotes
+                    </button>
+                  </div>
+                )}
 
                 {loadingStocks ? (
                   <div className="text-center py-5">
@@ -2129,11 +2166,11 @@ const CalendarioVacunacion = () => {
                               <FaBoxOpen className="me-2" size={16} />
                               Stock
                             </th>
-                            <th style={{ padding: '0.5rem 0.75rem', width: modoSeleccion === 'multiple' ? '27%' : '42%' }}>
+                            <th style={{ padding: '0.5rem 0.75rem', width: (modoSeleccion === 'multiple' || modoSeleccion === 'faltante') ? '27%' : '42%' }}>
                               <FaMapMarkerAlt className="me-2" size={16} />
                               Ubicación
                             </th>
-                            {modoSeleccion === 'multiple' && (
+                            {(modoSeleccion === 'multiple' || modoSeleccion === 'faltante') && (
                               <th style={{ width: '15%', padding: '0.5rem 0.75rem' }}>
                                 <FaEdit className="me-2" size={16} />
                                 Cantidad
@@ -2257,21 +2294,43 @@ const CalendarioVacunacion = () => {
                                     )}
                                   </div>
                                 </td>
-                                {modoSeleccion === 'multiple' && (
+                                {(modoSeleccion === 'multiple' || modoSeleccion === 'faltante') && (
                                   <td style={{ padding: '0.5rem 0.75rem' }} onClick={(e) => e.stopPropagation()}>
-                                    {estaSeleccionadoMultiple ? (
-                                      <input
-                                        type="number"
-                                        className="form-control"
-                                        min="1"
-                                        max={stock.stock_actual}
-                                        value={cantidadSeleccionada}
-                                        onChange={(e) => handleCambiarCantidadLote(stock.id_stock_vacuna, e.target.value)}
-                                        style={{ fontSize: '1rem', padding: '8px' }}
-                                      />
-                                    ) : (
-                                      <span className="text-muted text-center d-block">-</span>
-                                    )}
+                                    <input
+                                      type="number"
+                                      className="form-control"
+                                      min="0"
+                                      max={stock.stock_actual}
+                                      value={cantidadSeleccionada}
+                                      onChange={(e) => {
+                                        const nuevaCantidad = parseInt(e.target.value) || 0;
+                                        if (nuevaCantidad > 0) {
+                                          // Si escribe una cantidad, auto-seleccionar el lote
+                                          if (!estaSeleccionadoMultiple) {
+                                            handleToggleLoteMultiple(stock);
+                                          }
+                                          handleCambiarCantidadLote(stock.id_stock_vacuna, nuevaCantidad);
+                                        } else if (nuevaCantidad === 0 && estaSeleccionadoMultiple) {
+                                          // Si pone 0, deseleccionar
+                                          handleToggleLoteMultiple(stock);
+                                        }
+                                      }}
+                                      onFocus={(e) => {
+                                        // Al hacer foco, si no está seleccionado, auto-seleccionar con cantidad sugerida
+                                        if (!estaSeleccionadoMultiple && stock.stock_actual > 0) {
+                                          handleToggleLoteMultiple(stock);
+                                        }
+                                        e.target.select();
+                                      }}
+                                      placeholder="0"
+                                      disabled={stock.stock_actual === 0}
+                                      style={{ 
+                                        fontSize: '1rem', 
+                                        padding: '8px',
+                                        fontWeight: estaSeleccionadoMultiple ? 'bold' : 'normal',
+                                        backgroundColor: estaSeleccionadoMultiple ? '#d1e7dd' : 'white'
+                                      }}
+                                    />
                                   </td>
                                 )}
                               </tr>
@@ -2491,6 +2550,7 @@ const CalendarioVacunacion = () => {
         onReasignarAutomatico={handleReasignarAutomatico}
         onAsignarManual={(item) => handleAbrirReasignacion(item, 'simple')}
         onAsignarMultiples={(item) => handleAbrirReasignacion(item, 'multiple')}
+        onAsignarFaltante={(item) => handleAbrirReasignacion(item, 'faltante')}
         onVerStocks={(item) => {
           // Abrir el modal de reasignación en modo vista
           handleAbrirReasignacion(item, 'simple');

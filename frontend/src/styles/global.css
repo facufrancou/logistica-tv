@@ -1,5 +1,14 @@
 @import './variables.css';
 
+/* Zoom global del 90% para toda la aplicación */
+html {
+  zoom: 90%;
+}
+
+body {
+  zoom: 100%;
+}
+
 /* Deshabilitar todas las animaciones y transiciones */
 *,
 *::before,

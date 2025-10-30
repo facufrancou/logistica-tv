@@ -6,6 +6,7 @@ const { validarSesion } = require('../middlewares/auth');
 // Rutas de stock de vacunas
 router.get('/', validarSesion, stockVacunasController.getStockVacunas);
 router.get('/alertas', validarSesion, stockVacunasController.getAlertas);
+router.get('/movimientos', validarSesion, stockVacunasController.getTodosMovimientos);
 router.get('/vacuna/:id_vacuna', validarSesion, stockVacunasController.getStockByVacuna);
 router.get('/:id/movimientos', validarSesion, stockVacunasController.getMovimientosStockVacuna);
 router.get('/:id/reservas', validarSesion, stockVacunasController.getReservasLote);

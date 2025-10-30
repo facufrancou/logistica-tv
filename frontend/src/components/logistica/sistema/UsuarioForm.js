@@ -9,7 +9,7 @@ function UsuarioForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Aquí iría la llamada al backend para crear el usuario
-    // fetch('/api/usuarios', { ... })
+    // fetch('/usuarios', { ... })
     alert("Usuario creado (simulado)");
   };
 

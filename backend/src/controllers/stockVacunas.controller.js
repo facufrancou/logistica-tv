@@ -1147,3 +1147,118 @@ exports.getReservasLote = async (req, res) => {
     });
   }
 };
+
+/**
+ * Obtener todos los movimientos de stock (para la vista de Movimientos)
+ */
+exports.getTodosMovimientos = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 100,
+      tipo_movimiento,
+      id_vacuna,
+      lote,
+      fecha_desde,
+      fecha_hasta
+    } = req.query;
+
+    // Construir filtros
+    const where = {};
+    
+    if (tipo_movimiento) {
+      where.tipo_movimiento = tipo_movimiento;
+    }
+    
+    if (lote) {
+      where.stock_vacuna = {
+        lote: { contains: lote }
+      };
+    }
+    
+    if (id_vacuna) {
+      where.stock_vacuna = {
+        ...where.stock_vacuna,
+        id_vacuna: parseInt(id_vacuna)
+      };
+    }
+    
+    if (fecha_desde || fecha_hasta) {
+      where.created_at = {};
+      if (fecha_desde) where.created_at.gte = new Date(fecha_desde);
+      if (fecha_hasta) {
+        const hasta = new Date(fecha_hasta);
+        hasta.setHours(23, 59, 59, 999);
+        where.created_at.lte = hasta;
+      }
+    }
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [movimientos, totalCount] = await Promise.all([
+      prisma.movimientoStockVacuna.findMany({
+        where,
+        include: {
+          usuario: {
+            select: {
+              id_usuario: true,
+              nombre: true,
+              email: true
+            }
+          },
+          stock_vacuna: {
+            include: {
+              vacuna: {
+                select: {
+                  id_vacuna: true,
+                  codigo: true,
+                  nombre: true,
+                  detalle: true
+                }
+              }
+            }
+          },
+          cotizacion: {
+            select: {
+              id_cotizacion: true,
+              numero_cotizacion: true
+            }
+          }
+        },
+        orderBy: {
+          created_at: 'desc'
+        },
+        skip: offset,
+        take: parseInt(limit)
+      }),
+      prisma.movimientoStockVacuna.count({ where })
+    ]);
+
+    const movimientosFormatted = movimientos.map(movimiento => ({
+      ...movimiento,
+      id_movimiento: Number(movimiento.id_movimiento),
+      id_stock_vacuna: Number(movimiento.id_stock_vacuna),
+      precio_unitario: movimiento.precio_unitario ? parseFloat(movimiento.precio_unitario) : null
+    }));
+
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+    res.json({
+      success: true,
+      data: movimientosFormatted,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: totalPages,
+        total_count: totalCount,
+        limit: parseInt(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener todos los movimientos:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error.message 
+    });
+  }
+};

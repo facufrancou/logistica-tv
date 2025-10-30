@@ -9,7 +9,7 @@ router.use(validarSesion);
 // ===== RUTAS PARA CLASIFICACIÓN FISCAL =====
 
 /**
- * GET /api/liquidaciones/cotizacion/:id_cotizacion/items
+ * GET /liquidaciones/cotizacion/:id_cotizacion/items
  * Obtener items de cotización pendientes de clasificación fiscal
  */
 router.get('/cotizacion/:id_cotizacion/items', 
@@ -17,7 +17,7 @@ router.get('/cotizacion/:id_cotizacion/items',
 );
 
 /**
- * PUT /api/liquidaciones/item/:id_detalle_cotizacion/clasificar
+ * PUT /liquidaciones/item/:id_detalle_cotizacion/clasificar
  * Clasificar un item como Vía 1 (blanco) o Vía 2 (negro)
  */
 router.put('/item/:id_detalle_cotizacion/clasificar', 
@@ -25,7 +25,7 @@ router.put('/item/:id_detalle_cotizacion/clasificar',
 );
 
 /**
- * PUT /api/liquidaciones/items/clasificar-multiples
+ * PUT /liquidaciones/items/clasificar-multiples
  * Clasificar múltiples items de una vez
  */
 router.put('/items/clasificar-multiples', 
@@ -35,7 +35,7 @@ router.put('/items/clasificar-multiples',
 // ===== RUTAS PARA RESÚMENES DE LIQUIDACIÓN =====
 
 /**
- * POST /api/liquidaciones/cotizacion/:id_cotizacion/resumen
+ * POST /liquidaciones/cotizacion/:id_cotizacion/resumen
  * Generar resumen de liquidación para una cotización
  */
 router.post('/cotizacion/:id_cotizacion/resumen', 
@@ -43,7 +43,7 @@ router.post('/cotizacion/:id_cotizacion/resumen',
 );
 
 /**
- * GET /api/liquidaciones/cotizacion/:id_cotizacion/resumen
+ * GET /liquidaciones/cotizacion/:id_cotizacion/resumen
  * Obtener resumen de liquidación de una cotización
  */
 router.get('/cotizacion/:id_cotizacion/resumen', 
@@ -51,7 +51,7 @@ router.get('/cotizacion/:id_cotizacion/resumen',
 );
 
 /**
- * GET /api/liquidaciones/resumenes
+ * GET /liquidaciones/resumenes
  * Listar todos los resúmenes de liquidación con filtros
  * Query params: page, limit, fecha_desde, fecha_hasta, id_cliente
  */
@@ -60,7 +60,7 @@ router.get('/resumenes',
 );
 
 /**
- * GET /api/liquidaciones/estadisticas
+ * GET /liquidaciones/estadisticas
  * Obtener estadísticas generales de liquidaciones
  * Query params: fecha_desde, fecha_hasta
  */

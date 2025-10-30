@@ -8,7 +8,8 @@ const ModalGestionLotes = ({
   realizandoReasignacion, 
   onReasignarAutomatico, 
   onAsignarManual, 
-  onAsignarMultiples, 
+  onAsignarMultiples,
+  onAsignarFaltante, 
   onVerStocks 
 }) => {
   if (!isOpen || !item) return null;
@@ -17,6 +18,11 @@ const ModalGestionLotes = ({
     onClose();
     action();
   };
+  
+  // Calcular si hay un faltante
+  const dosisEntregadas = item.dosis_entregadas || 0;
+  const dosisFaltantes = item.cantidad_dosis - dosisEntregadas;
+  const hayFaltante = dosisEntregadas > 0 && dosisFaltantes > 0;
 
   return (
     <>
@@ -75,8 +81,34 @@ const ModalGestionLotes = ({
                 </div>
               </div>
 
+              {/* Alerta de faltante */}
+              {hayFaltante && (
+                <div className="alert alert-warning mb-3 py-2 px-3 d-flex align-items-center">
+                  <div className="me-auto">
+                    <strong>Entrega parcial detectada:</strong>
+                    <div className="small">
+                      Entregadas: {dosisEntregadas} | Faltantes: {dosisFaltantes} dosis
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Botones profesionales en grid */}
               <div className="row g-2">
+                {hayFaltante && (
+                  <div className="col-12">
+                    <button 
+                      className="btn btn-warning w-100 py-2 text-center fw-bold"
+                      onClick={() => handleAction(() => onAsignarFaltante(item))}
+                      disabled={realizandoReasignacion}
+                      style={{ borderWidth: '2px' }}
+                    >
+                      <FaPlus className="me-2" style={{ fontSize: '1.2rem' }} />
+                      Asignar Faltante ({dosisFaltantes} dosis)
+                    </button>
+                  </div>
+                )}
+                
                 <div className="col-6">
                   <button 
                     className="btn btn-outline-primary w-100 py-2 text-center"

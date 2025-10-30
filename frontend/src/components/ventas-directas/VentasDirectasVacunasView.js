@@ -87,7 +87,7 @@ const VentasDirectasVacunasView = () => {
   const cargarStocksDisponibles = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/ventas-directas-vacunas/stocks-disponibles', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas/stocks-disponibles', {
         credentials: 'include'
       });
 
@@ -96,6 +96,8 @@ const VentasDirectasVacunasView = () => {
       }
 
       const data = await response.json();
+      console.log('Stocks recibidos:', data.data);
+      console.log('Primera vacuna con ubicación:', data.data?.[0]?.ubicacion_fisica);
       setStocksVacunas(data.data || []);
     } catch (error) {
       console.error('Error cargando stocks:', error);
@@ -126,7 +128,7 @@ const VentasDirectasVacunasView = () => {
 
   const cargarVentasDirectas = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/ventas-directas-vacunas', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas', {
         credentials: 'include'
       });
 
@@ -148,7 +150,7 @@ const VentasDirectasVacunasView = () => {
 
   const cargarListasPrecios = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/ventas-directas-vacunas/listas-precios', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas/listas-precios', {
         credentials: 'include'
       });
 
@@ -192,16 +194,21 @@ const VentasDirectasVacunasView = () => {
       return;
     }
 
+    console.log('Stock completo al agregar:', stock);
+    console.log('Ubicación física:', stock.ubicacion_fisica);
+    
     const nuevoItem = {
       stockId: stock.id,
       vacuna: stock.vacuna,
       lote: stock.lote,
       fechaVencimiento: stock.fechaVencimiento,
+      ubicacion_fisica: stock.ubicacion_fisica,
       cantidadDisponible: stock.cantidadDisponible,
       cantidadVenta: 1,
       precioUnitario: stock.precioVenta || 0
     };
 
+    console.log('Nuevo item en carrito:', nuevoItem);
     setCarrito([...carrito, nuevoItem]);
     showSuccess(`${typeof stock.vacuna?.nombre === 'string' ? stock.vacuna.nombre : 'Vacuna'} agregada al carrito`);
   };
@@ -273,7 +280,7 @@ const VentasDirectasVacunasView = () => {
         }))
       };
 
-      const response = await fetch('http://localhost:3001/api/ventas-directas-vacunas', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -315,7 +322,7 @@ const VentasDirectasVacunasView = () => {
     try {
       setLoading(true);
       
-      const response = await fetch(`http://localhost:3001/api/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
+      const response = await fetch(`http://localhost:3001/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -354,7 +361,7 @@ const VentasDirectasVacunasView = () => {
 
   const confirmarEntrega = async (ventaId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/ventas-directas-vacunas/${ventaId}/confirmar`, {
+      const response = await fetch(`http://localhost:3001/ventas-directas-vacunas/${ventaId}/confirmar`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -449,6 +456,21 @@ const VentasDirectasVacunasView = () => {
     .slice(0, 5);
 
   const { subtotal, recargo, total, cantidadTotal } = calcularTotales();
+
+  // Calcular días hasta vencimiento
+  const calcularDiasHastaVencimiento = (fechaVencimiento) => {
+    if (!fechaVencimiento) return null;
+    const hoy = new Date();
+    const vencimiento = new Date(fechaVencimiento);
+    const diferencia = Math.ceil((vencimiento - hoy) / (1000 * 60 * 60 * 24));
+    return diferencia;
+  };
+
+  // Determinar si está próximo a vencer (menos de 7 días)
+  const estaProximoAVencer = (fechaVencimiento) => {
+    const dias = calcularDiasHastaVencimiento(fechaVencimiento);
+    return dias !== null && dias >= 0 && dias < 7;
+  };
 
   return (
     <div className="ventas-directas-vacunas-container">
@@ -622,44 +644,63 @@ const VentasDirectasVacunasView = () => {
                         </tr>
 
                         {/* Filas de detalle de lotes */}
-                        {estaExpandida && vacunaGroup.lotes.map((stock) => (
-                          <tr key={stock.id} className="bg-light" style={{borderLeft: '4px solid #007bff'}}>
-                            <td></td>
-                            <td style={{paddingLeft: '2rem'}}>
-                              <small className="text-muted">Lote:</small>
-                              <br />
-                              <code>{stock.lote}</code>
-                            </td>
-                            <td>
-                              <span className="badge bg-success text-white">
-                                {stock.cantidadDisponible || 0} frascos
-                              </span>
-                              <br />
-                              <small className="text-muted">
-                                {stock.dosisDisponibles || 0} dosis
-                              </small>
-                            </td>
-                            <td colSpan="1">
-                              <small>
-                                <strong>Venc:</strong> {stock.fechaVencimiento ? new Date(stock.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}
+                        {estaExpandida && vacunaGroup.lotes.map((stock) => {
+                          const proximoVencer = estaProximoAVencer(stock.fechaVencimiento);
+                          const diasRestantes = calcularDiasHastaVencimiento(stock.fechaVencimiento);
+                          
+                          return (
+                            <tr key={stock.id} className="bg-light" style={{borderLeft: '4px solid #007bff'}}>
+                              <td></td>
+                              <td style={{paddingLeft: '2rem'}}>
+                                <small className="text-muted">Lote:</small>
                                 <br />
-                                <strong>Precio:</strong> ${stock.precioVenta || 0}
-                              </small>
-                            </td>
-                            <td>
-                              <button
-                                className="btn btn-primary btn-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  agregarAlCarrito(stock);
-                                }}
-                                disabled={stock.cantidadDisponible === 0}
-                              >
-                                <FaPlus /> Agregar al Carrito
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                                <code>{stock.lote}</code>
+                              </td>
+                              <td>
+                                <span className="badge bg-success text-white">
+                                  {stock.cantidadDisponible || 0} frascos
+                                </span>
+                                <br />
+                                <small className="text-muted">
+                                  {stock.dosisDisponibles || 0} dosis
+                                </small>
+                              </td>
+                              <td colSpan="1">
+                                <small>
+                                  <strong>Venc:</strong>{' '}
+                                  <span className={proximoVencer ? 'vencimiento-proximo' : ''}>
+                                    {stock.fechaVencimiento ? new Date(stock.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}
+                                  </span>
+                                  {proximoVencer && (
+                                    <>
+                                      <br />
+                                      <span className="alerta-vencimiento">
+                                        <FaExclamationTriangle />
+                                        Vence en {diasRestantes} {diasRestantes === 1 ? 'día' : 'días'}
+                                      </span>
+                                    </>
+                                  )}
+                                  <br />
+                                  <strong>Ubic:</strong> {stock.ubicacion_fisica || '—'}
+                                  <br />
+                                  <strong>Precio:</strong> ${stock.precioVenta || 0}
+                                </small>
+                              </td>
+                              <td>
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    agregarAlCarrito(stock);
+                                  }}
+                                  disabled={stock.cantidadDisponible === 0}
+                                >
+                                  <FaPlus /> Agregar al Carrito
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </React.Fragment>
                     );
                   })}
@@ -696,12 +737,29 @@ const VentasDirectasVacunasView = () => {
             <>
               {/* Items del carrito */}
               <div className="cart-items">
-                {carrito.map(item => (
-                  <div key={item.stockId} className="cart-item">
-                    <div className="item-info">
-                      <h4>{typeof item.vacuna?.nombre === 'string' ? item.vacuna.nombre : 'Vacuna sin nombre'}</h4>
-                      <p>Lote: {typeof item.lote === 'string' ? item.lote : 'Sin lote'} | Vence: {item.fechaVencimiento ? new Date(item.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}</p>
-                    </div>
+                {carrito.map(item => {
+                  const proximoVencer = estaProximoAVencer(item.fechaVencimiento);
+                  const diasRestantes = calcularDiasHastaVencimiento(item.fechaVencimiento);
+                  
+                  return (
+                    <div key={item.stockId} className="cart-item">
+                      <div className="item-info">
+                        <h4>{typeof item.vacuna?.nombre === 'string' ? item.vacuna.nombre : 'Vacuna sin nombre'}</h4>
+                        <p>
+                          Lote: {typeof item.lote === 'string' ? item.lote : 'Sin lote'} | 
+                          Vence: <span className={proximoVencer ? 'vencimiento-proximo' : ''}>
+                            {item.fechaVencimiento ? new Date(item.fechaVencimiento).toLocaleDateString() : 'Sin fecha'}
+                          </span>
+                          {proximoVencer && (
+                            <span className="alerta-vencimiento" style={{marginLeft: '8px'}}>
+                              <FaExclamationTriangle />
+                              {diasRestantes} {diasRestantes === 1 ? 'día' : 'días'}
+                            </span>
+                          )}
+                          <br />
+                          Ubicación: {item.ubicacion_fisica || '—'}
+                        </p>
+                      </div>
                     
                     <div className="item-controls">
                       <div className="quantity-control">
@@ -732,7 +790,8 @@ const VentasDirectasVacunasView = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Totales */}

@@ -2056,14 +2056,15 @@ exports.marcarEntregaDosis = async (req, res) => {
       responsable_entrega, 
       responsable_recibe,
       observaciones_entrega,
-      tipo_entrega = 'completa' 
+      tipo_entrega = 'completa',
+      lotes_utilizados // NUEVO: array opcional con lotes y cantidades específicas
     } = req.body;
 
     if (!cantidad_entregada || cantidad_entregada <= 0) {
       return res.status(400).json({ error: 'Cantidad entregada debe ser mayor a 0' });
     }
 
-    // Verificar que el calendario existe
+    // Verificar que el calendario exists
     const calendarioExistente = await prisma.calendarioVacunacion.findUnique({
       where: { id_calendario: parseInt(id_calendario) },
       include: {
@@ -2098,36 +2099,68 @@ exports.marcarEntregaDosis = async (req, res) => {
       });
     }
 
+    // NUEVA LÓGICA: Detectar si hay múltiples lotes asignados
+    let lotesParaDescontar = [];
+    
+    if (lotes_utilizados && Array.isArray(lotes_utilizados) && lotes_utilizados.length > 0) {
+      // El frontend envió los lotes específicos
+      lotesParaDescontar = lotes_utilizados;
+      console.log('✅ Usando lotes enviados por el frontend:', lotesParaDescontar);
+    } else if (calendarioExistente.observaciones && calendarioExistente.observaciones.includes('Lotes múltiples asignados:')) {
+      // Extraer lotes de las observaciones
+      const match = calendarioExistente.observaciones.match(/Lotes múltiples asignados: (.+)/);
+      if (match) {
+        const lotesStr = match[1].trim();
+        const lotesArray = lotesStr.split(',').map(l => l.trim());
+        
+        console.log('🔍 Lotes detectados en observaciones:', lotesArray);
+        
+        // Buscar cada lote en la BD para obtener su id_stock_vacuna y reserva
+        for (const nombreLote of lotesArray) {
+          const stock = await prisma.stockVacuna.findFirst({
+            where: { lote: nombreLote }
+          });
+          
+          if (stock) {
+            lotesParaDescontar.push({
+              id_stock_vacuna: stock.id_stock_vacuna,
+              lote: stock.lote,
+              stock_reservado: stock.stock_reservado
+            });
+          }
+        }
+        
+        console.log('📦 Lotes preparados para descuento:', lotesParaDescontar);
+      }
+    } else if (calendarioExistente.stock_vacuna) {
+      // Solo hay un lote asignado (el principal)
+      lotesParaDescontar = [{
+        id_stock_vacuna: calendarioExistente.id_stock_vacuna,
+        lote: calendarioExistente.stock_vacuna.lote,
+        stock_reservado: calendarioExistente.stock_vacuna.stock_reservado
+      }];
+    }
+
     // Verificar stock disponible (solo si requiere control)
     if (calendarioExistente.producto.requiere_control_stock) {
-      // Si es un plan de vacunación y tiene stock_vacuna asignado, usar ese stock
-      if (calendarioExistente.cotizacion.id_plan && calendarioExistente.stock_vacuna) {
-        const stockActual = calendarioExistente.stock_vacuna.stock_actual || 0;
-        const stockReservado = calendarioExistente.stock_vacuna.stock_reservado || 0;
+      // Si es un plan de vacunación y tiene stock_vacuna asignado
+      if (calendarioExistente.cotizacion.id_plan && lotesParaDescontar.length > 0) {
+        // Verificar que la suma de stock reservado sea suficiente
+        const totalReservado = lotesParaDescontar.reduce((sum, lote) => sum + (lote.stock_reservado || 0), 0);
         
-        console.log(`Verificando stock de vacuna - Lote: ${calendarioExistente.stock_vacuna.lote}`);
-        console.log(`  Stock actual: ${stockActual}, Stock reservado: ${stockReservado}, Solicitado: ${cantidad_entregada}`);
+        console.log(`Verificando stock total de ${lotesParaDescontar.length} lote(s)`);
+        console.log(`  Total reservado: ${totalReservado}, Solicitado: ${cantidad_entregada}`);
         
-        // Validar que haya stock_actual Y que esté reservado
-        if (stockActual < cantidad_entregada) {
+        if (totalReservado < cantidad_entregada) {
           return res.status(400).json({ 
-            error: 'Stock insuficiente para la entrega',
-            stock_actual: stockActual,
+            error: 'Stock reservado insuficiente en los lotes asignados',
+            total_reservado: totalReservado,
             solicitado: cantidad_entregada,
-            lote: calendarioExistente.stock_vacuna.lote
+            lotes: lotesParaDescontar.map(l => l.lote).join(', '),
+            sugerencia: 'Reasigne lotes en el calendario antes de registrar la entrega'
           });
         }
-        
-        if (stockReservado < cantidad_entregada) {
-          return res.status(400).json({ 
-            error: 'Stock reservado insuficiente. Debe reasignar lotes en el calendario.',
-            stock_reservado: stockReservado,
-            solicitado: cantidad_entregada,
-            lote: calendarioExistente.stock_vacuna.lote,
-            sugerencia: 'Verifique si hubo egresos que afectaron las reservas y reasigne lotes'
-          });
-        }
-      } else {
+      } else if (!calendarioExistente.cotizacion.id_plan) {
         // Si no tiene stock de vacuna específico, usar stock de producto
         const stockDisponible = (calendarioExistente.producto.stock || 0) - (calendarioExistente.producto.stock_reservado || 0);
         console.log(`Verificando stock de producto - ${calendarioExistente.producto.nombre}, Disponible: ${stockDisponible}, Solicitado: ${cantidad_entregada}`);
@@ -2165,49 +2198,84 @@ exports.marcarEntregaDosis = async (req, res) => {
 
       // Actualizar stock si requiere control
       if (calendarioExistente.producto.requiere_control_stock) {
-        // Si es un plan de vacunación y tiene stock_vacuna asignado, actualizar ese stock
-        if (calendarioExistente.cotizacion.id_plan && calendarioExistente.stock_vacuna) {
-          // Calcular stock posterior
-          const stockAnterior = calendarioExistente.stock_vacuna.stock_actual;
-          const stockReservadoAnterior = calendarioExistente.stock_vacuna.stock_reservado || 0;
-          const stockPosterior = stockAnterior - cantidad_entregada;
-          const stockReservadoPosterior = Math.max(0, stockReservadoAnterior - cantidad_entregada);
+        // Si es un plan de vacunación y tiene lotes asignados
+        if (calendarioExistente.cotizacion.id_plan && lotesParaDescontar.length > 0) {
+          console.log(`🚚 Procesando entrega de ${cantidad_entregada} dosis desde ${lotesParaDescontar.length} lote(s)`);
           
-          console.log(`📦 Entrega de dosis - Lote ${calendarioExistente.stock_vacuna.lote}:`);
-          console.log(`  Stock anterior: ${stockAnterior} dosis`);
-          console.log(`  Reservado anterior: ${stockReservadoAnterior} dosis`);
-          console.log(`  Cantidad entregada: ${cantidad_entregada} dosis`);
-          console.log(`  Stock posterior: ${stockPosterior} dosis`);
-          console.log(`  Reservado posterior: ${stockReservadoPosterior} dosis`);
+          // NUEVA LÓGICA: Descontar proporcionalmente de cada lote según su reserva
+          let dosisRestantes = cantidad_entregada;
           
-          // Reducir stock reservado y actual del lote específico
-          await tx.stockVacuna.update({
-            where: { id_stock_vacuna: calendarioExistente.id_stock_vacuna },
-            data: {
-              stock_reservado: stockReservadoPosterior,
-              stock_actual: stockPosterior,
-              updated_at: new Date()
+          for (const loteInfo of lotesParaDescontar) {
+            if (dosisRestantes <= 0) break;
+            
+            // Obtener stock actualizado del lote
+            const stockLote = await tx.stockVacuna.findUnique({
+              where: { id_stock_vacuna: loteInfo.id_stock_vacuna }
+            });
+            
+            if (!stockLote) {
+              console.warn(`⚠️ Lote ${loteInfo.lote} no encontrado, saltando...`);
+              continue;
             }
-          });
+            
+            // Determinar cuánto descontar de este lote
+            const cantidadADescontar = Math.min(dosisRestantes, stockLote.stock_reservado);
+            
+            if (cantidadADescontar <= 0) {
+              console.log(`⏭️ Lote ${stockLote.lote} sin reserva suficiente, saltando...`);
+              continue;
+            }
+            
+            const stockAnterior = stockLote.stock_actual;
+            const stockReservadoAnterior = stockLote.stock_reservado;
+            const stockPosterior = stockAnterior - cantidadADescontar;
+            const stockReservadoPosterior = Math.max(0, stockReservadoAnterior - cantidadADescontar);
+            
+            console.log(`📦 Descontando de lote ${stockLote.lote}:`);
+            console.log(`  Stock anterior: ${stockAnterior} dosis`);
+            console.log(`  Reservado anterior: ${stockReservadoAnterior} dosis`);
+            console.log(`  Cantidad a descontar: ${cantidadADescontar} dosis`);
+            console.log(`  Stock posterior: ${stockPosterior} dosis`);
+            console.log(`  Reservado posterior: ${stockReservadoPosterior} dosis`);
+            
+            // Actualizar stock del lote
+            await tx.stockVacuna.update({
+              where: { id_stock_vacuna: loteInfo.id_stock_vacuna },
+              data: {
+                stock_reservado: stockReservadoPosterior,
+                stock_actual: stockPosterior,
+                updated_at: new Date()
+              }
+            });
 
-          // Registrar movimiento de stock de vacuna
-          await tx.movimientoStockVacuna.create({
-            data: {
-              id_stock_vacuna: calendarioExistente.id_stock_vacuna,
-              tipo_movimiento: 'egreso',
-              cantidad: cantidad_entregada,
-              stock_anterior: stockAnterior,
-              stock_posterior: stockPosterior,
-              motivo: 'Entrega de dosis programada',
-              observaciones: `Entrega: ${cantidad_entregada} dosis - ${responsableCompleto}`,
-              id_calendario: parseInt(id_calendario),
-              id_cotizacion: calendarioExistente.id_cotizacion,
-              id_usuario: req.user?.id_usuario || null
-            }
-          });
+            // Registrar movimiento de stock de vacuna
+            await tx.movimientoStockVacuna.create({
+              data: {
+                id_stock_vacuna: loteInfo.id_stock_vacuna,
+                tipo_movimiento: 'egreso',
+                cantidad: cantidadADescontar,
+                stock_anterior: stockAnterior,
+                stock_posterior: stockPosterior,
+                motivo: 'Entrega de dosis programada',
+                observaciones: lotesParaDescontar.length > 1 
+                  ? `Entrega múltiple lotes: ${cantidadADescontar}/${cantidad_entregada} dosis - ${responsableCompleto}`
+                  : `Entrega: ${cantidadADescontar} dosis - ${responsableCompleto}`,
+                id_calendario: parseInt(id_calendario),
+                id_cotizacion: calendarioExistente.id_cotizacion,
+                id_usuario: req.user?.id_usuario || null
+              }
+            });
+            
+            dosisRestantes -= cantidadADescontar;
+            console.log(`  ✅ Lote ${stockLote.lote} actualizado. Dosis restantes: ${dosisRestantes}`);
+          }
           
-          console.log(`✅ Stock actualizado correctamente`);
-        } else {
+          if (dosisRestantes > 0) {
+            throw new Error(`No se pudo descontar todas las dosis. Faltaron ${dosisRestantes} dosis.`);
+          }
+          
+          console.log(`✅ Entrega completada - ${lotesParaDescontar.length} lote(s) actualizados`);
+        } else if (!calendarioExistente.cotizacion.id_plan) {
           // Si no tiene stock de vacuna específico, usar stock de producto
           await tx.producto.update({
             where: { id_producto: calendarioExistente.id_producto },
@@ -3168,6 +3236,82 @@ exports.generarRemitoPDF = async (req, res) => {
     // Calcular dosis restantes
     const dosisRestantes = calendario.cantidad_dosis - datosEntrega.cantidad_entregada;
 
+    // NUEVA LÓGICA: Detectar múltiples lotes y obtener cantidades de movimientos
+    let lotesEntregados = [];
+    
+    // Buscar los movimientos de stock de esta entrega para obtener cantidades exactas
+    const movimientosEntrega = await prisma.movimientoStockVacuna.findMany({
+      where: {
+        id_calendario: parseInt(id_calendario),
+        tipo_movimiento: 'egreso',
+        motivo: 'Entrega de dosis programada'
+      },
+      include: {
+        stock_vacuna: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      },
+      take: 10 // Últimos 10 movimientos para esta entrega
+    });
+
+    if (movimientosEntrega.length > 0) {
+      // Hay movimientos registrados, usar esos datos
+      console.log(`📋 Encontrados ${movimientosEntrega.length} movimientos de entrega`);
+      
+      for (const mov of movimientosEntrega) {
+        lotesEntregados.push({
+          lote: mov.stock_vacuna.lote,
+          fecha_vencimiento: mov.stock_vacuna.fecha_vencimiento,
+          cantidad: mov.cantidad
+        });
+      }
+    } else {
+      // Fallback: usar lógica anterior
+      console.log('⚠️ No se encontraron movimientos, usando fallback');
+      
+      if (calendario.observaciones && calendario.observaciones.includes('Lotes múltiples asignados:')) {
+        const match = calendario.observaciones.match(/Lotes múltiples asignados: (.+)/);
+        if (match) {
+          const lotesStr = match[1].trim();
+          const lotesArray = lotesStr.split(',').map(l => l.trim());
+          
+          // Distribuir proporcionalmente entre los lotes
+          const cantidadPorLote = Math.floor(datosEntrega.cantidad_entregada / lotesArray.length);
+          let cantidadRestante = datosEntrega.cantidad_entregada;
+          
+          for (let i = 0; i < lotesArray.length; i++) {
+            const nombreLote = lotesArray[i];
+            const stock = await prisma.stockVacuna.findFirst({
+              where: { lote: nombreLote },
+              include: { vacuna: true }
+            });
+            
+            if (stock) {
+              const cantidad = i === lotesArray.length - 1 
+                ? cantidadRestante // Último lote recibe el resto
+                : cantidadPorLote;
+              
+              lotesEntregados.push({
+                lote: stock.lote,
+                fecha_vencimiento: stock.fecha_vencimiento,
+                cantidad: cantidad
+              });
+              
+              cantidadRestante -= cantidad;
+            }
+          }
+        }
+      } else if (calendario.stock_vacuna) {
+        // Solo un lote
+        lotesEntregados = [{
+          lote: calendario.stock_vacuna.lote,
+          fecha_vencimiento: calendario.stock_vacuna.fecha_vencimiento,
+          cantidad: datosEntrega.cantidad_entregada
+        }];
+      }
+    }
+
     // Preparar datos para el PDF
     const pdfData = {
       cliente: {
@@ -3192,6 +3336,7 @@ exports.generarRemitoPDF = async (req, res) => {
       },
       entrega: {
         fecha: datosEntrega.fecha_entrega || new Date(),
+        fechaEntrega: datosEntrega.fecha_entrega || new Date(), // Para el template
         responsable_entrega: datosEntrega.responsable_entrega || 'Sistema',
         responsable_recibe: datosEntrega.responsable_recibe || 'Sin especificar',
         observaciones: datosEntrega.observaciones_entrega || '',
@@ -3216,7 +3361,10 @@ exports.generarRemitoPDF = async (req, res) => {
         fecha_programada: calendario.fecha_programada || calendario.fecha_aplicacion_programada || null,
         // Información adicional de la vacuna
         proveedor: calendario.stock_vacuna?.vacuna?.proveedor?.nombre || vacunaInfo?.proveedor?.nombre || 'Sin proveedor',
-        tipo_producto: 'vacuna'
+        tipo_producto: 'vacuna',
+        // NUEVO: Lista de lotes entregados
+        lotes_entregados: lotesEntregados,
+        tiene_multiples_lotes: lotesEntregados.length > 1
       }
     };
 
@@ -3628,9 +3776,12 @@ exports.asignarMultiplesLotes = async (req, res) => {
  */
 exports.asignarMultiplesLotesManual = async (req, res) => {
   const { id_calendario } = req.params;
-  const { lotes } = req.body;
+  const { lotes, es_faltante } = req.body;
 
   try {
+    console.log('=== ASIGNAR MÚLTIPLES LOTES MANUAL ===');
+    console.log('Es modo faltante:', es_faltante);
+    
     // Validaciones
     if (!lotes || !Array.isArray(lotes) || lotes.length === 0) {
       return res.status(400).json({
@@ -3660,14 +3811,24 @@ exports.asignarMultiplesLotesManual = async (req, res) => {
 
     const cantidadTotal = lotes.reduce((sum, l) => sum + parseInt(l.cantidad), 0);
     
-    if (cantidadTotal < calendario.cantidad_dosis) {
+    // En modo faltante, calcular cuánto se necesita realmente
+    const dosisEntregadas = calendario.dosis_entregadas || 0;
+    const cantidadRequerida = es_faltante 
+      ? (calendario.cantidad_dosis - dosisEntregadas)
+      : calendario.cantidad_dosis;
+    
+    console.log('Cantidad total a asignar:', cantidadTotal);
+    console.log('Cantidad requerida:', cantidadRequerida);
+    console.log('Dosis ya entregadas:', dosisEntregadas);
+    
+    if (cantidadTotal < cantidadRequerida) {
       return res.status(400).json({
         success: false,
-        message: `La cantidad total (${cantidadTotal}) es menor a la requerida (${calendario.cantidad_dosis})`
+        message: `La cantidad total (${cantidadTotal}) es menor a la requerida (${cantidadRequerida})`
       });
     }
 
-    // Verificar disponibilidad de todos los lotes
+    // Verificar que los lotes existen y tienen stock físico suficiente
     for (const lote of lotes) {
       const stock = await prisma.stockVacuna.findUnique({
         where: { id_stock_vacuna: parseInt(lote.id_stock_vacuna) }
@@ -3680,11 +3841,12 @@ exports.asignarMultiplesLotesManual = async (req, res) => {
         });
       }
 
-      const stockDisponible = stock.stock_actual - stock.stock_reservado;
-      if (stockDisponible < lote.cantidad) {
+      // Solo validar que el stock físico real (stock_actual) sea suficiente
+      // No validar contra (stock_actual - stock_reservado) porque estamos MODIFICANDO las reservas
+      if (stock.stock_actual < lote.cantidad) {
         return res.status(400).json({
           success: false,
-          message: `Stock insuficiente en lote ${stock.lote}. Disponible: ${stockDisponible}, Solicitado: ${lote.cantidad}`
+          message: `Stock físico insuficiente en lote ${stock.lote}. Stock físico: ${stock.stock_actual}, Solicitado: ${lote.cantidad}`
         });
       }
     }
@@ -3693,101 +3855,146 @@ exports.asignarMultiplesLotesManual = async (req, res) => {
     const resultado = await prisma.$transaction(async (tx) => {
       const resultados = [];
       
-      // PASO 1: Liberar TODAS las reservas anteriores para este calendario
-      if (calendario.id_stock_vacuna) {
-        // Buscar TODOS los movimientos de reserva activos para este calendario
-        const reservasActuales = await tx.movimientoStockVacuna.findMany({
-          where: {
-            id_calendario: parseInt(id_calendario),
-            tipo_movimiento: 'reserva'
-          },
-          orderBy: {
-            fecha_movimiento: 'desc'
-          }
-        });
-        
-        // Agrupar por id_stock_vacuna y sumar cantidades
-        const reservasPorLote = {};
-        for (const mov of reservasActuales) {
-          if (!reservasPorLote[mov.id_stock_vacuna]) {
-            reservasPorLote[mov.id_stock_vacuna] = 0;
-          }
-          reservasPorLote[mov.id_stock_vacuna] += mov.cantidad;
+      // PASO 1: Calcular reservas actuales para este calendario
+      console.log('Calculando reservas actuales...');
+      const reservasActuales = await tx.movimientoStockVacuna.findMany({
+        where: {
+          id_calendario: parseInt(id_calendario),
+          tipo_movimiento: 'reserva'
         }
-        
-        // Buscar también liberaciones para restar
-        const liberaciones = await tx.movimientoStockVacuna.findMany({
-          where: {
-            id_calendario: parseInt(id_calendario),
-            tipo_movimiento: 'liberacion_reserva'
-          }
-        });
-        
-        for (const mov of liberaciones) {
-          if (reservasPorLote[mov.id_stock_vacuna]) {
-            reservasPorLote[mov.id_stock_vacuna] -= mov.cantidad;
-          }
+      });
+      
+      const liberaciones = await tx.movimientoStockVacuna.findMany({
+        where: {
+          id_calendario: parseInt(id_calendario),
+          tipo_movimiento: 'liberacion_reserva'
         }
+      });
+      
+      // Calcular reserva neta por lote
+      const reservaNetaPorLote = {};
+      for (const mov of reservasActuales) {
+        if (!reservaNetaPorLote[mov.id_stock_vacuna]) {
+          reservaNetaPorLote[mov.id_stock_vacuna] = 0;
+        }
+        reservaNetaPorLote[mov.id_stock_vacuna] += mov.cantidad;
+      }
+      
+      for (const mov of liberaciones) {
+        if (!reservaNetaPorLote[mov.id_stock_vacuna]) {
+          reservaNetaPorLote[mov.id_stock_vacuna] = 0;
+        }
+        reservaNetaPorLote[mov.id_stock_vacuna] -= mov.cantidad;
+      }
+      
+      console.log('Reservas actuales por lote:', reservaNetaPorLote);
+      
+      // PASO 2: Calcular nuevas reservas deseadas
+      const nuevasReservasPorLote = {};
+      for (const lote of lotes) {
+        const idStock = parseInt(lote.id_stock_vacuna);
+        if (!nuevasReservasPorLote[idStock]) {
+          nuevasReservasPorLote[idStock] = 0;
+        }
+        nuevasReservasPorLote[idStock] += parseInt(lote.cantidad);
+      }
+      
+      console.log('Nuevas reservas deseadas:', nuevasReservasPorLote);
+      
+      // PASO 3: En modo NO faltante, calcular diferencias y ajustar
+      if (!es_faltante) {
+        // Obtener todos los lotes que tenían o tendrán reservas
+        const todosLosLotes = new Set([
+          ...Object.keys(reservaNetaPorLote).map(k => parseInt(k)),
+          ...Object.keys(nuevasReservasPorLote).map(k => parseInt(k))
+        ]);
         
-        // Liberar cada lote que tenga reserva activa
-        for (const [idStock, cantidad] of Object.entries(reservasPorLote)) {
-          if (cantidad > 0) {
+        for (const idStock of todosLosLotes) {
+          const reservaActual = reservaNetaPorLote[idStock] || 0;
+          const reservaNueva = nuevasReservasPorLote[idStock] || 0;
+          const diferencia = reservaNueva - reservaActual;
+          
+          console.log(`Lote ${idStock}: Actual=${reservaActual}, Nueva=${reservaNueva}, Diferencia=${diferencia}`);
+          
+          if (diferencia > 0) {
+            // Necesitamos INCREMENTAR la reserva
             await tx.stockVacuna.update({
-              where: { id_stock_vacuna: parseInt(idStock) },
-              data: {
-                stock_reservado: { decrement: cantidad }
-              }
+              where: { id_stock_vacuna: idStock },
+              data: { stock_reservado: { increment: diferencia } }
             });
             
             await tx.movimientoStockVacuna.create({
               data: {
-                id_stock_vacuna: parseInt(idStock),
-                tipo_movimiento: 'liberacion_reserva',
-                cantidad: cantidad,
+                id_stock_vacuna: idStock,
+                tipo_movimiento: 'reserva',
+                cantidad: diferencia,
                 stock_anterior: 0,
                 stock_posterior: 0,
-                motivo: 'Liberación para reasignación múltiple',
-                observaciones: `Stock liberado (${cantidad} dosis) para asignación múltiple manual`,
+                motivo: 'Ajuste de reserva múltiple manual',
+                observaciones: `Incremento de reserva de ${reservaActual} a ${reservaNueva} dosis`,
+                id_calendario: parseInt(id_calendario),
+                id_usuario: req.user?.id_usuario
+              }
+            });
+          } else if (diferencia < 0) {
+            // Necesitamos DECREMENTAR la reserva
+            const cantidadALiberar = Math.abs(diferencia);
+            await tx.stockVacuna.update({
+              where: { id_stock_vacuna: idStock },
+              data: { stock_reservado: { decrement: cantidadALiberar } }
+            });
+            
+            await tx.movimientoStockVacuna.create({
+              data: {
+                id_stock_vacuna: idStock,
+                tipo_movimiento: 'liberacion_reserva',
+                cantidad: cantidadALiberar,
+                stock_anterior: 0,
+                stock_posterior: 0,
+                motivo: 'Ajuste de reserva múltiple manual',
+                observaciones: `Decremento de reserva de ${reservaActual} a ${reservaNueva} dosis`,
                 id_calendario: parseInt(id_calendario),
                 id_usuario: req.user?.id_usuario
               }
             });
           }
+          // Si diferencia === 0, no hacer nada
+        }
+      } else {
+        // MODO FALTANTE: Solo agregar las nuevas reservas sin tocar las existentes
+        for (const lote of lotes) {
+          const idStock = parseInt(lote.id_stock_vacuna);
+          const cantidad = parseInt(lote.cantidad);
+          
+          await tx.stockVacuna.update({
+            where: { id_stock_vacuna: idStock },
+            data: { stock_reservado: { increment: cantidad } }
+          });
+          
+          await tx.movimientoStockVacuna.create({
+            data: {
+              id_stock_vacuna: idStock,
+              tipo_movimiento: 'reserva',
+              cantidad: cantidad,
+              stock_anterior: 0,
+              stock_posterior: 0,
+              motivo: 'Asignación de faltante',
+              observaciones: `Reserva adicional para completar faltante`,
+              id_calendario: parseInt(id_calendario),
+              id_usuario: req.user?.id_usuario
+            }
+          });
         }
       }
       
-      // PASO 2: Asignar cada uno de los nuevos lotes
+      // PASO 4: Preparar resultado
       for (let i = 0; i < lotes.length; i++) {
         const lote = lotes[i];
-        const cantidad = parseInt(lote.cantidad);
         const idStockVacuna = parseInt(lote.id_stock_vacuna);
+        const cantidad = parseInt(lote.cantidad);
         
-        // Obtener info del stock
         const stockInfo = await tx.stockVacuna.findUnique({
           where: { id_stock_vacuna: idStockVacuna }
-        });
-        
-        // Reservar stock (solo incrementar reserva)
-        await tx.stockVacuna.update({
-          where: { id_stock_vacuna: idStockVacuna },
-          data: {
-            stock_reservado: { increment: cantidad }
-          }
-        });
-        
-        // Registrar movimiento
-        await tx.movimientoStockVacuna.create({
-          data: {
-            id_stock_vacuna: idStockVacuna,
-            tipo_movimiento: 'reserva',
-            cantidad: cantidad,
-            stock_anterior: stockInfo.stock_actual,
-            stock_posterior: stockInfo.stock_actual, // NO cambia en reserva
-            motivo: 'Asignación múltiple manual',
-            observaciones: `Parte ${i + 1} de ${lotes.length} lotes para calendario ID: ${id_calendario}`,
-            id_calendario: parseInt(id_calendario),
-            id_usuario: req.user?.id_usuario
-          }
         });
 
         resultados.push({
@@ -4054,12 +4261,24 @@ exports.verificarEstadoLotes = async (req, res) => {
         }
       }
 
+      // ✅ NUEVA LÓGICA: Verificar si ya fue entregado completamente
+      const dosisEntregadas = calendario.dosis_entregadas || 0;
+      const dosisPendientes = calendario.cantidad_dosis - dosisEntregadas;
+      
+      // Si ya se entregó todo, no verificar nada
+      if (dosisEntregadas >= calendario.cantidad_dosis) {
+        console.log(`✅ Semana ${calendario.numero_semana} - ${nombreVacuna}: Entrega completada (${dosisEntregadas}/${calendario.cantidad_dosis})`);
+        continue; // Saltar al siguiente calendario
+      }
+
       const problema = {
         id_calendario: calendario.id_calendario,
         semana: calendario.numero_semana,
         fecha_programada: calendario.fecha_programada,
         producto: nombreVacuna,
         cantidad_requerida: calendario.cantidad_dosis,
+        cantidad_pendiente: dosisPendientes,
+        dosis_entregadas: dosisEntregadas,
         problemas: []
       };
 
@@ -4090,14 +4309,18 @@ exports.verificarEstadoLotes = async (req, res) => {
             });
           }
 
-          // Verificar cantidad disponible (stock físico total debe ser >= a lo requerido)
-          // El stock_actual debe cubrir TANTO las reservas existentes COMO la cantidad requerida
-          if (stock.stock_actual < calendario.cantidad_dosis) {
-            const faltante = calendario.cantidad_dosis - stock.stock_actual;
+          // Verificar cantidad disponible solo para las dosis pendientes
+          // Usar stock_reservado si hay reserva, o stock_actual si no hay reserva
+          const stockDisponibleParaEsteCalendario = stock.stock_reservado > 0 
+            ? Math.min(stock.stock_reservado, stock.stock_actual)
+            : stock.stock_actual;
+            
+          if (stockDisponibleParaEsteCalendario < dosisPendientes) {
+            const faltante = dosisPendientes - stockDisponibleParaEsteCalendario;
             problema.problemas.push({
               tipo: 'cantidad_insuficiente',
               severidad: 'error',
-              mensaje: `Stock insuficiente: tiene ${stock.stock_actual} dosis, necesita ${calendario.cantidad_dosis} dosis (faltan ${faltante} dosis)`
+              mensaje: `Stock insuficiente: tiene ${stockDisponibleParaEsteCalendario} dosis, necesita ${dosisPendientes} dosis (faltan ${faltante} dosis)`
             });
           }
 
@@ -4124,12 +4347,13 @@ exports.verificarEstadoLotes = async (req, res) => {
             });
           }
 
-          if (stock.stock_actual < calendario.cantidad_dosis && stock.stock_reservado >= calendario.cantidad_dosis) {
+          // Solo alertar si hay dosis pendientes
+          if (dosisPendientes > 0 && stock.stock_actual < dosisPendientes && stock.stock_reservado >= dosisPendientes) {
             alertas.push({
               ...problema,
               tipo: 'solo_reservado',
               severidad: 'info',
-              mensaje: `Stock solo disponible en reserva`
+              mensaje: `Stock pendiente (${dosisPendientes} dosis) solo disponible en reserva`
             });
           }
         }

@@ -85,10 +85,11 @@ exports.getStocksDisponibles = async (req, res) => {
       const fechaVencimiento = new Date(stock.fecha_vencimiento);
       const diasHastaVencimiento = Math.ceil((fechaVencimiento - today) / (1000 * 60 * 60 * 24));
       
-      // Calcular en dosis
-      const dosisDisponibles = stock.stock_actual - stock.stock_reservado;
+      // Para ventas fuera de plan, usar el stock_actual total (stock físico real)
+      // No restar stock_reservado porque la reserva es solo organizativa
+      const dosisDisponibles = stock.stock_actual;
       
-      // Calcular en frascos
+      // Calcular en frascos basado en el stock actual total
       const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
       const frascosDisponibles = Math.floor(dosisDisponibles / dosisPorFrasco);
 
@@ -98,11 +99,13 @@ exports.getStocksDisponibles = async (req, res) => {
         id_vacuna: Number(stock.id_vacuna),
         lote: stock.lote,
         fechaVencimiento: stock.fecha_vencimiento, // Mapear para el frontend
-        cantidadDisponible: frascosDisponibles, // FRASCOS disponibles para el frontend
-        dosisDisponibles: dosisDisponibles, // Dosis disponibles
+        ubicacion_fisica: stock.ubicacion_fisica || null, // Ubicación física del stock
+        cantidadDisponible: frascosDisponibles, // FRASCOS TOTALES disponibles físicamente
+        dosisDisponibles: dosisDisponibles, // Dosis totales disponibles físicamente
         dosisPorFrasco: dosisPorFrasco, // Para cálculos en el frontend
         precioVenta: stock.precio_compra ? parseFloat(stock.precio_compra) : 0, // Mapear para el frontend
         stock_disponible: dosisDisponibles,
+        stock_reservado: stock.stock_reservado, // Incluir para referencia
         dias_hasta_vencimiento: diasHastaVencimiento,
         vencido: diasHastaVencimiento < 0,
         proximo_vencimiento: diasHastaVencimiento <= 30 && diasHastaVencimiento >= 0,

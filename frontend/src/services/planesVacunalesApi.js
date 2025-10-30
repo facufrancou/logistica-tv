@@ -819,61 +819,61 @@ export const planesVacunalesApi = {
   // Dashboard de Facturación
   getFacturacionDashboard: async (filtros = {}) => {
     const params = new URLSearchParams(filtros);
-    return await fetchConSesion(`${API_BASE_URL}/api/facturacion/dashboard?${params}`);
+    return await fetchConSesion(`${API_BASE_URL}/facturacion/dashboard?${params}`);
   },
   
   // CRUD Facturas
   getFacturas: async (filtros = {}) => {
     const params = new URLSearchParams(filtros);
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas?${params}`);
+    return await fetchConSesion(`${API_BASE_URL}/facturas?${params}`);
   },
   
   getFacturaById: async (id) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${id}`);
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${id}`);
   },
   
   crearFactura: async (facturaData) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas`, {
       method: 'POST',
       body: JSON.stringify(facturaData)
     });
   },
   
   actualizarFactura: async (id, facturaData) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${id}`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${id}`, {
       method: 'PUT',
       body: JSON.stringify(facturaData)
     });
   },
   
   eliminarFactura: async (id) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${id}`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${id}`, {
       method: 'DELETE'
     });
   },
   
   actualizarEstadoFactura: async (id, estado) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${id}/estado`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${id}/estado`, {
       method: 'PATCH',
       body: JSON.stringify({ estado })
     });
   },
   
   anularFactura: async (id) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${id}/anular`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${id}/anular`, {
       method: 'POST'
     });
   },
   
   duplicarFactura: async (id) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${id}/duplicar`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${id}/duplicar`, {
       method: 'POST'
     });
   },
   
   // Numeración
   generarNumeroFactura: async (tipo = 'A') => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/generar-numero`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/generar-numero`, {
       method: 'POST',
       body: JSON.stringify({ tipo })
     });
@@ -881,11 +881,11 @@ export const planesVacunalesApi = {
   
   // Pagos
   getHistorialPagosFactura: async (facturaId) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${facturaId}/pagos`);
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${facturaId}/pagos`);
   },
   
   registrarPagoFactura: async (facturaId, pagoData) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${facturaId}/pagos`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${facturaId}/pagos`, {
       method: 'POST',
       body: JSON.stringify(pagoData)
     });
@@ -893,14 +893,14 @@ export const planesVacunalesApi = {
   
   // Email y PDF
   enviarFacturaPorEmail: async (facturaId, emailData) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/${facturaId}/enviar-email`, {
+    return await fetchConSesion(`${API_BASE_URL}/facturas/${facturaId}/enviar-email`, {
       method: 'POST',
       body: JSON.stringify(emailData)
     });
   },
   
   descargarFacturaPDF: async (facturaId) => {
-    const response = await fetch(`${API_BASE_URL}/api/facturas/${facturaId}/pdf`, {
+    const response = await fetch(`${API_BASE_URL}/facturas/${facturaId}/pdf`, {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al descargar PDF');
@@ -910,58 +910,58 @@ export const planesVacunalesApi = {
   // Notas de Crédito y Débito
   getNotasCreditoDebito: async (filtros = {}) => {
     const params = new URLSearchParams(filtros);
-    return await fetchConSesion(`${API_BASE_URL}/api/notas-credito-debito?${params}`);
+    return await fetchConSesion(`${API_BASE_URL}/notas-credito-debito?${params}`);
   },
   
   getNotaCreditoDebitoById: async (id) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/notas-credito-debito/${id}`);
+    return await fetchConSesion(`${API_BASE_URL}/notas-credito-debito/${id}`);
   },
   
   crearNotaCreditoDebito: async (notaData) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/notas-credito-debito`, {
+    return await fetchConSesion(`${API_BASE_URL}/notas-credito-debito`, {
       method: 'POST',
       body: JSON.stringify(notaData)
     });
   },
   
   actualizarNotaCreditoDebito: async (id, notaData) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/notas-credito-debito/${id}`, {
+    return await fetchConSesion(`${API_BASE_URL}/notas-credito-debito/${id}`, {
       method: 'PUT',
       body: JSON.stringify(notaData)
     });
   },
   
   anularNotaCreditoDebito: async (id) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/notas-credito-debito/${id}/anular`, {
+    return await fetchConSesion(`${API_BASE_URL}/notas-credito-debito/${id}/anular`, {
       method: 'POST'
     });
   },
   
   generarNumeroNota: async (tipo) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/notas-credito-debito/generar-numero`, {
+    return await fetchConSesion(`${API_BASE_URL}/notas-credito-debito/generar-numero`, {
       method: 'POST',
       body: JSON.stringify({ tipo })
     });
   },
   
   getFacturasParaNotas: async () => {
-    return await fetchConSesion(`${API_BASE_URL}/api/facturas/para-notas`);
+    return await fetchConSesion(`${API_BASE_URL}/facturas/para-notas`);
   },
   
   // Configuración de Facturación
   getConfiguracionFacturacion: async () => {
-    return await fetchConSesion(`${API_BASE_URL}/api/configuracion/facturacion`);
+    return await fetchConSesion(`${API_BASE_URL}/configuracion/facturacion`);
   },
   
   actualizarConfiguracionFacturacion: async (configuracion) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/configuracion/facturacion`, {
+    return await fetchConSesion(`${API_BASE_URL}/configuracion/facturacion`, {
       method: 'PUT',
       body: JSON.stringify(configuracion)
     });
   },
   
   subirLogoEmpresa: async (formData) => {
-    return await fetch(`${API_BASE_URL}/api/configuracion/logo`, {
+    return await fetch(`${API_BASE_URL}/configuracion/logo`, {
       method: 'POST',
       credentials: 'include',
       body: formData // No agregar Content-Type para FormData
@@ -969,7 +969,7 @@ export const planesVacunalesApi = {
   },
   
   subirCertificadoAFIP: async (formData) => {
-    return await fetch(`${API_BASE_URL}/api/configuracion/afip/certificado`, {
+    return await fetch(`${API_BASE_URL}/configuracion/afip/certificado`, {
       method: 'POST',
       credentials: 'include',
       body: formData
@@ -977,13 +977,13 @@ export const planesVacunalesApi = {
   },
   
   probarConexionAFIP: async () => {
-    return await fetchConSesion(`${API_BASE_URL}/api/afip/probar-conexion`, {
+    return await fetchConSesion(`${API_BASE_URL}/afip/probar-conexion`, {
       method: 'POST'
     });
   },
   
   resetearNumeracionFactura: async (tipo) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/configuracion/numeracion/resetear`, {
+    return await fetchConSesion(`${API_BASE_URL}/configuracion/numeracion/resetear`, {
       method: 'POST',
       body: JSON.stringify({ tipo })
     });
@@ -992,22 +992,22 @@ export const planesVacunalesApi = {
   // Reportes de Facturación
   getReporteFacturacion: async (filtros = {}) => {
     const params = new URLSearchParams(filtros);
-    return await fetchConSesion(`${API_BASE_URL}/api/reportes/facturacion?${params}`);
+    return await fetchConSesion(`${API_BASE_URL}/reportes/facturacion?${params}`);
   },
   
   getReporteVentas: async (filtros = {}) => {
     const params = new URLSearchParams(filtros);
-    return await fetchConSesion(`${API_BASE_URL}/api/reportes/ventas?${params}`);
+    return await fetchConSesion(`${API_BASE_URL}/reportes/ventas?${params}`);
   },
   
   getReporteCuentasCorrientes: async (filtros = {}) => {
     const params = new URLSearchParams(filtros);
-    return await fetchConSesion(`${API_BASE_URL}/api/reportes/cuentas-corrientes?${params}`);
+    return await fetchConSesion(`${API_BASE_URL}/reportes/cuentas-corrientes?${params}`);
   },
   
   exportarReporteFacturacion: async (filtros = {}, formato = 'excel') => {
     const params = new URLSearchParams({...filtros, formato});
-    const response = await fetch(`${API_BASE_URL}/api/reportes/facturacion/exportar?${params}`, {
+    const response = await fetch(`${API_BASE_URL}/reportes/facturacion/exportar?${params}`, {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al exportar reporte');
@@ -1016,35 +1016,35 @@ export const planesVacunalesApi = {
   
   // Sincronización AFIP
   sincronizarAFIP: async () => {
-    return await fetchConSesion(`${API_BASE_URL}/api/afip/sincronizar`, {
+    return await fetchConSesion(`${API_BASE_URL}/afip/sincronizar`, {
       method: 'POST'
     });
   },
   
   getEstadoSincronizacionAFIP: async () => {
-    return await fetchConSesion(`${API_BASE_URL}/api/afip/estado-sincronizacion`);
+    return await fetchConSesion(`${API_BASE_URL}/afip/estado-sincronizacion`);
   },
   
   autorizarFacturaAFIP: async (facturaId) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/afip/autorizar-factura/${facturaId}`, {
+    return await fetchConSesion(`${API_BASE_URL}/afip/autorizar-factura/${facturaId}`, {
       method: 'POST'
     });
   },
   
   consultarFacturaAFIP: async (facturaId) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/afip/consultar-factura/${facturaId}`);
+    return await fetchConSesion(`${API_BASE_URL}/afip/consultar-factura/${facturaId}`);
   },
   
   // Validaciones
   validarCuit: async (cuit) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/validaciones/cuit`, {
+    return await fetchConSesion(`${API_BASE_URL}/validaciones/cuit`, {
       method: 'POST',
       body: JSON.stringify({ cuit })
     });
   },
   
   validarCondicionTributaria: async (cuit) => {
-    return await fetchConSesion(`${API_BASE_URL}/api/validaciones/condicion-tributaria`, {
+    return await fetchConSesion(`${API_BASE_URL}/validaciones/condicion-tributaria`, {
       method: 'POST',
       body: JSON.stringify({ cuit })
     });

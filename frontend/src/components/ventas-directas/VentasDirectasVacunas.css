@@ -2,7 +2,8 @@
 
 .ventas-directas-vacunas-container {
   padding: 20px;
-  max-width: 1400px;
+  width: 90%;
+  max-width: none;
   margin: 0 auto;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -765,4 +766,37 @@
 
 .confirmation-summary p strong {
   color: #495057;
+}
+
+/* Indicador de vencimiento próximo */
+.vencimiento-proximo {
+  color: #dc3545 !important;
+  font-weight: bold !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.alerta-vencimiento {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  color: #dc3545;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+  animation: pulseWarning 2s ease-in-out infinite;
+}
+
+@keyframes pulseWarning {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
