@@ -117,25 +117,27 @@ const CotizacionesPendientes = () => {
 
   return (
     <div className="container-fluid">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2 className="mb-0">
-            <FaClipboardList className="me-2 text-warning" />
-            Cotizaciones Pendientes de Liquidar
-          </h2>
-          <small className="text-muted">
-            Cotizaciones aceptadas que requieren clasificación fiscal
-          </small>
-        </div>
-        <div className="d-flex gap-2">
-          <button 
-            className="btn btn-outline-primary"
-            onClick={cargarCotizacionesPendientes}
-            disabled={loading}
-          >
-            <FaSync className={loading ? 'fa-spin' : ''} />
-          </button>
+      {/* Header con estilo consistente */}
+      <div className="card mb-3 shadow-sm" style={{ backgroundColor: 'var(--color-principal)' }}>
+        <div className="card-body py-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 className="mb-1 text-white">
+                <FaClipboardList className="me-2" />
+                Cotizaciones Pendientes de Liquidar
+              </h4>
+              <small className="text-white opacity-75">
+                Cotizaciones aceptadas que requieren clasificación fiscal
+              </small>
+            </div>
+            <button 
+              className="btn btn-light btn-sm"
+              onClick={cargarCotizacionesPendientes}
+              disabled={loading}
+            >
+              <FaSync className={loading ? 'fa-spin' : ''} />
+            </button>
+          </div>
         </div>
       </div>
 

@@ -82,7 +82,9 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
 
       const data = await response.json();
       console.log('Resumen generado:', data);
-      setResumen(data.resumen || data);
+      
+      // Recargar el resumen completo después de generar
+      await cargarResumen();
     } catch (error) {
       console.error('Error al generar resumen:', error);
       setError(`Error al generar resumen: ${error.message}`);
@@ -200,68 +202,42 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
   }
 
   return (
-    <div className="resumen-liquidacion">
-      {/* Header del resumen */}
-      <div className="row mb-4">
-        <div className="col-md-8">
-          <h4 className="mb-1">
-            <FaFileInvoice className="me-2 text-primary" />
-            Resumen de Liquidación
-          </h4>
-          <p className="text-muted mb-0">
-            Cotización {resumen.cotizacion?.numero_cotizacion || 'N/A'} • {resumen.cotizacion?.cliente?.nombre || 'N/A'}
-          </p>
-        </div>
-        <div className="col-md-4 text-end">
-          <div className="btn-group">
-            <button 
-              className="btn btn-outline-primary btn-sm"
-              onClick={() => exportarResumen('pdf')}
-              title="Exportar como PDF"
-            >
-              <FaDownload className="me-1" />
-              PDF
-            </button>
-            <button 
-              className="btn btn-outline-secondary btn-sm"
-              onClick={() => exportarResumen('excel')}
-              title="Exportar como Excel"
-            >
-              <FaDownload className="me-1" />
-              Excel
-            </button>
-            <button 
-              className="btn btn-outline-info btn-sm"
-              onClick={() => window.print()}
-              title="Imprimir"
-            >
-              <FaPrint />
-            </button>
+    <>
+      <div className="resumen-liquidacion">
+        {/* Header del resumen */}
+        <div className="row mb-4">
+          <div className="col-md-8">
+            <h4 className="mb-1">
+              <FaFileInvoice className="me-2 text-primary" />
+              Resumen de Liquidación
+            </h4>
+            <p className="text-muted mb-0">
+              Cotización {resumen.cotizacion?.numero_cotizacion || 'N/A'} • {resumen.cotizacion?.cliente?.nombre || 'N/A'}
+            </p>
           </div>
         </div>
-      </div>
 
       {/* Información general */}
       <div className="row mb-4">
         <div className="col-md-6">
-          <div className="card bg-light">
-            <div className="card-body">
-              <h6 className="card-title">
-                <FaBuilding className="me-2 text-primary" />
+          <div className="card border-success shadow-sm h-100">
+            <div className="card-body bg-light">
+              <h6 className="card-title text-success fw-bold">
+                <FaBuilding className="me-2" />
                 Información General
               </h6>
               <div className="row">
                 <div className="col-6">
                   <small className="text-muted">Cliente</small>
-                  <div className="fw-bold">{resumen.cotizacion?.cliente?.nombre || 'N/A'}</div>
+                  <div className="fw-bold text-dark">{resumen.cotizacion?.cliente?.nombre || 'N/A'}</div>
                 </div>
                 <div className="col-6">
                   <small className="text-muted">CUIT</small>
-                  <div className="fw-bold">{resumen.cotizacion?.cliente?.cuit || 'No especificado'}</div>
+                  <div className="fw-bold text-dark">{resumen.cotizacion?.cliente?.cuit || 'No especificado'}</div>
                 </div>
                 <div className="col-6 mt-2">
                   <small className="text-muted">Fecha Generación</small>
-                  <div className="fw-bold">
+                  <div className="fw-bold text-dark">
                     {new Date(resumen.fecha_generacion).toLocaleDateString('es-ES')}
                   </div>
                 </div>
@@ -277,24 +253,26 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
         </div>
         
         <div className="col-md-6">
-          <div className="card bg-primary text-white">
-            <div className="card-body">
-              <h6 className="card-title">
+          <div className="card border-success shadow-sm h-100">
+            <div className="card-body bg-light">
+              <h6 className="card-title text-success fw-bold">
                 <FaMoneyBillWave className="me-2" />
                 Totales de Liquidación
               </h6>
               <div className="row">
                 <div className="col-6">
-                  <small className="opacity-75">Total Vía 2</small>
-                  <div className="h5 mb-0">${resumen.totales?.total_negro?.toLocaleString() || '0'}</div>
+                  <small className="text-muted">Total Vía 2 (Negro)</small>
+                  <div className="h5 mb-0 text-dark fw-bold">${resumen.totales?.total_negro?.toLocaleString() || '0'}</div>
+                  <small className="text-muted">{resumen.totales?.porcentaje_negro?.toFixed(1) || '0'}%</small>
                 </div>
                 <div className="col-6">
-                  <small className="opacity-75">Total Vía 1</small>
-                  <div className="h5 mb-0">${resumen.totales?.total_blanco?.toLocaleString() || '0'}</div>
+                  <small className="text-muted">Total Vía 1 (Blanco)</small>
+                  <div className="h5 mb-0 text-dark fw-bold">${resumen.totales?.total_blanco?.toLocaleString() || '0'}</div>
+                  <small className="text-muted">{resumen.totales?.porcentaje_blanco?.toFixed(1) || '0'}%</small>
                 </div>
-                <div className="col-12 mt-2 pt-2 border-top border-light border-opacity-25">
-                  <small className="opacity-75">Total General</small>
-                  <div className="h4 mb-0">${resumen.totales?.total_general?.toLocaleString() || '0'}</div>
+                <div className="col-12 mt-3 pt-3 border-top">
+                  <small className="text-muted">Total General</small>
+                  <div className="h3 mb-0 text-success fw-bold">${resumen.totales?.total_general?.toLocaleString() || '0'}</div>
                 </div>
               </div>
             </div>
@@ -364,8 +342,10 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
         </div>
       )}
 
+      </div>
+
       {/* Acciones finales */}
-      <div className="d-flex justify-content-end gap-2 mt-4">
+      <div className="liquidacion-modal-actions">
         <button 
           className="btn btn-outline-primary"
           onClick={generarResumen}
@@ -390,7 +370,7 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
           Cerrar
         </button>
       </div>
-    </div>
+    </>
   );
 };
 

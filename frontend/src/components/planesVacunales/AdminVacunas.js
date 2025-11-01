@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
+import { FaSyringe } from 'react-icons/fa';
 import {
   getVacunasNuevas,
   getStockVacunas,
@@ -221,9 +222,14 @@ function AdminVacunas() {
 
   return (
     <div className="container-fluid py-3">
-      {/* Header principal */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="text-dark">Administración de Vacunas</h2>
+      {/* Header principal con estilo consistente */}
+      <div className="card mb-3 shadow-sm" style={{ backgroundColor: 'var(--color-principal)' }}>
+        <div className="card-body py-3">
+          <h4 className="mb-0 text-white">
+            <FaSyringe className="me-2" />
+            Administración de Vacunas
+          </h4>
+        </div>
       </div>
 
       {/* Navegación por pestañas */}

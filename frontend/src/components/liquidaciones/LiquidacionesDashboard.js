@@ -42,6 +42,7 @@ const LiquidacionesDashboard = () => {
   const [error, setError] = useState(null);
   const [selectedLiquidacion, setSelectedLiquidacion] = useState(null);
   const [exportando, setExportando] = useState(false);
+  const [mostrarTodas, setMostrarTodas] = useState(false);
 
   useEffect(() => {
     cargarLiquidaciones();
@@ -84,7 +85,35 @@ const LiquidacionesDashboard = () => {
     });
   };
 
+  // Primero filtrar según los criterios
   const liquidacionesFiltradas = liquidaciones.filter(liq => {
+    // Filtro por rango de fechas (normalizar a fecha sin hora)
+    if (filtros.fechaDesde || filtros.fechaHasta) {
+      // Convertir la fecha de la liquidación a formato YYYY-MM-DD en zona horaria local
+      const fechaLiq = new Date(liq.fecha_generacion);
+      const year = fechaLiq.getFullYear();
+      const month = String(fechaLiq.getMonth() + 1).padStart(2, '0');
+      const day = String(fechaLiq.getDate()).padStart(2, '0');
+      const fechaLiqStr = `${year}-${month}-${day}`;
+      
+      if (filtros.fechaDesde && fechaLiqStr < filtros.fechaDesde) return false;
+      if (filtros.fechaHasta && fechaLiqStr > filtros.fechaHasta) return false;
+    }
+
+    // Filtro por búsqueda de cliente o cotización
+    if (filtros.busqueda) {
+      const busquedaLower = filtros.busqueda.toLowerCase();
+      const nombreCliente = liq.cotizacion?.cliente?.nombre?.toLowerCase() || '';
+      const cuitCliente = liq.cotizacion?.cliente?.cuit?.toLowerCase() || '';
+      const numeroCotizacion = liq.cotizacion?.numero_cotizacion?.toLowerCase() || '';
+      
+      if (!nombreCliente.includes(busquedaLower) && 
+          !cuitCliente.includes(busquedaLower) && 
+          !numeroCotizacion.includes(busquedaLower)) {
+        return false;
+      }
+    }
+    
     // Filtro por tipo de vía
     if (filtros.tipoVia === 'negro' && liq.totales.total_negro === 0) return false;
     if (filtros.tipoVia === 'blanco' && liq.totales.total_blanco === 0) return false;
@@ -92,15 +121,22 @@ const LiquidacionesDashboard = () => {
     return true;
   });
 
+  // Verificar si hay filtros activos
+  const hayFiltrosActivos = filtros.fechaDesde || filtros.fechaHasta || filtros.busqueda || filtros.tipoVia;
+
+  // Limitar a 10 resultados solo si NO hay filtros activos y NO se presionó "Ver todas"
+  const liquidacionesParaMostrar = (!hayFiltrosActivos && !mostrarTodas) 
+    ? liquidacionesFiltradas.slice(0, 10) 
+    : liquidacionesFiltradas;
+
   const calcularTotales = () => {
-    const total = liquidacionesFiltradas.length;
-    const totalNegro = liquidacionesFiltradas.reduce((sum, liq) => sum + parseFloat(liq.totales.total_negro || 0), 0);
-    const totalBlanco = liquidacionesFiltradas.reduce((sum, liq) => sum + parseFloat(liq.totales.total_blanco || 0), 0);
-    const totalGeneral = liquidacionesFiltradas.reduce((sum, liq) => sum + parseFloat(liq.totales.total_general || 0), 0);
+    const total = liquidacionesParaMostrar.length;
+    const totalCompleto = liquidacionesFiltradas.length;
+    const totalNegro = liquidacionesParaMostrar.reduce((sum, liq) => sum + parseFloat(liq.totales.total_negro || 0), 0);
+    const totalBlanco = liquidacionesParaMostrar.reduce((sum, liq) => sum + parseFloat(liq.totales.total_blanco || 0), 0);
+    const totalGeneral = liquidacionesParaMostrar.reduce((sum, liq) => sum + parseFloat(liq.totales.total_general || 0), 0);
     
-    const hayFiltros = filtros.fechaDesde || filtros.fechaHasta || filtros.busqueda || filtros.numeroCotizacion || filtros.tipoVia;
-    
-    return { total, totalNegro, totalBlanco, totalGeneral, hayFiltros };
+    return { total, totalCompleto, totalNegro, totalBlanco, totalGeneral, hayFiltros: hayFiltrosActivos };
   };
 
   const totales = calcularTotales();
@@ -116,36 +152,40 @@ const LiquidacionesDashboard = () => {
 
   return (
     <div className="container-fluid p-4">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h4 className="mb-0">
-          <FaBalanceScale className="me-2" />
-          Dashboard de Liquidaciones
-        </h4>
-        <div className="d-flex gap-2">
-          <button 
-            className="btn btn-outline-secondary"
-            onClick={cargarLiquidaciones}
-            disabled={loading}
-          >
-            <FaSync className={`me-1 ${loading ? 'fa-spin' : ''}`} />
-            Actualizar
-          </button>
-          <button 
-            className="btn btn-success"
-            onClick={exportarExcel}
-            disabled={liquidaciones.length === 0 || exportando}
-          >
-            <FaFileExcel className="me-1" />
-            {exportando ? 'Exportando...' : 'Exportar Excel'}
-          </button>
-          <button 
-            className="btn btn-warning"
-            onClick={() => navigate('/liquidaciones/pendientes')}
-          >
-            <FaExclamationTriangle className="me-1" />
-            Pendientes
-          </button>
+      {/* Header con estilo consistente */}
+      <div className="card mb-3 shadow-sm" style={{ backgroundColor: 'var(--color-principal)' }}>
+        <div className="card-body py-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className="mb-0 text-white">
+              <FaBalanceScale className="me-2" />
+              Dashboard de Liquidaciones
+            </h4>
+            <div className="d-flex gap-2">
+              <button 
+                className="btn btn-light btn-sm"
+                onClick={cargarLiquidaciones}
+                disabled={loading}
+              >
+                <FaSync className={`me-1 ${loading ? 'fa-spin' : ''}`} />
+                Actualizar
+              </button>
+              <button 
+                className="btn btn-success btn-sm"
+                onClick={exportarExcel}
+                disabled={liquidaciones.length === 0 || exportando}
+              >
+                <FaFileExcel className="me-1" />
+                {exportando ? 'Exportando...' : 'Exportar Excel'}
+              </button>
+              <button 
+                className="btn btn-warning btn-sm"
+                onClick={() => navigate('/liquidaciones/pendientes')}
+              >
+                <FaExclamationTriangle className="me-1" />
+                Pendientes
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -209,18 +249,6 @@ const LiquidacionesDashboard = () => {
               </button>
             </div>
           </div>
-          <div className="row mt-2">
-            <div className="col-12">
-              <button 
-                className="btn btn-primary"
-                onClick={cargarLiquidaciones}
-                disabled={loading}
-              >
-                <FaSearch className="me-1" />
-                Aplicar Filtros
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -234,6 +262,11 @@ const LiquidacionesDashboard = () => {
               {totales.hayFiltros && (
                 <span className="badge bg-info ms-2">
                   {totales.total} resultados
+                </span>
+              )}
+              {!totales.hayFiltros && !mostrarTodas && totales.totalCompleto > 10 && (
+                <span className="badge bg-secondary ms-2">
+                  Mostrando {totales.total} de {totales.totalCompleto}
                 </span>
               )}
             </h5>
@@ -256,7 +289,7 @@ const LiquidacionesDashboard = () => {
                 Reintentar
               </button>
             </div>
-          ) : liquidacionesFiltradas.length === 0 ? (
+          ) : liquidacionesParaMostrar.length === 0 ? (
             <div className="text-center p-5">
               <FaFileInvoice className="fa-4x text-muted mb-3" />
               <h5 className="text-muted">No hay liquidaciones generadas</h5>
@@ -296,7 +329,7 @@ const LiquidacionesDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {liquidacionesFiltradas.map((liquidacion, index) => (
+                    {liquidacionesParaMostrar.map((liquidacion, index) => (
                       <React.Fragment key={index}>
                         <tr 
                           className={`${selectedLiquidacion?.id_resumen === liquidacion.id_resumen ? 'table-active' : ''} ${index > 0 ? 'border-top border-3' : ''}`}
@@ -460,6 +493,18 @@ const LiquidacionesDashboard = () => {
                 </table>
               </div>
               
+              {/* Botón Ver Todas si hay más de 10 y no hay filtros */}
+              {!hayFiltrosActivos && !mostrarTodas && totales.totalCompleto > 10 && (
+                <div className="text-center p-3 border-top">
+                  <button 
+                    className="btn btn-outline-primary"
+                    onClick={() => setMostrarTodas(true)}
+                  >
+                    Ver todas las liquidaciones ({totales.totalCompleto - 10} más)
+                  </button>
+                </div>
+              )}
+
               {/* Resumen total al pie */}
               <div className="card-footer bg-light">
                 <div className="row text-center">
@@ -468,7 +513,7 @@ const LiquidacionesDashboard = () => {
                       <small className="text-muted d-block mb-1">Total Vía 2 (Negro)</small>
                       <h5 className="mb-0 text-dark">
                         {liquidacionesService.formatearPrecio(
-                          liquidacionesFiltradas.reduce((sum, liq) => sum + parseFloat(liq.totales.total_negro || 0), 0)
+                          liquidacionesParaMostrar.reduce((sum, liq) => sum + parseFloat(liq.totales.total_negro || 0), 0)
                         )}
                       </h5>
                     </div>
@@ -478,7 +523,7 @@ const LiquidacionesDashboard = () => {
                       <small className="text-muted d-block mb-1">Total Vía 1 (Blanco)</small>
                       <h5 className="mb-0 text-dark">
                         {liquidacionesService.formatearPrecio(
-                          liquidacionesFiltradas.reduce((sum, liq) => sum + parseFloat(liq.totales.total_blanco || 0), 0)
+                          liquidacionesParaMostrar.reduce((sum, liq) => sum + parseFloat(liq.totales.total_blanco || 0), 0)
                         )}
                       </h5>
                     </div>
@@ -488,7 +533,7 @@ const LiquidacionesDashboard = () => {
                       <small className="text-muted d-block mb-1">Total General</small>
                       <h4 className="mb-0 text-success">
                         {liquidacionesService.formatearPrecio(
-                          liquidacionesFiltradas.reduce((sum, liq) => sum + parseFloat(liq.totales.total_general || 0), 0)
+                          liquidacionesParaMostrar.reduce((sum, liq) => sum + parseFloat(liq.totales.total_general || 0), 0)
                         )}
                       </h4>
                     </div>

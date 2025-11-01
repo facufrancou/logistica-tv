@@ -4765,6 +4765,37 @@ exports.generarOrdenCompra = async (req, res) => {
       );
 
       if (!vacunaExistente) {
+        // Primero, encontrar la fecha de aplicación más lejana para esta vacuna
+        // para poder filtrar el stock correctamente
+        const todasLasAplicaciones = itemsConDetalles
+          .filter(i => i.vacuna.id_vacuna === item.vacuna.id_vacuna)
+          .map(i => i.fecha_aplicacion);
+        
+        const fechaAplicacionMasLejana = todasLasAplicaciones.length > 0
+          ? new Date(Math.max(...todasLasAplicaciones.map(f => f.getTime())))
+          : item.fecha_aplicacion;
+
+        // Buscar stock válido: con vencimiento POSTERIOR a la fecha de aplicación más lejana
+        const stockTotalVacuna = await prisma.stockVacuna.findMany({
+          where: {
+            id_vacuna: item.vacuna.id_vacuna,
+            estado_stock: 'disponible',
+            stock_actual: { gt: 0 },
+            fecha_vencimiento: {
+              gt: fechaAplicacionMasLejana
+            }
+          }
+        });
+
+        // Calcular dosis disponibles (stock_actual - stock_reservado son DOSIS)
+        const dosisDisponibles = stockTotalVacuna.reduce((sum, stock) => {
+          const disponible = Math.max(0, stock.stock_actual - stock.stock_reservado);
+          return sum + disponible;
+        }, 0);
+
+        // Convertir dosis a frascos
+        const frascosDisponibles = Math.floor(dosisDisponibles / item.vacuna.dosis_por_frasco);
+
         vacunaExistente = {
           id_vacuna: item.vacuna.id_vacuna,
           nombre: item.vacuna.nombre,
@@ -4774,8 +4805,8 @@ exports.generarOrdenCompra = async (req, res) => {
           dosis_por_frasco: item.vacuna.dosis_por_frasco,
           calendario_items: [],
           total_dosis_necesarias: 0,
-          stock_actual_valido: item.stock_disponible_dosis,
-          frascos_en_stock: item.frascos_en_stock,
+          stock_actual_valido: frascosDisponibles, // Guardamos en FRASCOS
+          frascos_en_stock: frascosDisponibles,
           frascos_a_pedir: 0
         };
         agrupadoPorProveedor[proveedorId].vacunas.push(vacunaExistente);
@@ -4789,10 +4820,28 @@ exports.generarOrdenCompra = async (req, res) => {
       });
 
       vacunaExistente.total_dosis_necesarias += item.cantidad_dosis;
-      vacunaExistente.frascos_a_pedir = Math.max(
-        vacunaExistente.frascos_a_pedir,
-        Math.ceil((vacunaExistente.total_dosis_necesarias - vacunaExistente.stock_actual_valido) / vacunaExistente.dosis_por_frasco)
-      );
+    }
+
+    // Calcular frascos a pedir para cada vacuna después de sumar todas las dosis
+    for (const proveedor of Object.values(agrupadoPorProveedor)) {
+      for (const vacuna of proveedor.vacunas) {
+        // Convertir dosis necesarias a frascos necesarios
+        const frascosNecesarios = Math.ceil(vacuna.total_dosis_necesarias / vacuna.dosis_por_frasco);
+        // Frascos disponibles ya lo tenemos en stock_actual_valido
+        const frascosDisponibles = vacuna.stock_actual_valido;
+        // Calcular faltante
+        const frascosFaltantes = Math.max(0, frascosNecesarios - frascosDisponibles);
+        
+        vacuna.frascos_a_pedir = frascosFaltantes;
+        
+        // DEBUG: Log para ver el cálculo
+        console.log(`\n=== CÁLCULO FRASCOS: ${vacuna.nombre} ===`);
+        console.log(`Dosis necesarias: ${vacuna.total_dosis_necesarias}`);
+        console.log(`Dosis por frasco: ${vacuna.dosis_por_frasco}`);
+        console.log(`Frascos necesarios: ${frascosNecesarios}`);
+        console.log(`Frascos en stock: ${frascosDisponibles}`);
+        console.log(`Frascos a pedir: ${frascosFaltantes}`);
+      }
     }
 
     // Convertir a array y calcular totales por proveedor

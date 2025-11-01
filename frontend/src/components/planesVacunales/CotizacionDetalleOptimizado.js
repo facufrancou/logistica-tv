@@ -663,12 +663,10 @@ const CotizacionDetalleOptimizado = () => {
                                 )}
                               </div>
                             </td>
-                            <td className="text-center">
-                              <span className="badge bg-primary bg-opacity-75 small">
-                                {detalle.semana_inicio === detalle.semana_fin ? 
-                                  `S${detalle.semana_inicio}` : 
-                                  `S${detalle.semana_inicio}-${detalle.semana_fin}`}
-                              </span>
+                            <td className="text-center small">
+                              {detalle.semana_inicio === detalle.semana_fin ? 
+                                `Semana ${detalle.semana_inicio}` : 
+                                `Semana ${detalle.semana_inicio}-${detalle.semana_fin}`}
                             </td>
                             <td className="text-end small">${parseFloat(detalle.precio_unitario).toLocaleString()}</td>
                             <td className="text-end fw-bold small">${subtotal.toLocaleString()}</td>
@@ -678,35 +676,6 @@ const CotizacionDetalleOptimizado = () => {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sección de Clasificación Fiscal */}
-          {cotizacion.estado === 'aceptada' && mostrarClasificacion && (
-            <div className="card shadow-sm" ref={clasificacionRef}>
-              <div className="card-header py-2">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0">
-                    <FaBalanceScale className="me-2" />
-                    Clasificación Fiscal
-                  </h6>
-                  <button
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={() => setMostrarClasificacion(false)}
-                  >
-                    <FaTimes />
-                  </button>
-                </div>
-              </div>
-              <div className="card-body">
-                <ClasificacionFiscal 
-                  cotizacionId={cotizacion.id_cotizacion} 
-                  onClasificacionCompleta={() => {
-                    setMostrarClasificacion(false);
-                    cargarDatos();
-                  }}
-                />
               </div>
             </div>
           )}
@@ -893,23 +862,55 @@ const CotizacionDetalleOptimizado = () => {
 
       {/* Modal de Resumen de Liquidación */}
       {mostrarResumen && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-xl">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Resumen de Liquidación</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setMostrarResumen(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <ResumenLiquidacion 
-                  cotizacionId={cotizacion.id_cotizacion} 
-                  onClose={() => setMostrarResumen(false)}
-                />
-              </div>
+        <div className="liquidacion-modal-overlay">
+          <div className="liquidacion-modal-container">
+            <div className="liquidacion-modal-header">
+              {<h5 className="liquidacion-modal-title"></h5>}
+              <button
+                type="button"
+                className="liquidacion-modal-close"
+                onClick={() => setMostrarResumen(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <div className="liquidacion-modal-body">
+              <ResumenLiquidacion 
+                cotizacionId={cotizacion.id_cotizacion} 
+                onClose={() => setMostrarResumen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Clasificación Fiscal */}
+      {mostrarClasificacion && (
+        <div className="liquidacion-modal-overlay">
+          <div className="liquidacion-modal-container">
+            <div className="liquidacion-modal-header">
+              <h5 className="liquidacion-modal-title">
+                {/* <FaBalanceScale className="me-2" /> */}
+                
+              </h5>
+              <button
+                type="button"
+                className="liquidacion-modal-close"
+                onClick={() => setMostrarClasificacion(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <div className="liquidacion-modal-body">
+              <ClasificacionFiscal 
+                cotizacionId={cotizacion.id_cotizacion} 
+                onClasificacionCompleta={() => {
+                  setMostrarClasificacion(false);
+                  cargarDatos();
+                }}
+              />
             </div>
           </div>
         </div>

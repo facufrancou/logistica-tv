@@ -309,11 +309,11 @@ function Navbar() {
                 <span>Liquidaciones</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="liquidacionesDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/pendientes"><FaExclamationTriangle className="me-2 text-warning" /> Pendientes de Liquidar</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones"><FaChartBar className="me-2" /> Dashboard</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/pendientes"><FaExclamationTriangle className="me-2" /> Pendientes de Liquidar</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones"><FaChartBar className="me-2" /> Detalle de Liquidaciones</Link></li>
                 <li><hr className="dropdown-divider" /></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Todas las Cotizaciones</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
+                {/* <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li> */}
               </ul>
             </li>
 

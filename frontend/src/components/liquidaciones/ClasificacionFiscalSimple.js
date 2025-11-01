@@ -142,11 +142,86 @@ const ClasificacionFiscalSimple = ({ cotizacionId, onClasificacionCompleta }) =>
   const totales = calcularTotales();
 
   return (
-    <div className="clasificacion-fiscal">
-      <div className="mb-4">
-        <h6>Cotización: {cotizacion?.numero_cotizacion}</h6>
-        <p className="mb-0">Cliente: {cotizacion?.cliente?.nombre}</p>
-      </div>
+    <>
+      <div className="clasificacion-fiscal">
+        {/* Header del componente */}
+        <div className="row mb-4">
+          <div className="col-md-8">
+            <h4 className="mb-1">
+              <FaMoneyBillWave className="me-2 text-primary" />
+              Clasificación Fiscal
+            </h4>
+            <p className="text-muted mb-0">
+              Cotización {cotizacion?.numero_cotizacion || 'N/A'} • {cotizacion?.cliente?.nombre || 'N/A'}
+            </p>
+          </div>
+        </div>
+
+        {/* Información general y totales */}
+        <div className="row mb-4">
+          <div className="col-md-6">
+            <div className="card border-success shadow-sm h-100">
+              <div className="card-body bg-light">
+                <h6 className="card-title text-success fw-bold">
+                  <FaInfoCircle className="me-2" />
+                  Información General
+                </h6>
+                <div className="row">
+                  <div className="col-6">
+                    <small className="text-muted">Cliente</small>
+                    <div className="fw-bold text-dark">{cotizacion?.cliente?.nombre || 'N/A'}</div>
+                  </div>
+                  <div className="col-6">
+                    <small className="text-muted">CUIT</small>
+                    <div className="fw-bold text-dark">{cotizacion?.cliente?.cuit || 'No especificado'}</div>
+                  </div>
+                  <div className="col-6 mt-2">
+                    <small className="text-muted">Estado</small>
+                    <div>
+                      {totales.pendiente > 0 ? (
+                        <span className="badge bg-warning">Pendiente</span>
+                      ) : (
+                        <span className="badge bg-success">Clasificado</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-6 mt-2">
+                    <small className="text-muted">Items</small>
+                    <div className="fw-bold text-dark">{items.length} productos</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <div className="card border-success shadow-sm h-100">
+              <div className="card-body bg-light">
+                <h6 className="card-title text-success fw-bold">
+                  <FaCalculator className="me-2" />
+                  Totales de Clasificación
+                </h6>
+                <div className="row">
+                  <div className="col-6">
+                    <small className="text-muted">Vía 2 (Negro)</small>
+                    <div className="h5 fw-bold text-dark mb-0">${totales.negro.toLocaleString()}</div>
+                    <small className="text-muted">{totales.porcentaje_negro.toFixed(1)}%</small>
+                  </div>
+                  <div className="col-6">
+                    <small className="text-muted">Vía 1 (Blanco)</small>
+                    <div className="h5 fw-bold text-dark mb-0">${totales.blanco.toLocaleString()}</div>
+                    <small className="text-muted">{totales.porcentaje_blanco.toFixed(1)}%</small>
+                  </div>
+                </div>
+                <hr className="my-2" />
+                <div className="mt-2">
+                  <small className="text-muted">Total General</small>
+                  <div className="h4 fw-bold text-success mb-0">${totales.total.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       {/* Tabla de items */}
       <div className="table-responsive">
@@ -213,58 +288,26 @@ const ClasificacionFiscalSimple = ({ cotizacionId, onClasificacionCompleta }) =>
         </table>
       </div>
 
-      {/* Resumen de clasificación mejorado */}
-      <div className="row mt-4 g-3">
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm h-100 card-via-2">
-            <div className="card-body text-center py-4">
-              <div className="mb-2">
-                <FaTimes style={{ fontSize: '2rem', color: '#ffffff' }} />
-              </div>
-              <h6 className="card-title text-white mb-2 fw-bold">Vía 2</h6>
-              <p className="text-light mb-1 small">({totales.porcentaje_negro.toFixed(1)}%)</p>
-              <h4 className="text-white fw-bold mb-0">${totales.negro.toLocaleString()}</h4>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm h-100 card-via-1">
-            <div className="card-body text-center py-4">
-              <div className="mb-2">
-                <FaCheck style={{ fontSize: '2rem', color: '#28a745' }} />
-              </div>
-              <h6 className="card-title mb-2 fw-bold" style={{ color: '#28a745' }}>Vía 1</h6>
-              <p className="text-muted mb-1 small">({totales.porcentaje_blanco.toFixed(1)}%)</p>
-              <h4 className="fw-bold mb-0" style={{ color: '#28a745' }}>${totales.blanco.toLocaleString()}</h4>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm h-100 card-pendiente">
-            <div className="card-body text-center py-4">
-              <div className="mb-2">
-                <FaSpinner style={{ fontSize: '2rem', color: '#856404' }} />
-              </div>
-              <h6 className="card-title mb-2 fw-bold" style={{ color: '#856404' }}>Pendiente</h6>
-              <p className="text-muted mb-1 small">Sin clasificar</p>
-              <h4 className="fw-bold mb-0" style={{ color: '#856404' }}>${totales.pendiente.toLocaleString()}</h4>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm h-100 card-total">
-            <div className="card-body text-center py-4">
-              <div className="mb-2">
-                <FaCalculator style={{ fontSize: '2rem', color: '#ffffff' }} />
-              </div>
-              <h6 className="card-title text-white mb-2 fw-bold">Total General</h6>
-              <p className="text-light mb-1 small">100% de la cotización</p>
-              <h4 className="text-white fw-bold mb-0">${totales.total.toLocaleString()}</h4>
-            </div>
-          </div>
-        </div>
       </div>
-    </div>
+
+      {/* Botones de acción al final */}
+      <div className="liquidacion-modal-actions">
+        <button 
+          className="btn btn-success"
+          onClick={onClasificacionCompleta}
+          disabled={totales.pendiente > 0}
+        >
+          <FaSave className="me-2" />
+          Guardar Clasificación
+        </button>
+        <button 
+          className="btn btn-secondary"
+          onClick={onClasificacionCompleta}
+        >
+          Cerrar
+        </button>
+      </div>
+    </>
   );
 };
 
