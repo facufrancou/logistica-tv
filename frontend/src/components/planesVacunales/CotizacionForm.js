@@ -284,14 +284,6 @@ const CotizacionForm = () => {
 
     if (!formData.fecha_inicio_plan) {
       newErrors.fecha_inicio_plan = 'Debe especificar la fecha de inicio del plan';
-    } else {
-      const fechaInicio = new Date(formData.fecha_inicio_plan);
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      
-      if (fechaInicio < hoy) {
-        newErrors.fecha_inicio_plan = 'La fecha de inicio no puede ser anterior a hoy';
-      }
     }
 
     // NO validar dosis vs cantidad de animales para templates

@@ -32,7 +32,7 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
       setLoading(true);
       setError(null);
       
-      const API_BASE = "http://localhost:3001/api";
+      const API_BASE = "http://localhost:3001";
       const response = await fetch(`${API_BASE}/liquidaciones/cotizacion/${cotizacionId}/resumen`, {
         credentials: "include",
         headers: {
@@ -67,7 +67,7 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
       setGenerandoResumen(true);
       setError(null);
       
-      const API_BASE = "http://localhost:3001/api";
+      const API_BASE = "http://localhost:3001";
       const response = await fetch(`${API_BASE}/liquidaciones/cotizacion/${cotizacionId}/resumen`, {
         method: 'POST',
         credentials: "include",
@@ -93,7 +93,7 @@ const ResumenLiquidacionSimple = ({ cotizacionId, onClose }) => {
 
   const exportarResumen = async (formato = 'pdf') => {
     try {
-      const API_BASE = "http://localhost:3001/api";
+      const API_BASE = "http://localhost:3001";
       const response = await fetch(`${API_BASE}/liquidaciones/resumen/${resumen.id}/export?formato=${formato}`, {
         credentials: "include",
         headers: {

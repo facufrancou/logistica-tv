@@ -930,6 +930,14 @@ const CalendarioVacunacion = () => {
                          (item.vacuna_descripcion && item.vacuna_descripcion.includes('OLEOSA') ? 'MICOPLASMOSIS' : '') ||
                          'A definir';
         
+        // Obtener vía de aplicación del item
+        const viaAplicacion = item.via_aplicacion || 
+                             item.via_aplicacion_codigo ||
+                             item.via_aplicacion_nombre ||
+                             item.vacuna?.via_aplicacion?.codigo ||
+                             item.vacuna?.via_aplicacion?.nombre ||
+                             'IM'; // Valor por defecto si no se encuentra
+        
         return [
           fecha.toLocaleDateString('es-ES', { 
             day: '2-digit', 
@@ -940,7 +948,7 @@ const CalendarioVacunacion = () => {
           item.semana_aplicacion.toString(),
           nombreProducto.substring(0, 70) + (nombreProducto.length > 70 ? '...' : ''),
           patologia,
-          'IM',
+          viaAplicacion,
           frascos.toString()
         ];
       });
@@ -1019,6 +1027,236 @@ const CalendarioVacunacion = () => {
     } catch (error) {
       console.error('Error generando PDF:', error);
       showError('Error', 'No se pudo generar el PDF');
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
+  const handleGenerarOrdenCompra = async () => {
+    if (!cotizacion || !cotizacionId) {
+      showError('Error', 'No se puede generar la orden sin una cotización válida');
+      return;
+    }
+
+    setGenerandoPDF(true);
+    try {
+      console.log('Obteniendo datos para orden de compra...');
+      
+      // Obtener datos del backend
+      const response = await planesApi.generarOrdenCompra(cotizacionId);
+      
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Error al obtener datos de orden de compra');
+      }
+
+      const { cotizacion: cotizacionData, proveedores, resumen } = response.data;
+
+      if (proveedores.length === 0) {
+        showWarning('Información', 'No hay vacunas sin lote asignado para generar orden de compra');
+        return;
+      }
+
+      console.log('Generando PDF de orden de compra...', { proveedores: proveedores.length });
+
+      // Crear PDF con jsPDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Colores y medidas (esquema gris como cotizaciones)
+      const primaryColor = [70, 70, 70]; // Gris oscuro
+      const secondaryColor = [102, 102, 102]; // Gris medio
+      const accentColor = [158, 158, 158]; // Gris claro para acentos
+      const lightGray = [245, 245, 245];
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+
+      let yPos = margin;
+
+      // ============ CABECERA ============
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+
+      // Título principal
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text('ORDEN DE COMPRA', pageWidth / 2, 15, { align: 'center' });
+
+      // Subtítulo
+      doc.setFontSize(10);
+      doc.setFont('courier', 'normal');
+      doc.text('Vacunas sin lote asignado', pageWidth / 2, 22, { align: 'center' });
+
+      // Número de orden y fecha
+      const numeroOrden = `OC-${cotizacionData.numero_cotizacion}-${new Date().toISOString().split('T')[0]}`;
+      doc.setFontSize(9);
+      doc.text(`Orden N°: ${numeroOrden}`, pageWidth / 2, 28, { align: 'center' });
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, pageWidth / 2, 33, { align: 'center' });
+
+      yPos = 45;
+
+      // ============ INFORMACIÓN DEL CLIENTE Y PLAN ============
+      const infoBoxHeight = 22;
+      const infoBoxWidth = (pageWidth - 2 * margin - 3) / 2;
+
+      // Recuadro izquierdo - Cliente
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, yPos, infoBoxWidth, infoBoxHeight, 'F');
+      doc.rect(margin, yPos, infoBoxWidth, infoBoxHeight, 'S');
+
+      doc.setFontSize(9);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('INFORMACIÓN DEL CLIENTE', margin + 2, yPos + 4);
+
+      doc.setFontSize(7);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text(`Cliente: ${cotizacionData.cliente.nombre}`, margin + 2, yPos + 8);
+      doc.text(`CUIT: ${cotizacionData.cliente.cuit || 'N/A'}`, margin + 2, yPos + 11);
+      doc.text(`Email: ${cotizacionData.cliente.email || 'N/A'}`, margin + 2, yPos + 14);
+      doc.text(`Teléfono: ${cotizacionData.cliente.telefono || 'N/A'}`, margin + 2, yPos + 17);
+
+      // Recuadro derecho - Plan
+      doc.setFillColor(...lightGray);
+      doc.rect(margin + infoBoxWidth + 3, yPos, infoBoxWidth - 3, infoBoxHeight, 'F');
+      doc.rect(margin + infoBoxWidth + 3, yPos, infoBoxWidth - 3, infoBoxHeight, 'S');
+
+      doc.setFontSize(9);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('INFORMACIÓN DEL PLAN', margin + infoBoxWidth + 5, yPos + 4);
+
+      doc.setFontSize(7);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text(`Plan: ${cotizacionData.plan_nombre || 'N/A'}`, margin + infoBoxWidth + 5, yPos + 8);
+      doc.text(`Cotización: ${cotizacionData.numero_cotizacion}`, margin + infoBoxWidth + 5, yPos + 11);
+      doc.text(`Animales: ${cotizacionData.cantidad_animales?.toLocaleString() || '0'}`, margin + infoBoxWidth + 5, yPos + 14);
+      doc.text(`Duración: ${cotizacionData.duracion_semanas || '0'} semanas`, margin + infoBoxWidth + 5, yPos + 17);
+
+      yPos += infoBoxHeight + 8;
+
+      // ============ RESUMEN ============
+      doc.setFillColor(...accentColor);
+      doc.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
+
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0); // Texto negro sobre fondo gris
+      doc.text(`RESUMEN: ${resumen.total_proveedores} Proveedor(es) | ${resumen.total_frascos_general} Frascos Totales`, margin + 2, yPos + 6);
+
+      yPos += 14;
+
+      // ============ DETALLES POR PROVEEDOR ============
+      for (let i = 0; i < proveedores.length; i++) {
+        const proveedor = proveedores[i];
+
+        // Verificar si necesitamos nueva página
+        if (yPos > pageHeight - 80) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        // Cabecera del proveedor
+        doc.setFillColor(...primaryColor);
+        doc.rect(margin, yPos, pageWidth - 2 * margin, 12, 'F');
+
+        doc.setFont('courier', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`PROVEEDOR: ${proveedor.nombre_proveedor.toUpperCase()}`, margin + 2, yPos + 8);
+
+        yPos += 16;
+
+        // Tabla de vacunas
+        const tableHeaders = ['VACUNA', 'PATOLOGÍA', 'PRESENT.', 'SEMANAS', 'DOSIS', 'STOCK', 'FRASCOS'];
+        const tableData = proveedor.vacunas.map(vacuna => [
+          vacuna.nombre.substring(0, 30),
+          vacuna.patologia,
+          vacuna.presentacion.substring(0, 15),
+          vacuna.calendario_items.map(item => item.semana).join(', '),
+          vacuna.total_dosis_necesarias.toLocaleString(),
+          vacuna.frascos_en_stock.toString(),
+          vacuna.frascos_a_pedir.toString()
+        ]);
+
+        autoTable(doc, {
+          head: [tableHeaders],
+          body: tableData,
+          startY: yPos,
+          margin: { left: margin, right: margin },
+          styles: {
+            fontSize: 7,
+            cellPadding: 2,
+            halign: 'center',
+            valign: 'middle',
+            lineColor: primaryColor,
+            lineWidth: 0.2,
+            font: 'courier'
+          },
+          headStyles: {
+            fillColor: primaryColor,
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            fontSize: 8,
+            font: 'courier'
+          },
+          alternateRowStyles: {
+            fillColor: [248, 248, 248]
+          },
+          columnStyles: {
+            0: { cellWidth: 'auto', halign: 'left' },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 15 },
+            6: { cellWidth: 20, fontStyle: 'bold', textColor: primaryColor }
+          }
+        });
+
+        yPos = doc.lastAutoTable.finalY + 4;
+
+        // Total del proveedor
+        doc.setFillColor(...lightGray);
+        doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+        doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'S');
+
+        doc.setFont('courier', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...secondaryColor);
+        doc.text(`TOTAL FRASCOS ${proveedor.nombre_proveedor}: ${proveedor.total_frascos_proveedor}`, pageWidth - margin - 2, yPos + 5, { align: 'right' });
+
+        yPos += 14;
+      }
+
+      // ============ PIE DE PÁGINA ============
+      doc.setFillColor(...lightGray);
+      doc.rect(0, pageHeight - 18, pageWidth, 18, 'F');
+
+      doc.setFontSize(8);
+      doc.setTextColor(...secondaryColor);
+      doc.setFont('courier', 'bold');
+      doc.text('Sistema de Gestión - Tierra Volga', margin, pageHeight - 12);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`, margin, pageHeight - 8);
+      doc.text('Documento de uso interno - Orden de compra', margin, pageHeight - 4);
+
+      // Descargar PDF
+      const fileName = `orden-compra-${cotizacionData.numero_cotizacion}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      showSuccess('Éxito', `Orden de compra generada: ${proveedores.length} proveedor(es), ${resumen.total_frascos_general} frascos`);
+
+    } catch (error) {
+      console.error('Error generando orden de compra:', error);
+      showError('Error', 'No se pudo generar la orden de compra: ' + error.message);
     } finally {
       setGenerandoPDF(false);
     }
@@ -1170,6 +1408,26 @@ const CalendarioVacunacion = () => {
               ) : (
                 <>
                   Exportar PDF
+                </>
+              )}
+            </button>
+            <button 
+              className="btn btn-outline-warning btn-sm"
+              onClick={handleGenerarOrdenCompra}
+              disabled={generandoPDF}
+              title="Generar orden de compra para vacunas sin lote"
+            >
+              {generandoPDF ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                    <span className="visually-hidden">Generando...</span>
+                  </div>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <FaBoxOpen className="me-1" />
+                  Orden de Compra
                 </>
               )}
             </button>

@@ -35,7 +35,8 @@ import {
   FaSearch,
   FaEye,
   FaUserCog,
-  FaBalanceScale
+  FaBalanceScale,
+  FaExclamationTriangle
 } from "react-icons/fa";
 
 import Login from "./components/Login";
@@ -67,6 +68,7 @@ import CalendariosVacunalesList from "./components/planesVacunales/CalendariosVa
 
 // Componentes de Liquidaciones
 import LiquidacionesDashboard from "./components/liquidaciones/LiquidacionesDashboard";
+import CotizacionesPendientes from "./components/liquidaciones/CotizacionesPendientes";
 
 // Componentes de Stock (Sprint 3)
 import StockDashboard from "./components/stock/StockDashboard";
@@ -307,9 +309,10 @@ function Navbar() {
                 <span>Liquidaciones</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="liquidacionesDropdown">
+                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/pendientes"><FaExclamationTriangle className="me-2 text-warning" /> Pendientes de Liquidar</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones"><FaChartBar className="me-2" /> Dashboard</Link></li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Clasificar Cotizaciones</Link></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Todas las Cotizaciones</Link></li>
                 <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li>
               </ul>
             </li>
@@ -721,6 +724,14 @@ function MainRoutes() {
         />
 
         {/* ⚖️ LIQUIDACIONES */}
+        <Route
+          path="/liquidaciones/pendientes"
+          element={
+            <RutaPrivada>
+              <CotizacionesPendientes />
+            </RutaPrivada>
+          }
+        />
         <Route
           path="/liquidaciones"
           element={

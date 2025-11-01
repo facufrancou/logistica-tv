@@ -30,12 +30,20 @@ const ResumenLiquidacion = ({ cotizacionId, mostrarDetalle = true }) => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Cargando resumen para cotización:', cotizacionId);
       const data = await liquidacionesService.obtenerResumenLiquidacion(cotizacionId);
-      setResumen(data.resumen);
+      console.log('Datos de resumen recibidos:', data);
+      setResumen(data.resumen || data);
     } catch (error) {
       console.error('Error al cargar resumen:', error);
-      // Si no existe resumen, no es un error grave
-      setResumen(null);
+      // Si el error es 404, significa que no hay resumen todavía
+      if (error.message?.includes('404')) {
+        setResumen(null);
+        setError(null);
+      } else {
+        setError(`Error al cargar resumen: ${error.message}`);
+        setResumen(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -292,43 +300,69 @@ ${(resumen?.detalle_items || []).map(item =>
         </div>
       </div>
 
-      {/* Totales principales */}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card bg-light text-dark border">
-            <div className="card-body text-center">
-              <FaMoneyBillWave className="fa-2x mb-2" />
-              <h4>{liquidacionesService.formatearPrecio(resumen?.totales?.total_blanco || 0)}</h4>
-              <p className="mb-0">Vía 1 ({(resumen?.totales?.porcentaje_blanco || 0).toFixed(1)}%)</p>
-            </div>
-          </div>
+      {/* Totales principales - Tabla limpia */}
+      <div className="card mb-4">
+        <div className="card-header bg-dark text-white">
+          <h6 className="mb-0">Resumen de Montos</h6>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-dark text-white">
-            <div className="card-body text-center">
-              <FaMoneyBillWave className="fa-2x mb-2" />
-              <h4>{liquidacionesService.formatearPrecio(resumen?.totales?.total_negro || 0)}</h4>
-              <p className="mb-0">Vía 2 ({(resumen?.totales?.porcentaje_negro || 0).toFixed(1)}%)</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-primary text-white">
-            <div className="card-body text-center">
-              <FaMoneyBillWave className="fa-2x mb-2" />
-              <h4>{liquidacionesService.formatearPrecio(resumen?.totales?.total_general || 0)}</h4>
-              <p className="mb-0">Total General</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-info text-white">
-            <div className="card-body text-center">
-              <FaChartBar className="fa-2x mb-2" />
-              <h4>{resumen?.detalle_items?.length || 0}</h4>
-              <p className="mb-0">Items Clasificados</p>
-            </div>
-          </div>
+        <div className="card-body p-0">
+          <table className="table table-hover mb-0 align-middle">
+            <thead className="table-light">
+              <tr>
+                <th className="text-end" style={{width: '30%'}}>Monto</th>
+                <th className="text-center" style={{width: '20%'}}>Porcentaje</th>
+                <th className="text-center" style={{width: '15%'}}>Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="text-end">
+                  <h5 className="mb-0 text-secondary">{liquidacionesService.formatearPrecio(resumen?.totales?.total_blanco || 0)}</h5>
+                  <small className="text-muted">Vía 1 (Blanco)</small>
+                </td>
+                <td className="text-center">
+                  <span className="badge bg-light text-dark border">
+                    {(resumen?.totales?.porcentaje_blanco || 0).toFixed(1)}%
+                  </span>
+                </td>
+                <td className="text-center">
+                  <span className="badge bg-secondary">
+                    {(resumen?.detalle_items || []).filter(item => item.tipo_facturacion === 'blanco').length} items
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td className="text-end">
+                  <h5 className="mb-0 text-dark">{liquidacionesService.formatearPrecio(resumen?.totales?.total_negro || 0)}</h5>
+                  <small className="text-muted">Vía 2 (Negro)</small>
+                </td>
+                <td className="text-center">
+                  <span className="badge bg-dark">
+                    {(resumen?.totales?.porcentaje_negro || 0).toFixed(1)}%
+                  </span>
+                </td>
+                <td className="text-center">
+                  <span className="badge bg-dark">
+                    {(resumen?.detalle_items || []).filter(item => item.tipo_facturacion === 'negro').length} items
+                  </span>
+                </td>
+              </tr>
+              <tr className="table-success">
+                <td className="text-end">
+                  <h4 className="mb-0 text-success">{liquidacionesService.formatearPrecio(resumen?.totales?.total_general || 0)}</h4>
+                  <small className="text-muted fw-bold">Total General</small>
+                </td>
+                <td className="text-center">
+                  <span className="badge bg-success fs-5">100.0%</span>
+                </td>
+                <td className="text-center">
+                  <span className="badge bg-success">
+                    {resumen?.detalle_items?.length || 0} items
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 

@@ -3,7 +3,7 @@
  */
 
 // Configuración de la API
-const API_BASE = "http://localhost:3001/api";
+const API_BASE = "http://localhost:3001";
 
 // Función helper para llamadas API
 const apiCall = async (endpoint, options = {}) => {
@@ -267,6 +267,64 @@ const exportarLiquidaciones = async (filtros = {}) => {
 };
 
 /**
+ * Exportar liquidaciones a Excel
+ * @param {Object} filtros - Filtros a aplicar (fecha_desde, fecha_hasta, busqueda, etc.)
+ */
+const exportarExcel = async (filtros = {}) => {
+  try {
+    // Construir query params
+    const params = new URLSearchParams();
+    if (filtros.fechaDesde) params.append('fecha_desde', filtros.fechaDesde);
+    if (filtros.fechaHasta) params.append('fecha_hasta', filtros.fechaHasta);
+    if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+    if (filtros.numeroCotizacion) params.append('numero_cotizacion', filtros.numeroCotizacion);
+    if (filtros.id_cliente) params.append('id_cliente', filtros.id_cliente);
+
+    const url = `${API_BASE}/liquidaciones/exportar-excel?${params.toString()}`;
+    
+    // Hacer petición para descargar archivo
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error al exportar: ${response.status}`);
+    }
+
+    // Crear blob y descargar
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    
+    // Obtener nombre de archivo del header o usar uno por defecto
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `Liquidaciones_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+
+    return { success: true, message: 'Excel exportado correctamente' };
+  } catch (error) {
+    console.error('Error al exportar Excel:', error);
+    throw error;
+  }
+};
+
+/**
  * Obtener color según tipo de facturación
  * @param {string} tipo - Tipo de facturación
  * @returns {string} Clase CSS o color
@@ -291,6 +349,7 @@ const liquidacionesService = {
   obtenerTodasLiquidaciones,
   obtenerEstadisticas,
   exportarLiquidaciones,
+  exportarExcel,
   formatearPrecio,
   calcularTotalesClasificacion,
   todosItemsClasificados,

@@ -99,4 +99,7 @@ router.delete('/calendario/:id_calendario/desdoblamiento', validarSesion, cotiza
 router.get('/calendario/:id_calendario/remito', validarSesion, cotizacionesController.generarRemitoPDF);
 router.post('/calendario/:id_calendario/remito', validarSesion, cotizacionesController.generarRemitoPDF);
 
+// Generar orden de compra para vacunas sin lote
+router.get('/:id/orden-compra', validarSesion, cotizacionesController.generarOrdenCompra);
+
 module.exports = router;

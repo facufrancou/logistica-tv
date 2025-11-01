@@ -723,6 +723,11 @@ export const cancelarRecordatorio = async (aplicacionId) => {
   });
 };
 
+// Orden de Compra
+export const generarOrdenCompra = async (idCotizacion) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${idCotizacion}/orden-compra`);
+};
+
 // Export de todas las funciones de la API
 export const planesVacunalesApi = {
   // Planes vacunales
@@ -813,6 +818,9 @@ export const planesVacunalesApi = {
   getAlertasCriticas,
   programarRecordatorio,
   cancelarRecordatorio,
+  
+  // Orden de Compra
+  generarOrdenCompra,
   
   // === FACTURACIÓN API ===
   

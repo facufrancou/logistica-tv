@@ -68,4 +68,13 @@ router.get('/estadisticas',
   liquidacionesController.getEstadisticasLiquidaciones
 );
 
+/**
+ * GET /liquidaciones/exportar-excel
+ * Exportar liquidaciones a Excel con filtros
+ * Query params: fecha_desde, fecha_hasta, id_cliente, busqueda, numero_cotizacion
+ */
+router.get('/exportar-excel', 
+  liquidacionesController.exportarLiquidacionesExcel
+);
+
 module.exports = router;

@@ -4606,6 +4606,230 @@ exports.verificarEstadoLotes = async (req, res) => {
   }
 };
 
+/**
+ * Generar orden de compra para vacunas sin stock asignado
+ */
+exports.generarOrdenCompra = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Obtener información de la cotización
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        cliente: {
+          select: {
+            nombre: true,
+            cuit: true,
+            email: true,
+            telefono: true,
+            direccion: true
+          }
+        },
+        plan: {
+          select: {
+            nombre: true,
+            duracion_semanas: true
+          }
+        }
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cotización no encontrada'
+      });
+    }
+
+    // Obtener items del calendario SIN lote asignado
+    const itemsSinLote = await prisma.calendarioVacunacion.findMany({
+      where: {
+        id_cotizacion: parseInt(id),
+        OR: [
+          { lote_asignado: null },
+          { lote_asignado: '' }
+        ]
+      },
+      orderBy: [
+        { numero_semana: 'asc' }
+      ]
+    });
+
+    if (itemsSinLote.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No hay vacunas sin lote asignado',
+        data: {
+          cotizacion: {
+            numero_cotizacion: cotizacion.numero_cotizacion,
+            cliente: cotizacion.cliente,
+            fecha_inicio: cotizacion.fecha_inicio_plan,
+            cantidad_animales: cotizacion.cantidad_animales
+          },
+          proveedores: []
+        }
+      });
+    }
+
+    // Procesar cada item y obtener información de la vacuna
+    const itemsConDetalles = [];
+    
+    for (const item of itemsSinLote) {
+      // Obtener información de la vacuna
+      const vacuna = await prisma.vacuna.findUnique({
+        where: { id_vacuna: item.id_producto },
+        include: {
+          proveedor: {
+            select: {
+              id_proveedor: true,
+              nombre: true,
+              activo: true
+            }
+          },
+          patologia: {
+            select: {
+              nombre: true
+            }
+          },
+          presentacion: {
+            select: {
+              nombre: true,
+              dosis_por_frasco: true
+            }
+          }
+        }
+      });
+
+      if (!vacuna) continue;
+
+      // Buscar stock válido (con vencimiento posterior a la fecha de aplicación)
+      const stockValido = await prisma.stockVacuna.findMany({
+        where: {
+          id_vacuna: vacuna.id_vacuna,
+          fecha_vencimiento: {
+            gt: item.fecha_programada
+          },
+          estado_stock: 'disponible'
+        }
+      });
+
+      // Calcular stock disponible en dosis
+      const dosisPorFrasco = vacuna.presentacion?.dosis_por_frasco || 1000;
+      const stockDisponibleDosis = stockValido.reduce((sum, stock) => {
+        const disponible = stock.stock_actual - stock.stock_reservado;
+        return sum + (disponible * dosisPorFrasco);
+      }, 0);
+
+      const frascosFaltantes = Math.max(0, Math.ceil((item.cantidad_dosis - stockDisponibleDosis) / dosisPorFrasco));
+
+      itemsConDetalles.push({
+        id_calendario: item.id_calendario,
+        semana: item.numero_semana,
+        fecha_aplicacion: item.fecha_programada,
+        cantidad_dosis: item.cantidad_dosis,
+        vacuna: {
+          id_vacuna: vacuna.id_vacuna,
+          nombre: vacuna.nombre,
+          codigo: vacuna.codigo,
+          patologia: vacuna.patologia?.nombre || 'Sin especificar',
+          presentacion: vacuna.presentacion?.nombre || 'Sin especificar',
+          dosis_por_frasco: dosisPorFrasco,
+          proveedor: vacuna.proveedor
+        },
+        stock_disponible_dosis: stockDisponibleDosis,
+        frascos_en_stock: Math.floor(stockDisponibleDosis / dosisPorFrasco),
+        frascos_a_pedir: frascosFaltantes
+      });
+    }
+
+    // Agrupar por proveedor
+    const agrupadoPorProveedor = {};
+    
+    for (const item of itemsConDetalles) {
+      const proveedorId = item.vacuna.proveedor?.id_proveedor || 0;
+      const proveedorNombre = item.vacuna.proveedor?.nombre || 'Sin proveedor asignado';
+
+      if (!agrupadoPorProveedor[proveedorId]) {
+        agrupadoPorProveedor[proveedorId] = {
+          id_proveedor: proveedorId,
+          nombre_proveedor: proveedorNombre,
+          activo: item.vacuna.proveedor?.activo !== false,
+          vacunas: []
+        };
+      }
+
+      // Buscar si ya existe esta vacuna en el proveedor
+      let vacunaExistente = agrupadoPorProveedor[proveedorId].vacunas.find(
+        v => v.id_vacuna === item.vacuna.id_vacuna
+      );
+
+      if (!vacunaExistente) {
+        vacunaExistente = {
+          id_vacuna: item.vacuna.id_vacuna,
+          nombre: item.vacuna.nombre,
+          codigo: item.vacuna.codigo,
+          patologia: item.vacuna.patologia,
+          presentacion: item.vacuna.presentacion,
+          dosis_por_frasco: item.vacuna.dosis_por_frasco,
+          calendario_items: [],
+          total_dosis_necesarias: 0,
+          stock_actual_valido: item.stock_disponible_dosis,
+          frascos_en_stock: item.frascos_en_stock,
+          frascos_a_pedir: 0
+        };
+        agrupadoPorProveedor[proveedorId].vacunas.push(vacunaExistente);
+      }
+
+      // Agregar item del calendario
+      vacunaExistente.calendario_items.push({
+        semana: item.semana,
+        fecha: item.fecha_aplicacion,
+        cantidad_dosis: item.cantidad_dosis
+      });
+
+      vacunaExistente.total_dosis_necesarias += item.cantidad_dosis;
+      vacunaExistente.frascos_a_pedir = Math.max(
+        vacunaExistente.frascos_a_pedir,
+        Math.ceil((vacunaExistente.total_dosis_necesarias - vacunaExistente.stock_actual_valido) / vacunaExistente.dosis_por_frasco)
+      );
+    }
+
+    // Convertir a array y calcular totales por proveedor
+    const proveedoresArray = Object.values(agrupadoPorProveedor).map(proveedor => ({
+      ...proveedor,
+      total_frascos_proveedor: proveedor.vacunas.reduce((sum, v) => sum + v.frascos_a_pedir, 0)
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        cotizacion: {
+          numero_cotizacion: cotizacion.numero_cotizacion,
+          cliente: cotizacion.cliente,
+          fecha_inicio: cotizacion.fecha_inicio_plan,
+          cantidad_animales: cotizacion.cantidad_animales,
+          plan_nombre: cotizacion.plan?.nombre,
+          duracion_semanas: cotizacion.plan?.duracion_semanas
+        },
+        proveedores: proveedoresArray,
+        resumen: {
+          total_items_sin_lote: itemsSinLote.length,
+          total_proveedores: proveedoresArray.length,
+          total_frascos_general: proveedoresArray.reduce((sum, p) => sum + p.total_frascos_proveedor, 0)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al generar orden de compra:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar orden de compra: ' + error.message
+    });
+  }
+};
+
 // Exportar las nuevas funciones del calendario
 exports.getCalendarioVacunacion = getCalendarioVacunacion;
 exports.editarFechaCalendario = editarFechaCalendario;

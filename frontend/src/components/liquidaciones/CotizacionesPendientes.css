@@ -1,0 +1,69 @@
+.cotizaciones-pendientes .card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cotizaciones-pendientes .table {
+  font-size: 0.95rem;
+}
+
+.cotizaciones-pendientes .table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.cotizaciones-pendientes .table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.cotizaciones-pendientes .table tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.cotizaciones-pendientes .badge {
+  padding: 0.4em 0.8em;
+  font-weight: 500;
+}
+
+.cotizaciones-pendientes .btn-group .btn {
+  padding: 0.25rem 0.5rem;
+}
+
+.cotizaciones-pendientes .alert {
+  border-radius: 8px;
+}
+
+.cotizaciones-pendientes .alert ol {
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.cotizaciones-pendientes .alert ol li {
+  margin-bottom: 0.25rem;
+}
+
+/* Animación de carga */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.cotizaciones-pendientes .fa-spin {
+  animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
