@@ -1,0 +1,51 @@
+{
+  "fecha_exportacion": "2025-11-02T22:15:06.096Z",
+  "base_origen": "desarrollo",
+  "estadisticas": {
+    "listas_precios": 5,
+    "precios_por_lista": 0
+  },
+  "listas_precios": [
+    {
+      "id_lista": 1,
+      "tipo": "L15",
+      "nombre": "Lista de precios L15",
+      "descripcion": "Lista de precios con recargo del 15%",
+      "porcentaje_recargo": "15",
+      "activa": true
+    },
+    {
+      "id_lista": 2,
+      "tipo": "L18",
+      "nombre": "Lista de precios L18",
+      "descripcion": "Lista de precios con recargo del 18%",
+      "porcentaje_recargo": "18",
+      "activa": true
+    },
+    {
+      "id_lista": 3,
+      "tipo": "L20",
+      "nombre": "Lista de precios L20",
+      "descripcion": "Lista de precios con recargo del 20%",
+      "porcentaje_recargo": "20",
+      "activa": true
+    },
+    {
+      "id_lista": 4,
+      "tipo": "L25",
+      "nombre": "Lista de precios L25",
+      "descripcion": "Lista de precios con recargo del 25%",
+      "porcentaje_recargo": "25",
+      "activa": true
+    },
+    {
+      "id_lista": 5,
+      "tipo": "L30",
+      "nombre": "Lista de precios L30",
+      "descripcion": "Lista de precios con recargo del 30%",
+      "porcentaje_recargo": "30",
+      "activa": true
+    }
+  ],
+  "precios_por_lista": []
+}

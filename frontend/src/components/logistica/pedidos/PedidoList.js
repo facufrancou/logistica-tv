@@ -8,6 +8,7 @@ import {
   completarPedido,
   eliminarPedido,
 } from "../../../services/api";
+import "./PedidoList.css";
 
 function PedidoList({ pedidos, onActualizar }) {
   const [pagina, setPagina] = useState(0);
@@ -360,17 +361,16 @@ function PedidoList({ pedidos, onActualizar }) {
 
       {/* Modal Edición */}
       {modalOpen && pedidoEditando && (
-        <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog modal-xl">
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header">
-                <h5 className="modal-title d-flex align-items-center gap-2">
-                  <i className="bi bi-pencil-square me-2"></i>
-                  Editar Pedido #{pedidoEditando.id_pedido}
-                </h5>
-                <button type="button" className="btn-close" onClick={() => setModalOpen(false)}></button>
-              </div>
-              <div className="modal-body">
+        <div className="pedido-modal-overlay">
+          <div className="pedido-modal-container">
+            <div className="pedido-modal-header">
+              <h5 className="pedido-modal-title">
+                <i className="bi bi-pencil-square"></i>
+                Editar Pedido #{pedidoEditando.id_pedido}
+              </h5>
+              <button type="button" className="pedido-modal-close" onClick={() => setModalOpen(false)}>×</button>
+            </div>
+            <div className="pedido-modal-body">
                 <div className="row g-4 mb-4">
                   <div className="col-md-5">
                     <div className="card border-0 shadow-sm h-100">
@@ -417,7 +417,7 @@ function PedidoList({ pedidos, onActualizar }) {
                         {/* Tabla de productos del pedido */}
                         <div className="table-responsive mb-3" style={{ maxHeight: 260 }}>
                           <table className="table table-sm align-middle mb-0">
-                            <thead className="table-light sticky-top">
+                            <thead className="table-light">
                               <tr>
                                 <th style={{width:'6%'}}>#</th>
                                 <th style={{width:'34%'}}>Nombre</th>
@@ -508,12 +508,11 @@ function PedidoList({ pedidos, onActualizar }) {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer border-0">
-                <button className="btn btn-outline-secondary" onClick={() => setModalOpen(false)}>Cancelar</button>
-                <button className="btn btn-success" onClick={handleGuardar} disabled={pedidoEditando.productos.length === 0}>
-                  <i className="bi bi-check2-circle me-1"></i>Guardar Cambios
-                </button>
-              </div>
+            <div className="pedido-modal-footer">
+              <button className="btn btn-outline-secondary" onClick={() => setModalOpen(false)}>Cancelar</button>
+              <button className="btn btn-success" onClick={handleGuardar} disabled={pedidoEditando.productos.length === 0}>
+                <i className="bi bi-check2-circle me-1"></i>Guardar Cambios
+              </button>
             </div>
           </div>
         </div>
@@ -521,17 +520,16 @@ function PedidoList({ pedidos, onActualizar }) {
 
       {/* Modal Vista Pedido */}
       {pedidoVista && (
-        <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: "#00000099" }}>
-          <div className="modal-dialog modal-xl">
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header">
-                <h5 className="modal-title d-flex align-items-center gap-2">
-                  <i className="bi bi-receipt-cutoff me-2"></i>
-                  Pedido #{pedidoVista.id_pedido}
-                </h5>
-                <button type="button" className="btn-close" onClick={() => setPedidoVista(null)}></button>
-              </div>
-              <div className="modal-body">
+        <div className="pedido-modal-overlay">
+          <div className="pedido-modal-container">
+            <div className="pedido-modal-header">
+              <h5 className="pedido-modal-title">
+                <i className="bi bi-receipt-cutoff"></i>
+                Pedido #{pedidoVista.id_pedido}
+              </h5>
+              <button type="button" className="pedido-modal-close" onClick={() => setPedidoVista(null)}>×</button>
+            </div>
+            <div className="pedido-modal-body">
                 <div className="row g-4 mb-3">
                   <div className="col-md-6">
                     <div className="card border-0 h-100 shadow-sm">
@@ -638,11 +636,10 @@ function PedidoList({ pedidos, onActualizar }) {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer border-0">
-                <button className="btn btn-outline-secondary" onClick={() => setPedidoVista(null)}>
-                  Cerrar
-                </button>
-              </div>
+            <div className="pedido-modal-footer">
+              <button className="btn btn-outline-secondary" onClick={() => setPedidoVista(null)}>
+                Cerrar
+              </button>
             </div>
           </div>
         </div>

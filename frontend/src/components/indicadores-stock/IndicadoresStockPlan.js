@@ -58,7 +58,7 @@ const IndicadoresStockPlan = () => {
 
   const cargarIndicadores = async () => {
     const params = new URLSearchParams(filtros);
-    const response = await fetch(`http://localhost:3001/indicadores-stock/planes?${params}`, {
+    const response = await fetch(`https://api.tierravolga.com.ar/indicadores-stock/planes?${params}`, {
       credentials: 'include'
     });
 
@@ -71,7 +71,7 @@ const IndicadoresStockPlan = () => {
   };
 
   const cargarPlanes = async () => {
-    const response = await fetch('http://localhost:3001/planes-vacunales/activos', {
+    const response = await fetch('https://api.tierravolga.com.ar/planes-vacunales/activos', {
       credentials: 'include'
     });
 
@@ -84,7 +84,7 @@ const IndicadoresStockPlan = () => {
   };
 
   const cargarResumenGeneral = async () => {
-    const response = await fetch('http://localhost:3001/indicadores-stock/resumen', {
+    const response = await fetch('https://api.tierravolga.com.ar/indicadores-stock/resumen', {
       credentials: 'include'
     });
 
@@ -129,7 +129,7 @@ const IndicadoresStockPlan = () => {
   const exportarReporte = async () => {
     try {
       const params = new URLSearchParams(filtros);
-      const response = await fetch(`http://localhost:3001/indicadores-stock/export?${params}`, {
+      const response = await fetch(`https://api.tierravolga.com.ar/indicadores-stock/export?${params}`, {
         credentials: 'include'
       });
 

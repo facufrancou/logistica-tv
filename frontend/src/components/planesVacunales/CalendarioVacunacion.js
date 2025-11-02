@@ -276,7 +276,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
+      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -337,7 +337,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${id_calendario}/remito`, {
+      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -717,10 +717,16 @@ const CalendarioVacunacion = () => {
         canvas.width = this.naturalWidth;
         canvas.height = this.naturalHeight;
         ctx.drawImage(this, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
+        // Retornar dataURL junto con dimensiones originales
+        resolve({
+          dataUrl: canvas.toDataURL('image/png'),
+          width: this.naturalWidth,
+          height: this.naturalHeight,
+          ratio: this.naturalWidth / this.naturalHeight
+        });
       };
       img.onerror = () => {
-        console.warn('No se pudo cargar LOGO.PNG, intentando logo blanco');
+        console.warn('No se pudo cargar logo.png, intentando Logo blanco.png');
         // Fallback al logo blanco
         const fallbackImg = new Image();
         fallbackImg.crossOrigin = 'anonymous';
@@ -730,7 +736,12 @@ const CalendarioVacunacion = () => {
           canvas.width = this.naturalWidth;
           canvas.height = this.naturalHeight;
           ctx.drawImage(this, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
+          resolve({
+            dataUrl: canvas.toDataURL('image/png'),
+            width: this.naturalWidth,
+            height: this.naturalHeight,
+            ratio: this.naturalWidth / this.naturalHeight
+          });
         };
         fallbackImg.onerror = () => {
           console.warn('No se pudo cargar ningún logo');
@@ -738,8 +749,8 @@ const CalendarioVacunacion = () => {
         };
         fallbackImg.src = '/img/Logo blanco.png';
       };
-      // Usar el nuevo LOGO.PNG (3780x945)
-      img.src = '/img/LOGO.PNG';
+      // Intentar cargar logo.png primero
+      img.src = '/img/logo.png';
     });
   };
 
@@ -747,8 +758,8 @@ const CalendarioVacunacion = () => {
     try {
       setGenerandoPDF(true);
       
-      // Cargar logo de la empresa
-      const logoDataUrl = await cargarLogo();
+      // Cargar logo de la empresa con sus dimensiones
+      const logoData = await cargarLogo();
       
       // Crear instancia del documento
       const doc = new jsPDF({
@@ -773,20 +784,38 @@ const CalendarioVacunacion = () => {
       doc.setFillColor(...primaryColor);
       doc.rect(0, 0, pageWidth, 22, 'F'); // Encabezado más compacto
 
-      // Logo de la empresa (LOGO.PNG 3780x945)
-      if (logoDataUrl) {
+      // Logo de la empresa con detección automática de proporción
+      if (logoData) {
         try {
-          // LOGO.PNG tiene proporción 3780:945 = 4:1 aproximadamente
-          const logoHeight = 15; // Altura en mm
-          const logoWidth = logoHeight * 4; // Ancho proporcional (4:1)
+          // Calcular dimensiones manteniendo la proporción real del logo
+          const maxLogoHeight = 15; // Altura máxima en mm
+          const maxLogoWidth = 60;  // Ancho máximo en mm
+          
+          let logoWidth, logoHeight;
+          
+          // Calcular dimensiones respetando la proporción real
+          if (logoData.ratio > (maxLogoWidth / maxLogoHeight)) {
+            // Logo más ancho que alto - limitar por ancho
+            logoWidth = maxLogoWidth;
+            logoHeight = maxLogoWidth / logoData.ratio;
+          } else {
+            // Logo más alto que ancho - limitar por alto
+            logoHeight = maxLogoHeight;
+            logoWidth = maxLogoHeight * logoData.ratio;
+          }
+          
+          // Centrar verticalmente en el encabezado
+          const logoY = 4 + (15 - logoHeight) / 2;
           
           // Posicionar el logo en el encabezado
-          doc.addImage(logoDataUrl, 'PNG', margin, 5, logoWidth, logoHeight, undefined, 'FAST');
+          doc.addImage(logoData.dataUrl, 'PNG', margin, logoY, logoWidth, logoHeight, undefined, 'FAST');
+          
+          console.log(`Logo cargado: ${logoData.width}x${logoData.height}, ratio: ${logoData.ratio.toFixed(2)}, renderizado: ${logoWidth.toFixed(1)}x${logoHeight.toFixed(1)}mm`);
         } catch (error) {
           console.warn('No se pudo cargar el logo:', error);
           // Fallback mejorado
           doc.setFillColor(255, 255, 255);
-          doc.rect(margin, 4, 60, 15, 'F'); // Ajustar tamaño del fallback
+          doc.rect(margin, 4, 60, 15, 'F');
           doc.setTextColor(64, 64, 64);
           doc.setFontSize(8);
           doc.setFont('courier', 'bold');

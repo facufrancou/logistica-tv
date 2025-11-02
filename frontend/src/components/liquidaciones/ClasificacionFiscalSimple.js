@@ -30,7 +30,7 @@ const ClasificacionFiscalSimple = ({ cotizacionId, onClasificacionCompleta }) =>
       setLoading(true);
       setError(null);
       
-      const API_BASE = "http://localhost:3001";
+      const API_BASE = "https://api.tierravolga.com.ar";
       const response = await fetch(`${API_BASE}/liquidaciones/cotizacion/${cotizacionId}/items`, {
         credentials: "include",
         headers: {
@@ -59,7 +59,7 @@ const ClasificacionFiscalSimple = ({ cotizacionId, onClasificacionCompleta }) =>
     try {
       console.log('Clasificando item:', itemId, 'como:', tipo);
       
-      const API_BASE = "http://localhost:3001";
+      const API_BASE = "https://api.tierravolga.com.ar";
       const response = await fetch(`${API_BASE}/liquidaciones/item/${itemId}/clasificar`, {
         method: 'PUT',
         credentials: "include",

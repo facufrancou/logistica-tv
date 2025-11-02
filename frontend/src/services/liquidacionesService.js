@@ -3,7 +3,7 @@
  */
 
 // Configuración de la API
-const API_BASE = "http://localhost:3001";
+const API_BASE = "https://api.tierravolga.com.ar";
 
 // Función helper para llamadas API
 const apiCall = async (endpoint, options = {}) => {

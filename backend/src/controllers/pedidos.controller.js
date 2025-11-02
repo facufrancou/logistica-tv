@@ -352,20 +352,8 @@ exports.actualizarPedido = async (req, res) => {
 
     // Actualizar pedido y detalle en transacción
     await prisma.$transaction(async (tx) => {
-      // Actualizar pedido principal
-      await tx.pedido.update({
-        where: { id_pedido: parseInt(id) },
-        data: {
-          total: nuevoTotal,
-          seguimiento_dist: seguimiento_dist || undefined,
-          fecha_proximo_pedido: fecha_proximo_pedido ? new Date(fecha_proximo_pedido) : undefined
-        }
-      });
-
-      // Eliminar detalles actuales
-      await tx.detallePedido.deleteMany({
-        where: { id_pedido: parseInt(id) }
-      });
+      // Primero, eliminar detalles actuales (antes de actualizar el pedido)
+      await tx.$executeRawUnsafe(`DELETE FROM detalle_pedido WHERE id_pedido = ?`, parseInt(id));
 
       // Crear nuevos detalles
       for (const item of productosConPrecios) {
@@ -379,6 +367,17 @@ exports.actualizarPedido = async (req, res) => {
           }
         });
       }
+
+      // Finalmente, actualizar pedido principal con el nuevo total
+      await tx.pedido.update({
+        where: { id_pedido: parseInt(id) },
+        data: {
+          total: nuevoTotal,
+          seguimiento_dist: seguimiento_dist || undefined,
+          fecha_proximo_pedido: fecha_proximo_pedido ? new Date(fecha_proximo_pedido) : undefined,
+          updated_at: new Date()
+        }
+      });
     });
 
     res.json({ mensaje: 'Pedido actualizado exitosamente' });

@@ -21,8 +21,12 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
       console.log('🔍 Verificando estado de lotes para cotización:', cotizacionId);
       
       // Hacer la petición directamente usando fetch para debugging
-      const url = `http://localhost:3001/cotizaciones/${cotizacionId}/verificar-lotes`;
+      const url = `https://api.tierravolga.com.ar/cotizaciones/${cotizacionId}/verificar-lotes`;
       console.log('📡 URL:', url);
+      
+      // Crear un timeout de 10 segundos
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -31,8 +35,11 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       console.log('📊 Response status:', response.status);
       console.log('📊 Response ok:', response.ok);
@@ -58,8 +65,21 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
       }
     } catch (err) {
       console.error('❌ Error completo:', err);
-      const errorMessage = err.message || 'Error al verificar estado de lotes';
+      
+      let errorMessage = 'Error al verificar estado de lotes';
+      if (err.name === 'AbortError') {
+        errorMessage = 'La verificación tardó demasiado tiempo (timeout 10s)';
+        console.warn('⏱️ Timeout: La consulta de lotes demoró más de 10 segundos');
+      } else {
+        errorMessage = err.message || errorMessage;
+      }
+      
       setError(errorMessage);
+      
+      // Notificar que no hay problemas si hubo error (para no bloquear UI)
+      if (onProblemasDetectados) {
+        onProblemasDetectados(false);
+      }
     } finally {
       if (!silencioso) setLoading(false);
     }

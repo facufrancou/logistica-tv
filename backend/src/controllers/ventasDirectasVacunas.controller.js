@@ -682,7 +682,7 @@ exports.generarRemitoPdf = async (req, res) => {
 
     // Preparar datos para el PDF
     const datosRemito = {
-      numeroRemito: `VD-${venta.numero_venta}`,
+      numeroRemito: `${venta.numero_venta}`,
       fechaEmision: new Date().toLocaleDateString('es-AR'),
       horaEmision: new Date().toLocaleTimeString('es-AR', { 
         hour: '2-digit', 

@@ -790,18 +790,24 @@ exports.getCotizaciones = async (req, res) => {
       }
     });
 
-    // Formatear respuesta con lógica híbrida
-    const cotizacionesFormatted = await Promise.all(
-      cotizaciones.map(async (cotizacion) => {
-        // Procesar detalle con lógica de solo vacunas
-        const productosHibridos = await Promise.all(
-          cotizacion.detalle_cotizacion.map(async (dc) => {
-            // Buscar solo en vacunas
-            const vacuna = await prisma.vacuna.findUnique({
-              where: { id_vacuna: dc.id_producto },
-              select: { nombre: true, detalle: true }
-            });
+    // OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez (prevenir N+1)
+    const todosLosIdsVacunas = [...new Set(cotizaciones.flatMap(c => c.detalle_cotizacion.map(dc => dc.id_producto)))];
+    const vacunasMap = new Map();
+    
+    if (todosLosIdsVacunas.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: todosLosIdsVacunas } },
+        select: { id_vacuna: true, nombre: true, detalle: true }
+      });
+      vacunas.forEach(v => vacunasMap.set(v.id_vacuna, v));
+    }
 
+    // Formatear respuesta con lógica híbrida
+    const cotizacionesFormatted = cotizaciones.map((cotizacion) => {
+        // Procesar detalle con lógica de solo vacunas (usando el Map precargado)
+        const productosHibridos = cotizacion.detalle_cotizacion.map((dc) => {
+            // Buscar en el Map precargado
+            const vacuna = vacunasMap.get(dc.id_producto);
             const nombreItem = vacuna ? vacuna.nombre : 'Vacuna no encontrada';
 
             return {
@@ -813,8 +819,7 @@ exports.getCotizaciones = async (req, res) => {
               semana_inicio: Number(dc.semana_inicio),
               semana_fin: dc.semana_fin ? Number(dc.semana_fin) : null
             };
-          })
-        );
+          });
 
         return {
           ...cotizacion,
@@ -829,8 +834,7 @@ exports.getCotizaciones = async (req, res) => {
           lista_precio_tipo: cotizacion.lista_precio?.tipo || null,
           productos: productosHibridos
         };
-      })
-    );
+      });
 
     res.json(cotizacionesFormatted);
   } catch (error) {
@@ -882,13 +886,21 @@ exports.getCotizacionById = async (req, res) => {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
 
+    // OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez
+    const idsVacunasDetalle = cotizacion.detalle_cotizacion.map(dc => dc.id_producto);
+    const vacunasDetalleMap = new Map();
+    
+    if (idsVacunasDetalle.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: idsVacunasDetalle } }
+      });
+      vacunas.forEach(v => vacunasDetalleMap.set(v.id_vacuna, v));
+    }
+
     // Procesar detalle con lógica de solo vacunas
-    const detalleCompleto = await Promise.all(
-      cotizacion.detalle_cotizacion.map(async (dc) => {
-        // Buscar solo en vacunas
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: dc.id_producto }
-        });
+    const detalleCompleto = cotizacion.detalle_cotizacion.map((dc) => {
+        // Buscar solo en vacunas (del Map precargado)
+        const vacuna = vacunasDetalleMap.get(dc.id_producto);
 
         if (vacuna) {
           // Es una vacuna
@@ -920,16 +932,23 @@ exports.getCotizacionById = async (req, res) => {
             dosis_por_semana: dc.dosis_por_semana
           };
         }
-      })
-    );
+      });
+
+    // OPTIMIZACIÓN: Cargar todas las vacunas del calendario de una sola vez
+    const idsVacunasCalendario = cotizacion.calendario_vacunacion.map(cv => cv.id_producto);
+    const vacunasCalendarioMap = new Map();
+    
+    if (idsVacunasCalendario.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: idsVacunasCalendario } }
+      });
+      vacunas.forEach(v => vacunasCalendarioMap.set(v.id_vacuna, v));
+    }
 
     // Procesar calendario híbrido (vacunas primero, luego productos)
-    const calendarioCompleto = await Promise.all(
-      cotizacion.calendario_vacunacion.map(async (cv) => {
+    const calendarioCompleto = cotizacion.calendario_vacunacion.map((cv) => {
         // PRIMERO intentar encontrar como vacuna (nuevo sistema)
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: cv.id_producto }
-        });
+        const vacuna = vacunasCalendarioMap.get(cv.id_producto);
 
         let nombreItem = 'Vacuna no encontrada';
         if (vacuna) {
@@ -947,8 +966,7 @@ exports.getCotizacionById = async (req, res) => {
           fecha_aplicacion: cv.fecha_aplicacion,
           observaciones: cv.observaciones
         };
-      })
-    );
+      });
 
     // Formatear respuesta completa
     const cotizacionFormatted = {

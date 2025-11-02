@@ -37,18 +37,25 @@ exports.getItemsPendientesClasificacion = async (req, res) => {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
 
+    // OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez
+    const idsVacunas = cotizacion.detalle_cotizacion.map(d => d.id_producto);
+    const vacunasMap = new Map();
+    
+    if (idsVacunas.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: idsVacunas } },
+        include: {
+          patologia: { select: { nombre: true } },
+          presentacion: { select: { nombre: true } }
+        }
+      });
+      vacunas.forEach(v => vacunasMap.set(v.id_vacuna, v));
+    }
+
     // Formatear items con información de clasificación
-    // Buscar vacunas para cada detalle (id_producto contiene id_vacuna en el sistema actual)
-    const itemsConClasificacion = await Promise.all(
-      cotizacion.detalle_cotizacion.map(async (detalle) => {
+    const itemsConClasificacion = cotizacion.detalle_cotizacion.map((detalle) => {
         // Intentar buscar vacuna primero (sistema actual usa id_producto para id_vacuna)
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: detalle.id_producto },
-          include: {
-            patologia: { select: { nombre: true } },
-            presentacion: { select: { nombre: true } }
-          }
-        });
+        const vacuna = vacunasMap.get(detalle.id_producto);
 
         const nombreItem = vacuna 
           ? `${vacuna.nombre} - ${vacuna.patologia.nombre}`
@@ -78,8 +85,7 @@ exports.getItemsPendientesClasificacion = async (req, res) => {
             fecha_clasificacion: detalle.item_facturacion.fecha_clasificacion
           } : null
         };
-      })
-    );
+      });
 
     res.json({
       cotizacion: {
@@ -403,16 +409,24 @@ exports.getResumenLiquidacion = async (req, res) => {
       return res.status(404).json({ error: 'Resumen de liquidación no encontrado' });
     }
 
+    // OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez
+    const idsVacunasResumen = resumen.cotizacion.detalle_cotizacion.map(d => d.id_producto);
+    const vacunasResumenMap = new Map();
+    
+    if (idsVacunasResumen.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: idsVacunasResumen } },
+        include: {
+          patologia: { select: { nombre: true } }
+        }
+      });
+      vacunas.forEach(v => vacunasResumenMap.set(v.id_vacuna, v));
+    }
+
     // Formatear detalle de items - Buscar vacunas para cada item
-    const detalleItems = await Promise.all(
-      resumen.cotizacion.detalle_cotizacion.map(async (detalle) => {
+    const detalleItems = resumen.cotizacion.detalle_cotizacion.map((detalle) => {
         // Buscar vacuna (id_producto contiene id_vacuna en el sistema actual)
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: detalle.id_producto },
-          include: {
-            patologia: { select: { nombre: true } }
-          }
-        });
+        const vacuna = vacunasResumenMap.get(detalle.id_producto);
 
         const nombreItem = vacuna 
           ? `${vacuna.nombre} - ${vacuna.patologia.nombre}`
@@ -427,8 +441,7 @@ exports.getResumenLiquidacion = async (req, res) => {
           monto_negro: detalle.item_facturacion?.monto_negro ? parseFloat(detalle.item_facturacion.monto_negro) : 0,
           monto_blanco: detalle.item_facturacion?.monto_blanco ? parseFloat(detalle.item_facturacion.monto_blanco) : 0
         };
-      })
-    );
+      });
 
     res.json({
       resumen: {
@@ -541,21 +554,28 @@ exports.getResumenesLiquidacion = async (req, res) => {
       prisma.resumenLiquidacion.count({ where })
     ]);
 
+    // OPTIMIZACIÓN CRÍTICA: Cargar TODAS las vacunas de TODOS los resumenes en UNA sola query
+    const todosLosIdsVacunas = [...new Set(resumenes.flatMap(r => r.cotizacion.detalle_cotizacion.map(d => d.id_producto)))];
+    const vacunasGlobalMap = new Map();
+    
+    if (todosLosIdsVacunas.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: todosLosIdsVacunas } },
+        include: {
+          patologia: { select: { nombre: true } },
+          presentacion: { select: { nombre: true } },
+          proveedor: { select: { nombre: true } }
+        }
+      });
+      vacunas.forEach(v => vacunasGlobalMap.set(v.id_vacuna, v));
+    }
+
     // Formatear resumenes con detalle de items
-    const resumenesFormateados = await Promise.all(
-      resumenes.map(async (resumen) => {
-        // Formatear detalle de items - Buscar vacunas para cada item
-        const detalleItems = await Promise.all(
-          resumen.cotizacion.detalle_cotizacion.map(async (detalle) => {
+    const resumenesFormateados = resumenes.map((resumen) => {
+        // Formatear detalle de items - Buscar vacunas en el Map precargado
+        const detalleItems = resumen.cotizacion.detalle_cotizacion.map((detalle) => {
             // Buscar vacuna (id_producto contiene id_vacuna en el sistema actual)
-            const vacuna = await prisma.vacuna.findUnique({
-              where: { id_vacuna: detalle.id_producto },
-              include: {
-                patologia: { select: { nombre: true } },
-                presentacion: { select: { nombre: true } },
-                proveedor: { select: { nombre: true } }
-              }
-            });
+            const vacuna = vacunasGlobalMap.get(detalle.id_producto);
 
             const nombreItem = vacuna 
               ? `${vacuna.nombre} - ${vacuna.patologia.nombre}`
@@ -573,8 +593,7 @@ exports.getResumenesLiquidacion = async (req, res) => {
               monto_negro: detalle.item_facturacion?.monto_negro ? parseFloat(detalle.item_facturacion.monto_negro) : 0,
               monto_blanco: detalle.item_facturacion?.monto_blanco ? parseFloat(detalle.item_facturacion.monto_blanco) : 0
             };
-          })
-        );
+          });
 
         return {
           id_resumen: resumen.id_resumen,
@@ -593,8 +612,7 @@ exports.getResumenesLiquidacion = async (req, res) => {
           fecha_generacion: resumen.fecha_generacion,
           detalle_items: detalleItems
         };
-      })
-    );
+      });
 
     res.json({
       resumenes: resumenesFormateados,
