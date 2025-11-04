@@ -790,14 +790,19 @@ exports.getCotizaciones = async (req, res) => {
       }
     });
 
-    // OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez (prevenir N+1)
+    // ✅ OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez (prevenir N+1)
     const todosLosIdsVacunas = [...new Set(cotizaciones.flatMap(c => c.detalle_cotizacion.map(dc => dc.id_producto)))];
     const vacunasMap = new Map();
     
     if (todosLosIdsVacunas.length > 0) {
       const vacunas = await prisma.vacuna.findMany({
         where: { id_vacuna: { in: todosLosIdsVacunas } },
-        select: { id_vacuna: true, nombre: true, detalle: true }
+        select: { 
+          id_vacuna: true, 
+          codigo: true,
+          nombre: true, 
+          detalle: true 
+        }
       });
       vacunas.forEach(v => vacunasMap.set(v.id_vacuna, v));
     }
@@ -886,13 +891,20 @@ exports.getCotizacionById = async (req, res) => {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
 
-    // OPTIMIZACIÓN: Cargar todas las vacunas de una sola vez
+    // ✅ OPTIMIZACIÓN: Cargar todas las vacunas del detalle en una sola query
     const idsVacunasDetalle = cotizacion.detalle_cotizacion.map(dc => dc.id_producto);
     const vacunasDetalleMap = new Map();
     
     if (idsVacunasDetalle.length > 0) {
       const vacunas = await prisma.vacuna.findMany({
-        where: { id_vacuna: { in: idsVacunasDetalle } }
+        where: { id_vacuna: { in: idsVacunasDetalle } },
+        select: {
+          id_vacuna: true,
+          codigo: true,
+          nombre: true,
+          detalle: true,
+          precio_lista: true
+        }
       });
       vacunas.forEach(v => vacunasDetalleMap.set(v.id_vacuna, v));
     }
@@ -909,7 +921,7 @@ exports.getCotizacionById = async (req, res) => {
             id_vacuna: Number(dc.id_producto),
             tipo: 'vacuna',
             nombre_producto: vacuna.nombre,
-            descripcion_producto: vacuna.detalle || vacuna.descripcion || '',
+            descripcion_producto: vacuna.detalle || '',
             cantidad_total: dc.cantidad_total,
             precio_unitario: parseFloat(dc.precio_unitario),
             subtotal: parseFloat(dc.subtotal),
@@ -945,15 +957,10 @@ exports.getCotizacionById = async (req, res) => {
       vacunas.forEach(v => vacunasCalendarioMap.set(v.id_vacuna, v));
     }
 
-    // Procesar calendario híbrido (vacunas primero, luego productos)
+    // ✅ Procesar calendario usando el Map precargado (sin queries adicionales)
     const calendarioCompleto = cotizacion.calendario_vacunacion.map((cv) => {
-        // PRIMERO intentar encontrar como vacuna (nuevo sistema)
         const vacuna = vacunasCalendarioMap.get(cv.id_producto);
-
-        let nombreItem = 'Vacuna no encontrada';
-        if (vacuna) {
-          nombreItem = vacuna.nombre;
-        }
+        const nombreItem = vacuna ? vacuna.nombre : 'Vacuna no encontrada';
 
         return {
           id_calendario: Number(cv.id_calendario),
@@ -2676,14 +2683,15 @@ exports.getEstadoPlan = async (req, res) => {
     const dosisPendientes = totalDosisProgr - totalDosisEntregadas;
     const porcentajeCompletado = totalDosisProgr > 0 ? (totalDosisEntregadas / totalDosisProgr) * 100 : 0;
 
-    // Agrupar por item usando lógica híbrida (vacunas primero, productos para compatibilidad)
-    const resumenPorItem = {};
+    // ✅ OPTIMIZACIÓN: Cargar TODAS las vacunas del calendario en UNA sola query
+    const idsVacunasResumen = [...new Set(cotizacion.calendario_vacunacion.map(cal => cal.id_producto))];
+    const vacunasResumenMap = new Map();
     
-    for (const cal of cotizacion.calendario_vacunacion) {
-      // PRIMERO intentar encontrar como vacuna (nuevo sistema)
-      const vacuna = await prisma.vacuna.findUnique({
-        where: { id_vacuna: cal.id_producto },
+    if (idsVacunasResumen.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: idsVacunasResumen } },
         select: {
+          id_vacuna: true,
           nombre: true,
           stock_vacunas: {
             select: {
@@ -2693,6 +2701,14 @@ exports.getEstadoPlan = async (req, res) => {
           }
         }
       });
+      vacunas.forEach(v => vacunasResumenMap.set(v.id_vacuna, v));
+    }
+
+    // Agrupar por item usando el Map precargado (sin queries adicionales)
+    const resumenPorItem = {};
+    
+    for (const cal of cotizacion.calendario_vacunacion) {
+      const vacuna = vacunasResumenMap.get(cal.id_producto);
 
       let nombreItem = 'Item no encontrado';
       let stockActual = 0;
@@ -2703,21 +2719,6 @@ exports.getEstadoPlan = async (req, res) => {
         // Sumar todo el stock de todas las entradas de la vacuna
         stockActual = vacuna.stock_vacunas.reduce((total, stock) => total + (stock.stock_actual || 0), 0);
         stockReservado = vacuna.stock_vacunas.reduce((total, stock) => total + (stock.stock_reservado || 0), 0);
-      } else {
-        // LUEGO intentar como producto (sistema anterior - retrocompatibilidad)
-        const producto = await prisma.producto.findUnique({
-          where: { id_producto: cal.id_producto },
-          select: {
-            nombre: true,
-            stock: true,
-            stock_reservado: true
-          }
-        });
-        if (producto) {
-          nombreItem = producto.nombre;
-          stockActual = producto.stock || 0;
-          stockReservado = producto.stock_reservado || 0;
-        }
       }
 
       if (!resumenPorItem[nombreItem]) {
@@ -2767,26 +2768,23 @@ exports.getEstadoPlan = async (req, res) => {
         porcentaje_completado: Math.round(porcentajeCompletado * 100) / 100
       },
       resumen_por_vacuna: Object.values(resumenPorItem),
-      calendario_detallado: await Promise.all(
-        cotizacion.calendario_vacunacion.map(async (cal) => {
-          // Usar lógica híbrida para el nombre del item
-          const vacuna = await prisma.vacuna.findUnique({
-            where: { id_vacuna: cal.id_producto },
-            select: { nombre: true }
+      calendario_detallado: await (async () => {
+        // ✅ OPTIMIZACIÓN: Cargar todas las vacunas del calendario en UNA sola query
+        const idsVacunasCalDetalle = [...new Set(cotizacion.calendario_vacunacion.map(cal => cal.id_producto))];
+        const vacunasCalDetalleMap = new Map();
+        
+        if (idsVacunasCalDetalle.length > 0) {
+          const vacunas = await prisma.vacuna.findMany({
+            where: { id_vacuna: { in: idsVacunasCalDetalle } },
+            select: { id_vacuna: true, nombre: true }
           });
+          vacunas.forEach(v => vacunasCalDetalleMap.set(v.id_vacuna, v));
+        }
 
-          let nombreItem = 'Item no encontrado';
-          if (vacuna) {
-            nombreItem = vacuna.nombre;
-          } else {
-            const producto = await prisma.producto.findUnique({
-              where: { id_producto: cal.id_producto },
-              select: { nombre: true }
-            });
-            if (producto) {
-              nombreItem = producto.nombre;
-            }
-          }
+        // Procesar sin queries adicionales
+        return cotizacion.calendario_vacunacion.map((cal) => {
+          const vacuna = vacunasCalDetalleMap.get(cal.id_producto);
+          const nombreItem = vacuna ? vacuna.nombre : 'Item no encontrado';
 
           return {
             id_calendario: cal.id_calendario,
@@ -2798,8 +2796,8 @@ exports.getEstadoPlan = async (req, res) => {
             estado_entrega: cal.estado_entrega,
             responsable_entrega: cal.responsable_entrega
           };
-        })
-      )
+        });
+      })()
     });
 
   } catch (error) {
@@ -3536,31 +3534,60 @@ const getCalendarioVacunacion = async (req, res) => {
       return fechaFormateada;
     };
 
-    // Procesar calendario con lógica híbrida (vacunas primero, productos para compatibilidad)
-    const calendarioFormateado = await Promise.all(
-      calendario.map(async (item) => {
-        // PRIMERO intentar encontrar como vacuna (nuevo sistema)
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: item.id_producto },
-          include: {
-            patologia: true,
-            presentacion: true,
-            via_aplicacion: true,
-            proveedor: true
-          }
-        });
+    // ✅ OPTIMIZACIÓN CRÍTICA: Cargar TODAS las vacunas y stocks en DOS queries en lugar de N queries
+    const idsVacunasCalendario = [...new Set(calendario.map(item => item.id_producto))];
+    const idsStockVacunas = [...new Set(calendario.filter(item => item.id_stock_vacuna).map(item => item.id_stock_vacuna))];
+    
+    const vacunasCalendarioMap = new Map();
+    const stocksCalendarioMap = new Map();
+    
+    // Query 1: Todas las vacunas
+    if (idsVacunasCalendario.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: idsVacunasCalendario } },
+        select: {
+          id_vacuna: true,
+          nombre: true,
+          detalle: true,
+          patologia: { select: { nombre: true } },
+          presentacion: { select: { nombre: true } },
+          via_aplicacion: { select: { codigo: true, nombre: true } },
+          proveedor: { select: { nombre: true } }
+        }
+      });
+      vacunas.forEach(v => vacunasCalendarioMap.set(v.id_vacuna, v));
+    }
+    
+    // Query 2: Todos los stocks
+    if (idsStockVacunas.length > 0) {
+      const stocks = await prisma.stockVacuna.findMany({
+        where: { id_stock_vacuna: { in: idsStockVacunas } },
+        select: {
+          id_stock_vacuna: true,
+          lote: true,
+          fecha_vencimiento: true,
+          stock_actual: true,
+          stock_reservado: true,
+          ubicacion_fisica: true
+        }
+      });
+      stocks.forEach(s => stocksCalendarioMap.set(s.id_stock_vacuna, s));
+    }
+
+    // Procesar calendario usando los Maps precargados (sin queries adicionales)
+    const calendarioFormateado = calendario.map((item) => {
+        const vacuna = vacunasCalendarioMap.get(item.id_producto);
+        const stockInfo = item.id_stock_vacuna ? stocksCalendarioMap.get(item.id_stock_vacuna) : null;
 
         let nombreItem = 'Item no encontrado';
         let descripcionItem = '';
         let tipoItem = 'N/A';
-        let stockInfo = null;
         let patologiaInfo = null;
         let presentacionInfo = null;
         let viaAplicacionInfo = null;
         let proveedorInfo = null;
 
         if (vacuna) {
-          // Es una vacuna (sistema nuevo)
           nombreItem = vacuna.nombre;
           descripcionItem = vacuna.detalle || '';
           tipoItem = 'vacuna';
@@ -3568,30 +3595,6 @@ const getCalendarioVacunacion = async (req, res) => {
           presentacionInfo = vacuna.presentacion?.nombre || null;
           viaAplicacionInfo = vacuna.via_aplicacion?.codigo || vacuna.via_aplicacion?.nombre || null;
           proveedorInfo = vacuna.proveedor?.nombre || null;
-          
-          // Obtener información del stock si está asignado
-          if (item.id_stock_vacuna) {
-            stockInfo = await prisma.stockVacuna.findUnique({
-              where: { id_stock_vacuna: item.id_stock_vacuna },
-              select: {
-                lote: true,
-                fecha_vencimiento: true,
-                stock_actual: true,
-                stock_reservado: true,
-                ubicacion_fisica: true
-              }
-            });
-          }
-        } else {
-          // LUEGO intentar como producto (sistema anterior - retrocompatibilidad)
-          const producto = await prisma.producto.findUnique({
-            where: { id_producto: item.id_producto }
-          });
-          if (producto) {
-            nombreItem = producto.nombre;
-            descripcionItem = producto.descripcion || '';
-            tipoItem = producto.tipo_producto || 'producto';
-          }
         }
 
         return {
@@ -3633,8 +3636,7 @@ const getCalendarioVacunacion = async (req, res) => {
           numero_desdoblamiento: item.numero_desdoblamiento || null,
           dosis_original_id: item.dosis_original_id || null
         };
-      })
-    );
+      });
 
     res.json(calendarioFormateado);
   } catch (error) {

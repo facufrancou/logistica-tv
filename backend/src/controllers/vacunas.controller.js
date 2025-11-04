@@ -399,6 +399,7 @@ exports.deleteVacuna = async (req, res) => {
  */
 exports.getVacunasDisponibles = async (req, res) => {
   try {
+    // ✅ OPTIMIZACIÓN: Usar select específico para reducir transferencia de datos
     const vacunas = await prisma.vacuna.findMany({
       where: {
         activa: true,
@@ -409,32 +410,52 @@ exports.getVacunasDisponibles = async (req, res) => {
           }
         }
       },
-      include: {
+      select: {
+        id_vacuna: true,
+        codigo: true,
+        nombre: true,
+        detalle: true,
+        precio_lista: true,
+        requiere_frio: true,
         proveedor: {
           select: {
+            id_proveedor: true,
             nombre: true
           }
         },
         patologia: {
           select: {
-            nombre: true
+            id_patologia: true,
+            nombre: true,
+            codigo: true
           }
         },
         presentacion: {
           select: {
+            id_presentacion: true,
             nombre: true,
-            unidad_medida: true
+            unidad_medida: true,
+            dosis_por_frasco: true
           }
         },
         via_aplicacion: {
           select: {
-            nombre: true
+            id_via_aplicacion: true,
+            nombre: true,
+            codigo: true
           }
         },
         stock_vacunas: {
           where: {
             estado_stock: 'disponible',
             stock_actual: { gt: 0 }
+          },
+          select: {
+            id_stock_vacuna: true,
+            stock_actual: true,
+            stock_reservado: true,
+            lote: true,
+            fecha_vencimiento: true
           }
         }
       },
@@ -449,6 +470,9 @@ exports.getVacunasDisponibles = async (req, res) => {
       precio_lista: parseFloat(vacuna.precio_lista),
       stock_disponible: vacuna.stock_vacunas.reduce((total, stock) => 
         total + stock.stock_actual, 0
+      ),
+      stock_reservado_total: vacuna.stock_vacunas.reduce((total, stock) => 
+        total + stock.stock_reservado, 0
       )
     }));
 

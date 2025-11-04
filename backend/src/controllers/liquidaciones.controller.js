@@ -554,14 +554,17 @@ exports.getResumenesLiquidacion = async (req, res) => {
       prisma.resumenLiquidacion.count({ where })
     ]);
 
-    // OPTIMIZACIÓN CRÍTICA: Cargar TODAS las vacunas de TODOS los resumenes en UNA sola query
+    // ✅ OPTIMIZACIÓN CRÍTICA: Cargar TODAS las vacunas de TODOS los resumenes en UNA sola query
     const todosLosIdsVacunas = [...new Set(resumenes.flatMap(r => r.cotizacion.detalle_cotizacion.map(d => d.id_producto)))];
     const vacunasGlobalMap = new Map();
     
     if (todosLosIdsVacunas.length > 0) {
       const vacunas = await prisma.vacuna.findMany({
         where: { id_vacuna: { in: todosLosIdsVacunas } },
-        include: {
+        select: {
+          id_vacuna: true,
+          nombre: true,
+          codigo: true,
           patologia: { select: { nombre: true } },
           presentacion: { select: { nombre: true } },
           proveedor: { select: { nombre: true } }
@@ -770,6 +773,25 @@ exports.exportarLiquidacionesExcel = async (req, res) => {
       orderBy: { fecha_generacion: 'desc' }
     });
 
+    // ✅ OPTIMIZACIÓN CRÍTICA: Cargar TODAS las vacunas de TODAS las cotizaciones en UNA sola query
+    const todosLosIdsVacunasExcel = [...new Set(resumenes.flatMap(r => r.cotizacion.detalle_cotizacion.map(d => d.id_producto)))];
+    const vacunasExcelMap = new Map();
+    
+    if (todosLosIdsVacunasExcel.length > 0) {
+      const vacunas = await prisma.vacuna.findMany({
+        where: { id_vacuna: { in: todosLosIdsVacunasExcel } },
+        select: {
+          id_vacuna: true,
+          nombre: true,
+          codigo: true,
+          patologia: { select: { nombre: true } },
+          presentacion: { select: { nombre: true } },
+          proveedor: { select: { nombre: true } }
+        }
+      });
+      vacunas.forEach(v => vacunasExcelMap.set(v.id_vacuna, v));
+    }
+
     // Crear workbook
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Sistema de Gestión Logística TV';
@@ -913,15 +935,8 @@ exports.exportarLiquidacionesExcel = async (req, res) => {
       let totalBlancoLiq = 0;
       
       for (const detalle of resumen.cotizacion.detalle_cotizacion) {
-        // Buscar vacuna
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: detalle.id_producto },
-          include: {
-            patologia: { select: { nombre: true } },
-            presentacion: { select: { nombre: true } },
-            proveedor: { select: { nombre: true } }
-          }
-        });
+        // ✅ Buscar vacuna en el Map precargado (sin query)
+        const vacuna = vacunasExcelMap.get(detalle.id_producto);
 
         const nombreItem = vacuna 
           ? `${vacuna.nombre} - ${vacuna.patologia.nombre}`
