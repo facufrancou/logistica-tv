@@ -86,6 +86,9 @@ router.put('/:id/cantidad-animales', validarSesion, cotizacionesController.actua
 // Editar fecha programada en calendario
 router.put('/:id_cotizacion/calendario/:id_calendario/fecha', validarSesion, cotizacionesController.editarFechaCalendario);
 
+// Editar día del plan en calendario (recalcula fecha automáticamente)
+router.put('/:id_cotizacion/calendario/:id_calendario/dia-plan', validarSesion, cotizacionesController.editarDiaPlan);
+
 // Desdoblar una dosis del calendario
 router.post('/:id_cotizacion/calendario/:id_calendario/desdoblar', validarSesion, cotizacionesController.desdoblarDosis);
 

@@ -168,6 +168,7 @@ const PlanVacunalForm = () => {
           dosis_por_semana: p.dosis_por_semana || 1,
           semana_inicio: p.semana_inicio,
           semana_fin: p.semana_fin || p.semana_inicio,
+          dia_plan: p.dia_plan, // Incluir el día del plan
           observaciones: p.observaciones
         }))
       };
@@ -468,9 +469,12 @@ const PlanVacunalForm = () => {
 
 // Modal para agregar vacunas
 const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
+  const duracionDias = duracionSemanas * 7; // Calcular días totales del plan
+  
   const [productoData, setProductoData] = useState({
     id_vacuna: '',
-    semana_aplicacion: 1,
+    semana_aplicacion: 1, // Semana del plan (1 a N semanas)
+    dia_plan: 1, // Día del plan (1 a N días)
     observaciones: ''
   });
 
@@ -480,7 +484,7 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
     const { name, value } = e.target;
     setProductoData(prev => ({
       ...prev,
-      [name]: name === 'semana_aplicacion' ? parseInt(value) || '' : value
+      [name]: (name === 'dia_plan' || name === 'semana_aplicacion') ? parseInt(value) || '' : value
     }));
   };
 
@@ -491,8 +495,12 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
       newErrors.id_vacuna = 'Debe seleccionar una vacuna';
     }
 
-    if (productoData.semana_aplicacion < 1 || productoData.semana_aplicacion > duracionSemanas) {
-      newErrors.semana_aplicacion = 'Semana de aplicación inválida';
+    if (!productoData.semana_aplicacion || productoData.semana_aplicacion < 1 || productoData.semana_aplicacion > duracionSemanas) {
+      newErrors.semana_aplicacion = `La semana debe estar entre 1 y ${duracionSemanas}`;
+    }
+
+    if (!productoData.dia_plan || productoData.dia_plan < 1 || productoData.dia_plan > duracionDias) {
+      newErrors.dia_plan = `El día del plan debe estar entre 1 y ${duracionDias}`;
     }
 
     setErrors(newErrors);
@@ -502,8 +510,11 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
   const handleSave = () => {
     if (validarProducto()) {
       const vacuna = productos.find(v => v.id_vacuna == productoData.id_vacuna);
+      
       onSave({
         ...productoData,
+        dia_plan: productoData.dia_plan, // Día del plan (1, 2, 3... N)
+        semana_aplicacion: productoData.semana_aplicacion, // Semana del plan
         id_producto: productoData.id_vacuna, // Para compatibilidad con el estado del formulario
         dosis_por_semana: 1, // Por defecto 1 dosis por animal
         semana_inicio: productoData.semana_aplicacion,
@@ -544,7 +555,7 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
 
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="form-label">Semana de aplicación *</label>
+                <label className="form-label">Semana de Aplicación *</label>
                 <input
                   type="number"
                   className={`form-control ${errors.semana_aplicacion ? 'is-invalid' : ''}`}
@@ -553,12 +564,33 @@ const ProductoModal = ({ productos, duracionSemanas, onSave, onClose }) => {
                   onChange={handleInputChange}
                   min="1"
                   max={duracionSemanas}
+                  placeholder={`Semana 1 a ${duracionSemanas}`}
                 />
                 {errors.semana_aplicacion && (
                   <div className="invalid-feedback">{errors.semana_aplicacion}</div>
                 )}
                 <small className="text-muted">
-                  En qué semana del plan se aplica esta vacuna
+                  Semana del plan (1 a {duracionSemanas})
+                </small>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Día del Plan *</label>
+                <input
+                  type="number"
+                  className={`form-control ${errors.dia_plan ? 'is-invalid' : ''}`}
+                  name="dia_plan"
+                  value={productoData.dia_plan}
+                  onChange={handleInputChange}
+                  min="1"
+                  max={duracionDias}
+                  placeholder={`Día 1 a ${duracionDias}`}
+                />
+                {errors.dia_plan && (
+                  <div className="invalid-feedback">{errors.dia_plan}</div>
+                )}
+                <small className="text-muted">
+                  Día correlativo (1 a {duracionDias})
                 </small>
               </div>
 

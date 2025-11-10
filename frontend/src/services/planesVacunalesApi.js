@@ -1,5 +1,5 @@
-const API_BASE_URL = 'https://api.tierravolga.com.ar'; // Backend API URL (corregido al puerto 3001)
-const OLD_API_BASE_URL = "https://api.tierravolga.com.ar"; // Sistema anterior de pedidos
+const API_BASE_URL = 'http://localhost:3001'; // Backend API URL (corregido al puerto 3001)
+const OLD_API_BASE_URL = "http://localhost:3001"; // Sistema anterior de pedidos
 
 // Headers por defecto
 const defaultHeaders = {
@@ -310,6 +310,13 @@ export const editarFechaCalendario = async (id_cotizacion, id_calendario, fechaD
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/fecha`, {
     method: 'PUT',
     body: JSON.stringify(fechaData)
+  });
+};
+
+export const editarDiaPlanCalendario = async (id_cotizacion, id_calendario, diaPlanData) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/dia-plan`, {
+    method: 'PUT',
+    body: JSON.stringify(diaPlanData)
   });
 };
 
@@ -756,6 +763,7 @@ export const planesVacunalesApi = {
   actualizarEstadoDosis,
   regenerarCalendario,
   editarFechaCalendario,
+  editarDiaPlanCalendario,
   crearDesdoblamientoDosis,
   
   // Reasignación de Lotes

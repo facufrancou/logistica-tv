@@ -73,6 +73,8 @@ const CalendarioVacunacion = () => {
   // Estados para edición del calendario
   const [editandoFecha, setEditandoFecha] = useState(null);
   const [fechaEditForm, setFechaEditForm] = useState('');
+  const [editandoDiaPlan, setEditandoDiaPlan] = useState(null);
+  const [diaPlanEditForm, setDiaPlanEditForm] = useState('');
   const [showDesdoblamientoModal, setShowDesdoblamientoModal] = useState(false);
   const [calendarioParaDesdoblamiento, setCalendarioParaDesdoblamiento] = useState(null);
   const [desdoblamientoForm, setDesdoblamientoForm] = useState({
@@ -106,6 +108,13 @@ const CalendarioVacunacion = () => {
   useEffect(() => {
     cargarDatosIniciales();
   }, [cotizacionId]);
+
+  // Función para parsear fecha sin problemas de timezone
+  const parseFechaLocal = (fechaString) => {
+    if (!fechaString) return new Date();
+    const [year, month, day] = fechaString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month - 1 porque los meses en JS van de 0-11
+  };
 
   const cargarDatosIniciales = async () => {
     try {
@@ -276,7 +285,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
+      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -337,7 +346,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${id_calendario}/remito`, {
+      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -440,6 +449,28 @@ const CalendarioVacunacion = () => {
   const handleCancelarEdicion = () => {
     setEditandoFecha(null);
     setFechaEditForm('');
+    setEditandoDiaPlan(null);
+    setDiaPlanEditForm('');
+  };
+
+  const handleEditarDiaPlan = (calendarioItem) => {
+    setEditandoDiaPlan(calendarioItem.id_calendario);
+    setDiaPlanEditForm(calendarioItem.dia_plan || '');
+  };
+
+  const handleGuardarDiaPlan = async (calendarioId) => {
+    try {
+      await planesApi.editarDiaPlanCalendario(cotizacionId, calendarioId, {
+        nuevo_dia_plan: parseInt(diaPlanEditForm)
+      });
+      
+      showSuccess('Éxito', 'Día del plan actualizado correctamente');
+      setEditandoDiaPlan(null);
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error actualizando día del plan:', error);
+      showError('Error', 'No se pudo actualizar el día del plan');
+    }
   };
 
   const handleDesdoblarDosis = (calendarioItem) => {
@@ -873,7 +904,7 @@ const CalendarioVacunacion = () => {
       doc.setTextColor(...secondaryColor);
       doc.text(`Cliente: ${cotizacion?.cliente?.nombre || 'BIODER S.A'}`, margin + 2, yPos + 8);
       doc.text(`Cotización: ${cotizacion?.numero_cotizacion || 'COT-251013-391'}`, margin + 2, yPos + 11);
-      doc.text(`Fecha Nacimiento: ${cotizacion?.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : '26/10/2025'}`, margin + 2, yPos + 14);
+      doc.text(`Fecha Nacimiento: ${cotizacion?.fecha_inicio_plan ? parseFechaLocal(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : '26/10/2025'}`, margin + 2, yPos + 14);
       doc.text(`Cantidad de Pollos: ${cotizacion?.cantidad_animales?.toLocaleString() || '3500'}`, margin + 2, yPos + 17);
       doc.text(`Genética: ${cotizacion?.genetica || 'A definir'}`, margin + 2, yPos + 20);
 
@@ -923,12 +954,10 @@ const CalendarioVacunacion = () => {
       ];
       
       const tableData = calendario.map((item, index) => {
-        const fecha = new Date(item.fecha_aplicacion_programada);
-        const fechaInicio = new Date(cotizacion.fecha_inicio_plan);
+        const fecha = parseFechaLocal(item.fecha_aplicacion_programada);
         
-        // Calcular día del plan
-        const diffTime = fecha.getTime() - fechaInicio.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        // Usar el día del plan que viene del backend (ya calculado correctamente)
+        const diaPlan = item.dia_plan || (index + 1);
         
         // Calcular frascos basado en la cantidad de animales y dosis típicas por frasco
         const cantidadAnimales = cotizacion?.cantidad_animales || 3500;
@@ -973,7 +1002,7 @@ const CalendarioVacunacion = () => {
             month: '2-digit',
             year: 'numeric'
           }),
-          diffDays.toString(),
+          diaPlan.toString(),
           item.semana_aplicacion.toString(),
           nombreProducto.substring(0, 70) + (nombreProducto.length > 70 ? '...' : ''),
           patologia,
@@ -1562,6 +1591,7 @@ const CalendarioVacunacion = () => {
                 <thead>
                   <tr>
                     <th>Semana</th>
+                    <th>Día Plan</th>
                     <th>Fecha Programada</th>
                     <th>Producto</th>
                     <th>Lote Asignado</th>
@@ -1582,6 +1612,11 @@ const CalendarioVacunacion = () => {
                       <tr key={item.id_calendario}>
                         <td>
                           <strong>Semana {item.semana_aplicacion}</strong>
+                        </td>
+                        <td>
+                          <span className="badge bg-info">
+                            Día {item.dia_plan || 'N/A'}
+                          </span>
                         </td>
                         <td>
                           {formatearFecha(item.fecha_aplicacion_programada)}
@@ -1728,6 +1763,7 @@ const CalendarioVacunacion = () => {
                   <thead>
                     <tr>
                       <th>Semana</th>
+                      <th>Día Plan</th>
                       <th>Fecha Programada</th>
                       <th>Producto</th>
                       <th>Dosis</th>
@@ -1756,6 +1792,45 @@ const CalendarioVacunacion = () => {
                             </div>
                           </td>
                           <td>
+                            {editandoDiaPlan === item.id_calendario ? (
+                              <div className="d-flex align-items-center">
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm me-2"
+                                  value={diaPlanEditForm}
+                                  onChange={(e) => setDiaPlanEditForm(e.target.value)}
+                                  min="1"
+                                  max={cotizacion?.plan?.duracion_semanas * 7 || 999}
+                                  style={{ width: '80px' }}
+                                />
+                                <button
+                                  className="btn btn-success btn-sm me-1"
+                                  onClick={() => handleGuardarDiaPlan(item.id_calendario)}
+                                >
+                                  <FaSave />
+                                </button>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={handleCancelarEdicion}
+                                >
+                                  <FaTimes />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="d-flex align-items-center">
+                                <span className="me-2 badge bg-info">
+                                  Día {item.dia_plan || 'N/A'}
+                                </span>
+                                <button
+                                  className="btn btn-outline-primary btn-sm"
+                                  onClick={() => handleEditarDiaPlan(item)}
+                                >
+                                  <FaEdit />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td>
                             {editandoFecha === item.id_calendario ? (
                               <div className="d-flex align-items-center">
                                 <input
@@ -1763,6 +1838,15 @@ const CalendarioVacunacion = () => {
                                   className="form-control form-control-sm me-2"
                                   value={fechaEditForm}
                                   onChange={(e) => setFechaEditForm(e.target.value)}
+                                  min={cotizacion?.fecha_inicio_plan || ''}
+                                  max={(() => {
+                                    if (!cotizacion?.fecha_inicio_plan || !cotizacion?.plan?.duracion_semanas) return '';
+                                    const fechaInicio = new Date(cotizacion.fecha_inicio_plan);
+                                    const duracionDias = cotizacion.plan.duracion_semanas * 7;
+                                    const fechaFin = new Date(fechaInicio);
+                                    fechaFin.setDate(fechaFin.getDate() + duracionDias - 1);
+                                    return fechaFin.toISOString().split('T')[0];
+                                  })()}
                                   style={{ width: '150px' }}
                                 />
                                 <button

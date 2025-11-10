@@ -19,6 +19,28 @@ function calcularFechaProgramada(fechaInicio, numeroSemana) {
   return fecha;
 }
 
+// Función para calcular el día del plan desde fecha_inicio
+function calcularDiaPlan(fechaInicio, fechaProgramada) {
+  const inicio = new Date(fechaInicio);
+  const programada = new Date(fechaProgramada);
+  
+  // Resetear horas para cálculo preciso de días
+  inicio.setHours(0, 0, 0, 0);
+  programada.setHours(0, 0, 0, 0);
+  
+  const diffTime = programada.getTime() - inicio.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 porque el día 1 es el inicio
+  
+  return diffDays;
+}
+
+// Función para calcular fecha_programada desde dia_plan
+function calcularFechaDesdeDiaPlan(fechaInicio, diaPlan) {
+  const fecha = new Date(fechaInicio);
+  fecha.setDate(fecha.getDate() + (diaPlan - 1)); // -1 porque dia_plan=1 es el mismo día de inicio
+  return fecha;
+}
+
 // Función para generar calendario con vacunas (ÚNICA FUNCIÓN DE CALENDARIO)
 async function generarCalendarioVacunacionVacunas(cotizacionId, fechaInicio, vacunasDelPlan, cantidadAnimales, tx = prisma) {
   const calendarioMap = new Map(); // Usar Map para agrupar por vacuna+semana
@@ -30,12 +52,12 @@ async function generarCalendarioVacunacionVacunas(cotizacionId, fechaInicio, vac
     // Calcular dosis reales: 1 dosis por animal en total (no por semana)
     const dosisRealesTotal = cantidadAnimales; // 1 dosis por animal
     
-    console.log(`Generando calendario - Vacuna: ${planVacuna.vacuna?.nombre || 'N/A'}, Semana: ${semanaInicio}-${semanaFin}, Animales: ${cantidadAnimales}, Dosis Totales: ${dosisRealesTotal}`);
+    console.log(`Generando calendario - Vacuna: ${planVacuna.vacuna?.nombre || 'N/A'}, Semana: ${semanaInicio}-${semanaFin}, Dia Plan: ${planVacuna.dia_plan || 'No especificado'}, Animales: ${cantidadAnimales}, Dosis Totales: ${dosisRealesTotal}`);
 
-    // Para cada semana en el rango, crear entrada de aplicación de vacuna
-    for (let semana = semanaInicio; semana <= semanaFin; semana++) {
-      const fechaProgramada = calcularFechaProgramada(fechaInicio, semana);
-      const clave = `${planVacuna.id_vacuna}-${semana}`;
+    // Si el plan de vacuna tiene dia_plan definido, usarlo directamente
+    if (planVacuna.dia_plan) {
+      const fechaProgramada = calcularFechaDesdeDiaPlan(fechaInicio, planVacuna.dia_plan);
+      const clave = `${planVacuna.id_vacuna}-${planVacuna.dia_plan}`;
       
       // Buscar stock disponible con lógica FIFO y validación de vencimiento
       const stockAsignado = await asignarStockFIFO(
@@ -45,27 +67,56 @@ async function generarCalendarioVacunacionVacunas(cotizacionId, fechaInicio, vac
         tx
       );
 
-      if (calendarioMap.has(clave)) {
-        const itemExistente = calendarioMap.get(clave);
-        itemExistente.cantidad_dosis += dosisRealesTotal;
-        if (stockAsignado) {
-          // Si hay nuevo stock asignado, actualizar información
-          itemExistente.id_stock_vacuna = stockAsignado.id_stock_vacuna;
-          itemExistente.lote_asignado = stockAsignado.lote;
-          itemExistente.fecha_vencimiento_lote = stockAsignado.fecha_vencimiento;
+      calendarioMap.set(clave, {
+        id_cotizacion: cotizacionId,
+        id_producto: planVacuna.id_vacuna,
+        id_stock_vacuna: stockAsignado?.id_stock_vacuna || null,
+        numero_semana: semanaInicio,
+        dia_plan: planVacuna.dia_plan,
+        fecha_programada: fechaProgramada,
+        cantidad_dosis: dosisRealesTotal,
+        lote_asignado: stockAsignado?.lote || null,
+        fecha_vencimiento_lote: stockAsignado?.fecha_vencimiento || null,
+        estado_dosis: 'pendiente'
+      });
+    } else {
+      // Lógica antigua: usar semana_inicio y semana_fin
+      for (let semana = semanaInicio; semana <= semanaFin; semana++) {
+        const fechaProgramada = calcularFechaProgramada(fechaInicio, semana);
+        const diaPlan = calcularDiaPlan(fechaInicio, fechaProgramada);
+        const clave = `${planVacuna.id_vacuna}-${semana}`;
+        
+        // Buscar stock disponible con lógica FIFO y validación de vencimiento
+        const stockAsignado = await asignarStockFIFO(
+          planVacuna.id_vacuna, 
+          dosisRealesTotal, 
+          fechaProgramada, 
+          tx
+        );
+
+        if (calendarioMap.has(clave)) {
+          const itemExistente = calendarioMap.get(clave);
+          itemExistente.cantidad_dosis += dosisRealesTotal;
+          if (stockAsignado) {
+            // Si hay nuevo stock asignado, actualizar información
+            itemExistente.id_stock_vacuna = stockAsignado.id_stock_vacuna;
+            itemExistente.lote_asignado = stockAsignado.lote;
+            itemExistente.fecha_vencimiento_lote = stockAsignado.fecha_vencimiento;
+          }
+        } else {
+          calendarioMap.set(clave, {
+            id_cotizacion: cotizacionId,
+            id_producto: planVacuna.id_vacuna,
+            id_stock_vacuna: stockAsignado?.id_stock_vacuna || null,
+            numero_semana: semana,
+            dia_plan: diaPlan,
+            fecha_programada: fechaProgramada,
+            cantidad_dosis: dosisRealesTotal,
+            lote_asignado: stockAsignado?.lote || null,
+            fecha_vencimiento_lote: stockAsignado?.fecha_vencimiento || null,
+            estado_dosis: 'pendiente'
+          });
         }
-      } else {
-        calendarioMap.set(clave, {
-          id_cotizacion: cotizacionId,
-          id_producto: planVacuna.id_vacuna,
-          id_stock_vacuna: stockAsignado?.id_stock_vacuna || null,
-          numero_semana: semana,
-          fecha_programada: fechaProgramada,
-          cantidad_dosis: dosisRealesTotal,
-          lote_asignado: stockAsignado?.lote || null,
-          fecha_vencimiento_lote: stockAsignado?.fecha_vencimiento || null,
-          estado_dosis: 'pendiente'
-        });
       }
     }
   }
@@ -2948,11 +2999,15 @@ exports.editarFechaCalendario = async (req, res) => {
       });
     }
 
-    // Actualizar la fecha
+    // Calcular el nuevo dia_plan basado en la nueva fecha
+    const nuevoDiaPlan = calcularDiaPlan(calendarioExistente.cotizacion.fecha_inicio_plan, fechaProgramada);
+
+    // Actualizar la fecha y el dia_plan
     const calendarioActualizado = await prisma.calendarioVacunacion.update({
       where: { id_calendario: parseInt(id_calendario) },
       data: {
         fecha_programada: fechaProgramada,
+        dia_plan: nuevoDiaPlan,
         observaciones: observaciones ? 
           `${calendarioExistente.observaciones || ''}\nFecha modificada: ${observaciones}` :
           calendarioExistente.observaciones,
@@ -2977,6 +3032,114 @@ exports.editarFechaCalendario = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al actualizar la fecha del calendario'
+    });
+  }
+};
+
+/**
+ * Editar día del plan en el calendario (recalcula fecha automáticamente)
+ */
+exports.editarDiaPlan = async (req, res) => {
+  const { id_cotizacion, id_calendario } = req.params;
+  const { nuevo_dia_plan, observaciones } = req.body;
+
+  try {
+    // Validaciones
+    if (!nuevo_dia_plan || nuevo_dia_plan < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'El día del plan debe ser un número mayor o igual a 1'
+      });
+    }
+
+    // Verificar que el calendario existe y pertenece a la cotización
+    const calendarioExistente = await prisma.calendarioVacunacion.findFirst({
+      where: {
+        id_calendario: parseInt(id_calendario),
+        id_cotizacion: parseInt(id_cotizacion)
+      },
+      include: {
+        cotizacion: {
+          select: { 
+            numero_cotizacion: true, 
+            estado: true,
+            fecha_inicio_plan: true,
+            plan: {
+              select: {
+                duracion_semanas: true
+              }
+            }
+          }
+        },
+        producto: {
+          select: { nombre: true }
+        }
+      }
+    });
+
+    if (!calendarioExistente) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registro de calendario no encontrado'
+      });
+    }
+
+    // Validar que la cotización permita modificaciones
+    if (calendarioExistente.cotizacion.estado === 'finalizada' || 
+        calendarioExistente.cotizacion.estado === 'cancelada') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede modificar el calendario de una cotización finalizada o cancelada'
+      });
+    }
+
+    // Validar que el día del plan no exceda la duración del plan
+    const duracionDias = calendarioExistente.cotizacion.plan.duracion_semanas * 7;
+    if (nuevo_dia_plan > duracionDias) {
+      return res.status(400).json({
+        success: false,
+        message: `El día del plan no puede exceder la duración del plan (${duracionDias} días)`
+      });
+    }
+
+    // Calcular la nueva fecha basada en el día del plan
+    const nuevaFechaProgramada = calcularFechaDesdeDiaPlan(
+      calendarioExistente.cotizacion.fecha_inicio_plan, 
+      nuevo_dia_plan
+    );
+
+    // Actualizar el dia_plan y la fecha_programada
+    const calendarioActualizado = await prisma.calendarioVacunacion.update({
+      where: { id_calendario: parseInt(id_calendario) },
+      data: {
+        dia_plan: nuevo_dia_plan,
+        fecha_programada: nuevaFechaProgramada,
+        observaciones: observaciones ? 
+          `${calendarioExistente.observaciones || ''}\nDía del plan modificado: ${observaciones}` :
+          calendarioExistente.observaciones,
+        updated_at: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Día del plan actualizado exitosamente',
+      data: {
+        id_calendario: calendarioActualizado.id_calendario,
+        numero_semana: calendarioActualizado.numero_semana,
+        producto: calendarioExistente.producto.nombre,
+        dia_plan_anterior: calendarioExistente.dia_plan,
+        dia_plan_nuevo: calendarioActualizado.dia_plan,
+        fecha_anterior: calendarioExistente.fecha_programada,
+        fecha_nueva: calendarioActualizado.fecha_programada
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al editar día del plan:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar el día del plan'
     });
   }
 };
@@ -3602,6 +3765,7 @@ const getCalendarioVacunacion = async (req, res) => {
           id_producto: item.id_producto, // ID que puede ser vacuna o producto
           id_vacuna: vacuna ? vacuna.id_vacuna : null, // ID específico de vacuna (si es vacuna)
           semana_aplicacion: item.numero_semana,
+          dia_plan: item.dia_plan, // Día del plan (1, 2, 3... N)
           fecha_aplicacion_programada: formatearFechaLocal(item.fecha_programada),
           vacuna_nombre: nombreItem,
           vacuna_tipo: tipoItem,
@@ -3680,11 +3844,45 @@ const editarFechaCalendario = async (req, res) => {
     console.log('Fecha ISO para guardar:', fechaParaGuardar.toISOString());
     console.log('Fecha objeto para guardar:', fechaParaGuardar);
 
-    // Actualizar la fecha en el calendario
+    // Obtener la cotización para calcular el dia_plan
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id_cotizacion) },
+      select: { 
+        fecha_inicio_plan: true,
+        plan: {
+          select: {
+            duracion_semanas: true
+          }
+        }
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cotización no encontrada'
+      });
+    }
+
+    // Calcular el dia_plan basado en la nueva fecha
+    const nuevoDiaPlan = calcularDiaPlan(cotizacion.fecha_inicio_plan, fechaParaGuardar);
+    console.log('Nuevo dia_plan calculado:', nuevoDiaPlan);
+
+    // Validar que el dia_plan no exceda la duración del plan
+    const duracionDias = cotizacion.plan.duracion_semanas * 7;
+    if (nuevoDiaPlan < 1 || nuevoDiaPlan > duracionDias) {
+      return res.status(400).json({
+        success: false,
+        message: `La fecha seleccionada está fuera del rango del plan. El plan es de ${cotizacion.plan.duracion_semanas} semanas (${duracionDias} días). Día calculado: ${nuevoDiaPlan}`
+      });
+    }
+
+    // Actualizar la fecha y el dia_plan en el calendario
     const calendarioActualizado = await prisma.calendarioVacunacion.update({
       where: { id_calendario: parseInt(id_calendario) },
       data: {
-        fecha_programada: fechaParaGuardar
+        fecha_programada: fechaParaGuardar,
+        dia_plan: nuevoDiaPlan
       },
       include: {
         producto: {

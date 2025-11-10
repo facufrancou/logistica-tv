@@ -87,7 +87,7 @@ const VentasDirectasVacunasView = () => {
   const cargarStocksDisponibles = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas/stocks-disponibles', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas/stocks-disponibles', {
         credentials: 'include'
       });
 
@@ -109,7 +109,7 @@ const VentasDirectasVacunasView = () => {
 
   const cargarClientes = async () => {
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/clientes', {
+      const response = await fetch('http://localhost:3001/clientes', {
         credentials: 'include'
       });
 
@@ -128,7 +128,7 @@ const VentasDirectasVacunasView = () => {
 
   const cargarVentasDirectas = async () => {
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas', {
         credentials: 'include'
       });
 
@@ -150,7 +150,7 @@ const VentasDirectasVacunasView = () => {
 
   const cargarListasPrecios = async () => {
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas/listas-precios', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas/listas-precios', {
         credentials: 'include'
       });
 
@@ -280,7 +280,7 @@ const VentasDirectasVacunasView = () => {
         }))
       };
 
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas', {
+      const response = await fetch('http://localhost:3001/ventas-directas-vacunas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -322,7 +322,7 @@ const VentasDirectasVacunasView = () => {
     try {
       setLoading(true);
       
-      const response = await fetch(`https://api.tierravolga.com.ar/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
+      const response = await fetch(`http://localhost:3001/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -361,7 +361,7 @@ const VentasDirectasVacunasView = () => {
 
   const confirmarEntrega = async (ventaId) => {
     try {
-      const response = await fetch(`https://api.tierravolga.com.ar/ventas-directas-vacunas/${ventaId}/confirmar`, {
+      const response = await fetch(`http://localhost:3001/ventas-directas-vacunas/${ventaId}/confirmar`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

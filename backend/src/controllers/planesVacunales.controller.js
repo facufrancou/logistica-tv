@@ -231,6 +231,7 @@ exports.createPlan = async (req, res) => {
             dosis_por_semana: parseInt(vacuna.dosis_por_semana) || 1,
             semana_inicio: parseInt(vacuna.semana_inicio),
             semana_fin: vacuna.semana_fin ? parseInt(vacuna.semana_fin) : null,
+            dia_plan: vacuna.dia_plan ? parseInt(vacuna.dia_plan) : null, // Guardar día del plan
             observaciones: vacuna.observaciones || ''
           }))
         });
@@ -357,6 +358,7 @@ exports.updatePlan = async (req, res) => {
             dosis_por_semana: vacuna.dosis_por_semana || 0,
             semana_inicio: parseInt(vacuna.semana_inicio),
             semana_fin: vacuna.semana_fin ? parseInt(vacuna.semana_fin) : null,
+            dia_plan: vacuna.dia_plan ? parseInt(vacuna.dia_plan) : null, // Guardar día del plan
             observaciones: vacuna.observaciones || null
           }));
 

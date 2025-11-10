@@ -104,7 +104,7 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   const cargarMovimientos = async () => {
     setLoadingMovimientos(true);
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/stock-vacunas/movimientos', {
+      const response = await fetch('http://localhost:3001/stock-vacunas/movimientos', {
         credentials: 'include'
       });
       const data = await response.json();
