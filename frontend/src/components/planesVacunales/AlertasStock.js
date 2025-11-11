@@ -21,7 +21,7 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
       console.log('🔍 Verificando estado de lotes para cotización:', cotizacionId);
       
       // Hacer la petición directamente usando fetch para debugging
-      const url = `http://localhost:3001/cotizaciones/${cotizacionId}/verificar-lotes`;
+      const url = `https://api.tierravolga.com.ar/cotizaciones/${cotizacionId}/verificar-lotes`;
       console.log('📡 URL:', url);
       
       // Crear un timeout de 10 segundos

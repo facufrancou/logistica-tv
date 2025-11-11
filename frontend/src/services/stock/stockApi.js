@@ -1,5 +1,5 @@
 // API para gestión de stock - Sprint 3
-const API_BASE_URL = 'http://localhost:3001'; // Backend API URL
+const API_BASE_URL = 'https://api.tierravolga.com.ar'; // Backend API URL
 
 // Headers por defecto
 const defaultHeaders = {

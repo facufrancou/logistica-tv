@@ -163,23 +163,49 @@ const CotizacionDetalleOptimizado = () => {
 
   // Función para cargar el logo
   const cargarLogo = () => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => {
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
-        // Usar dimensiones originales del logo
-        const width = img.width;
-        const height = img.height;
-        canvas.width = width;
-        canvas.height = height;
-        
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
+        canvas.width = this.naturalWidth;
+        canvas.height = this.naturalHeight;
+        ctx.drawImage(this, 0, 0);
+        // Retornar dataURL junto con dimensiones originales
+        resolve({
+          dataUrl: canvas.toDataURL('image/png'),
+          width: this.naturalWidth,
+          height: this.naturalHeight,
+          ratio: this.naturalWidth / this.naturalHeight
+        });
       };
-      img.onerror = () => resolve(null);
-      img.src = '/img/LOGO.PNG';
+      img.onerror = () => {
+        console.warn('No se pudo cargar logo.png, intentando Logo blanco.png');
+        // Fallback al logo blanco
+        const fallbackImg = new Image();
+        fallbackImg.crossOrigin = 'anonymous';
+        fallbackImg.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = this.naturalWidth;
+          canvas.height = this.naturalHeight;
+          ctx.drawImage(this, 0, 0);
+          resolve({
+            dataUrl: canvas.toDataURL('image/png'),
+            width: this.naturalWidth,
+            height: this.naturalHeight,
+            ratio: this.naturalWidth / this.naturalHeight
+          });
+        };
+        fallbackImg.onerror = () => {
+          console.warn('No se pudo cargar ningún logo');
+          resolve(null);
+        };
+        fallbackImg.src = '/img/Logo blanco.png';
+      };
+      // Intentar cargar logo.png primero
+      img.src = '/img/logo.png';
     });
   };
 
@@ -194,7 +220,7 @@ const CotizacionDetalleOptimizado = () => {
       setGenerandoPDF(true);
       
       // Cargar logo de la empresa
-      const logoDataUrl = await cargarLogo();
+      const logoData = await cargarLogo();
       
       // Crear instancia del documento en formato A4 vertical
       const doc = new jsPDF({
@@ -208,22 +234,54 @@ const CotizacionDetalleOptimizado = () => {
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 20;
 
-      // Colores corporativos
-      const primaryColor = [64, 64, 64];
+      // Colores corporativos - Bordó
+      const primaryColor = [125, 12, 10]; // #7D0C0A
       const secondaryColor = [96, 96, 96];
       const lightGray = [245, 245, 245];
-      const accentColor = [128, 128, 128];
+      const accentColor = [158, 15, 13]; // Bordó más claro para acentos
 
       // ENCABEZADO
       doc.setFillColor(...primaryColor);
       doc.rect(0, 0, pageWidth, 35, 'F');
 
       // Logo de la empresa centrado verticalmente
-      if (logoDataUrl) {
-        const logoWidth = 55;
-        const logoHeight = 15; // Mantiene relación aproximada 3.67:1
-        const logoY = (35 - logoHeight) / 2; // Centrado vertical en el header de 35mm
-        doc.addImage(logoDataUrl, 'PNG', margin, logoY, logoWidth, logoHeight);
+      if (logoData) {
+        try {
+          // Calcular dimensiones manteniendo la proporción real del logo
+          const maxLogoHeight = 15;
+          const maxLogoWidth = 55;
+          
+          let logoWidth, logoHeight;
+          
+          // Calcular dimensiones respetando la proporción real
+          if (logoData.ratio > (maxLogoWidth / maxLogoHeight)) {
+            // Logo más ancho que alto - limitar por ancho
+            logoWidth = maxLogoWidth;
+            logoHeight = maxLogoWidth / logoData.ratio;
+          } else {
+            // Logo más alto que ancho - limitar por alto
+            logoHeight = maxLogoHeight;
+            logoWidth = maxLogoHeight * logoData.ratio;
+          }
+          
+          const logoY = (35 - logoHeight) / 2; // Centrado vertical en el header de 35mm
+          doc.addImage(logoData.dataUrl, 'PNG', margin, logoY, logoWidth, logoHeight, undefined, 'FAST');
+          
+          console.log(`Logo cargado en cotización: ${logoData.width}x${logoData.height}, ratio: ${logoData.ratio.toFixed(2)}`);
+        } catch (error) {
+          console.warn('Error al renderizar logo:', error);
+          // Fallback a texto si hay error
+          const logoBoxHeight = 18;
+          const logoY = (35 - logoBoxHeight) / 2;
+          doc.setFillColor(255, 255, 255);
+          doc.rect(margin, logoY, 55, logoBoxHeight, 'F');
+          doc.setTextColor(64, 64, 64);
+          doc.setFontSize(9);
+          doc.setFont('courier', 'bold');
+          doc.text('TERMOPLAST', margin + 27.5, logoY + 6, { align: 'center' });
+          doc.text('LOGÍSTICA', margin + 27.5, logoY + 11, { align: 'center' });
+          doc.text('VETERINARIA', margin + 27.5, logoY + 16, { align: 'center' });
+        }
       } else {
         // Texto alternativo si no hay logo
         const logoBoxHeight = 18;
@@ -424,6 +482,13 @@ const CotizacionDetalleOptimizado = () => {
           { content: `$${parseFloat(cotizacion.precio_total).toLocaleString()}`, styles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' } }
         ]] : undefined
       });
+
+      // Leyenda de precios justo debajo de la tabla
+      const finalY = doc.lastAutoTable.finalY;
+      doc.setFontSize(9);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('Los precios están expresados en pesos argentinos y no incluyen IVA', pageWidth - margin, finalY + 6, { align: 'right' });
 
       // PIE DE PÁGINA
       doc.setFillColor(...lightGray);

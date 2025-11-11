@@ -285,7 +285,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
+      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -346,7 +346,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${id_calendario}/remito`, {
+      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -804,10 +804,10 @@ const CalendarioVacunacion = () => {
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 12; // Márgenes más pequeños para optimizar espacio
 
-      // Colores corporativos en escala de grises
-      const primaryColor = [64, 64, 64]; // Gris oscuro principal
+      // Colores corporativos - Bordó
+      const primaryColor = [125, 12, 10]; // #7D0C0A - Bordó principal
       const secondaryColor = [96, 96, 96]; // Gris medio
-      const accentColor = [128, 128, 128]; // Gris claro
+      const accentColor = [158, 15, 13]; // Bordó más claro para acentos
       const lightGray = [245, 245, 245]; // Gris muy claro para fondos
 
       // ENCABEZADO CON LOGO Y DISEÑO PROFESIONAL (optimizado)
@@ -964,18 +964,8 @@ const CalendarioVacunacion = () => {
         const dosisPorFrasco = item.vacuna_descripcion?.includes('OLEOSA') ? 500 : 1000; // Vacunas oleosas suelen tener menos dosis
         const frascos = Math.ceil(cantidadAnimales / dosisPorFrasco);
         
-        // Formatear nombre del producto: vacuna || presentación || proveedor
-        const nombreVacuna = item.vacuna_nombre || item.producto_nombre;
-        const presentacion = item.presentacion || '';
-        const proveedor = item.proveedor_nombre || item.proveedor || '';
-        
-        let nombreProducto = nombreVacuna;
-        if (presentacion) {
-          nombreProducto += ` || ${presentacion}`;
-        }
-        if (proveedor) {
-          nombreProducto += ` || ${proveedor}`;
-        }
+        // Formatear nombre del producto: solo vacuna (sin presentación ni proveedor)
+        const nombreProducto = item.vacuna_nombre || item.producto_nombre;
         
         // Obtener patología del item - revisar múltiples posibles campos
         const patologia = item.patologia_nombre || 
@@ -1123,10 +1113,10 @@ const CalendarioVacunacion = () => {
         format: 'a4'
       });
 
-      // Colores y medidas (esquema gris como cotizaciones)
-      const primaryColor = [70, 70, 70]; // Gris oscuro
-      const secondaryColor = [102, 102, 102]; // Gris medio
-      const accentColor = [158, 158, 158]; // Gris claro para acentos
+      // Colores y medidas - Bordó corporativo
+      const primaryColor = [125, 12, 10]; // #7D0C0A - Bordó principal
+      const secondaryColor = [96, 96, 96]; // Gris medio
+      const accentColor = [158, 15, 13]; // Bordó más claro para acentos
       const lightGray = [245, 245, 245];
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();

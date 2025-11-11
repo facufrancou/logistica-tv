@@ -1,6 +1,6 @@
 // ===== API PARA PLANES VACUNALES CON VACUNAS =====
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'https://api.tierravolga.com.ar';
 
 // Headers por defecto
 const defaultHeaders = {

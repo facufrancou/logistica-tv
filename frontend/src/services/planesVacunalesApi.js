@@ -1,5 +1,5 @@
-const API_BASE_URL = 'http://localhost:3001'; // Backend API URL (corregido al puerto 3001)
-const OLD_API_BASE_URL = "http://localhost:3001"; // Sistema anterior de pedidos
+const API_BASE_URL = 'https://api.tierravolga.com.ar'; // Backend API URL (corregido al puerto 3001)
+const OLD_API_BASE_URL = "https://api.tierravolga.com.ar"; // Sistema anterior de pedidos
 
 // Headers por defecto
 const defaultHeaders = {
