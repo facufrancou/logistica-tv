@@ -105,6 +105,10 @@ const CalendarioVacunacion = () => {
   const [showModalGestionLotes, setShowModalGestionLotes] = useState(false);
   const [itemGestionLotes, setItemGestionLotes] = useState(null);
 
+  // Estados para modal de orden de compra
+  const [showModalOrdenCompra, setShowModalOrdenCompra] = useState(false);
+  const [datosOrdenCompra, setDatosOrdenCompra] = useState(null);
+
   useEffect(() => {
     cargarDatosIniciales();
   }, [cotizacionId]);
@@ -902,10 +906,10 @@ const CalendarioVacunacion = () => {
       doc.setFontSize(7);
       doc.setFont('courier', 'normal');
       doc.setTextColor(...secondaryColor);
-      doc.text(`Cliente: ${cotizacion?.cliente?.nombre || 'BIODER S.A'}`, margin + 2, yPos + 8);
-      doc.text(`Cotización: ${cotizacion?.numero_cotizacion || 'COT-251013-391'}`, margin + 2, yPos + 11);
-      doc.text(`Fecha Nacimiento: ${cotizacion?.fecha_inicio_plan ? parseFechaLocal(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : '26/10/2025'}`, margin + 2, yPos + 14);
-      doc.text(`Cantidad de Pollos: ${cotizacion?.cantidad_animales?.toLocaleString() || '3500'}`, margin + 2, yPos + 17);
+      doc.text(`Cliente: ${cotizacion?.cliente?.nombre || 'SIN CLIENTE'}`, margin + 2, yPos + 8);
+      doc.text(`Cotización: ${cotizacion?.numero_cotizacion || 'SIN COTIZACION'}`, margin + 2, yPos + 11);
+      doc.text(`Fecha Nacimiento: ${formatearFecha(cotizacion?.fecha_inicio_plan)}`, margin + 2, yPos + 14);
+      doc.text(`Cantidad de Aves: ${cotizacion?.cantidad_animales?.toLocaleString() || '0'}`, margin + 2, yPos + 17);
       doc.text(`Genética: ${cotizacion?.genetica || 'A definir'}`, margin + 2, yPos + 20);
 
       // Recuadro derecho - Información técnica
@@ -1086,7 +1090,6 @@ const CalendarioVacunacion = () => {
       return;
     }
 
-    setGenerandoPDF(true);
     try {
       console.log('Obteniendo datos para orden de compra...');
       
@@ -1104,7 +1107,24 @@ const CalendarioVacunacion = () => {
         return;
       }
 
-      console.log('Generando PDF de orden de compra...', { proveedores: proveedores.length });
+      // Guardar datos y mostrar modal de selección
+      setDatosOrdenCompra({ cotizacionData, proveedores, resumen });
+      setShowModalOrdenCompra(true);
+
+    } catch (error) {
+      console.error('Error obteniendo datos de orden de compra:', error);
+      showError('Error', 'No se pudo obtener los datos: ' + error.message);
+    }
+  };
+
+  const handleGenerarOrdenCompraInterna = async () => {
+    if (!datosOrdenCompra) return;
+
+    setGenerandoPDF(true);
+    try {
+      const { cotizacionData, proveedores, resumen } = datosOrdenCompra;
+
+      console.log('Generando PDF de orden de compra interna...', { proveedores: proveedores.length });
 
       // Crear PDF con jsPDF
       const doc = new jsPDF({
@@ -1300,7 +1320,8 @@ const CalendarioVacunacion = () => {
       const fileName = `orden-compra-${cotizacionData.numero_cotizacion}-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
 
-      showSuccess('Éxito', `Orden de compra generada: ${proveedores.length} proveedor(es), ${resumen.total_frascos_general} frascos`);
+      showSuccess('Éxito', `Orden de compra interna generada: ${proveedores.length} proveedor(es), ${resumen.total_frascos_general} frascos`);
+      setShowModalOrdenCompra(false);
 
     } catch (error) {
       console.error('Error generando orden de compra:', error);
@@ -1308,6 +1329,266 @@ const CalendarioVacunacion = () => {
     } finally {
       setGenerandoPDF(false);
     }
+  };
+
+  const handleGenerarOrdenCompraLaboratorio = async (proveedor) => {
+    if (!datosOrdenCompra) return;
+
+    setGenerandoPDF(true);
+    try {
+      const { cotizacionData } = datosOrdenCompra;
+
+      console.log(`Generando orden de compra para ${proveedor.nombre_proveedor}...`);
+
+      // Cargar logo de la empresa
+      const logoData = await cargarLogo();
+
+      // Crear PDF con jsPDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Colores y medidas - Bordó corporativo (misma estética)
+      const primaryColor = [125, 12, 10];
+      const secondaryColor = [96, 96, 96];
+      const accentColor = [158, 15, 13];
+      const lightGray = [245, 245, 245];
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+
+      let yPos = margin;
+
+      // ============ CABECERA ============
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+
+      // Logo de la empresa con detección automática de proporción
+      if (logoData) {
+        try {
+          // Calcular dimensiones manteniendo la proporción real del logo
+          const maxLogoHeight = 15;
+          const maxLogoWidth = 60;
+          
+          let logoWidth, logoHeight;
+          
+          if (logoData.ratio > (maxLogoWidth / maxLogoHeight)) {
+            logoWidth = maxLogoWidth;
+            logoHeight = maxLogoWidth / logoData.ratio;
+          } else {
+            logoHeight = maxLogoHeight;
+            logoWidth = maxLogoHeight * logoData.ratio;
+          }
+          
+          // Centrar más en el encabezado (más hacia el centro verticalmente)
+          const logoY = 8 + (24 - logoHeight) / 2;
+          
+          // Posicionar el logo en el encabezado
+          doc.addImage(logoData.dataUrl, 'PNG', margin, logoY, logoWidth, logoHeight, undefined, 'FAST');
+        } catch (error) {
+          console.warn('No se pudo cargar el logo:', error);
+        }
+      }
+
+      // Título principal
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(255, 255, 255);
+      doc.text('ORDEN DE COMPRA', pageWidth / 2, 18, { align: 'center' });
+
+      // Subtítulo con nombre del proveedor
+      doc.setFontSize(10);
+      doc.setFont('courier', 'normal');
+      doc.text(proveedor.nombre_proveedor.toUpperCase(), pageWidth / 2, 25, { align: 'center' });
+
+      // Solo fecha
+      doc.setFontSize(9);
+      doc.text(`Fecha: ${formatearFecha(new Date().toISOString().split('T')[0])}`, pageWidth / 2, 32, { align: 'center' });
+
+      yPos = 45;
+
+      // ============ INFORMACIÓN DE TIERRA VOLGA ============
+      const infoBoxHeight = 20;
+
+      // Recuadro con información de Tierra Volga
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, yPos, pageWidth - 2 * margin, infoBoxHeight, 'F');
+      doc.rect(margin, yPos, pageWidth - 2 * margin, infoBoxHeight, 'S');
+
+      doc.setFontSize(9);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('TIERRA VOLGA', margin + 2, yPos + 4);
+
+      doc.setFontSize(7);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text('Razón Social: TIERRA VOLGA S.A.S.', margin + 2, yPos + 8);
+      doc.text('CUIT: 30-71676009-6', margin + 2, yPos + 11);
+      doc.text('Dirección: RN12 KM 406, Crespo, Entre Ríos', margin + 2, yPos + 14);
+      doc.text('Email: contacto@tierravolga.com.ar', margin + 2, yPos + 17);
+
+      yPos += infoBoxHeight + 8;
+
+      // ============ DETALLE DE PRODUCTOS SOLICITADOS ============
+      doc.setFillColor(...primaryColor);
+      doc.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
+
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.text('DETALLE DE PRODUCTOS SOLICITADOS', margin + 2, yPos + 6);
+
+      yPos += 14;
+
+      // Tabla de vacunas del proveedor
+      const tableHeaders = ['PRODUCTO', 'PATOLOGÍA', 'PRESENTACIÓN', 'SEMANAS', 'DOSIS REQ.', 'FRASCOS'];
+      const tableData = proveedor.vacunas.map(vacuna => [
+        vacuna.nombre,
+        vacuna.patologia,
+        vacuna.presentacion,
+        vacuna.calendario_items.map(item => `S${item.semana}`).join(', '),
+        vacuna.total_dosis_necesarias.toLocaleString(),
+        vacuna.frascos_a_pedir.toString()
+      ]);
+
+      autoTable(doc, {
+        head: [tableHeaders],
+        body: tableData,
+        startY: yPos,
+        margin: { left: margin, right: margin },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          halign: 'center',
+          valign: 'middle',
+          lineColor: primaryColor,
+          lineWidth: 0.2,
+          font: 'courier'
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9,
+          font: 'courier'
+        },
+        alternateRowStyles: {
+          fillColor: [248, 248, 248]
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto', halign: 'left' },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 20, fontStyle: 'bold', textColor: primaryColor }
+        }
+      });
+
+      yPos = doc.lastAutoTable.finalY + 6;
+
+      // Total de frascos
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
+      doc.rect(margin, yPos, pageWidth - 2 * margin, 10, 'S');
+
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...primaryColor);
+      doc.text(`TOTAL FRASCOS: ${proveedor.total_frascos_proveedor}`, pageWidth - margin - 2, yPos + 6, { align: 'right' });
+
+      yPos += 16;
+
+      // ============ FIRMA Y ACEPTACIÓN ============
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(0.5);
+      
+      const firmaY = pageHeight - 50;
+      const firmaWidth = (pageWidth - 2 * margin - 10) / 2;
+
+      // Línea para firma comprador
+      doc.line(margin, firmaY, margin + firmaWidth, firmaY);
+      doc.setFontSize(8);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(...secondaryColor);
+      doc.text('Firma y Sello - Tierra Volga', margin, firmaY + 5);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.text('Responsable de Compras', margin, firmaY + 9);
+
+      // Línea para firma proveedor
+      const firmaX2 = margin + firmaWidth + 10;
+      doc.line(firmaX2, firmaY, firmaX2 + firmaWidth, firmaY);
+      doc.setFont('courier', 'bold');
+      doc.setFontSize(8);
+      doc.text(`Firma y Sello - ${proveedor.nombre_proveedor}`, firmaX2, firmaY + 5);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.text('Acuse de Recibo', firmaX2, firmaY + 9);
+
+      // ============ PIE DE PÁGINA ============
+      doc.setFillColor(...lightGray);
+      doc.rect(0, pageHeight - 18, pageWidth, 18, 'F');
+
+      doc.setFontSize(8);
+      doc.setTextColor(...secondaryColor);
+      doc.setFont('courier', 'bold');
+      doc.text('Sistema de Gestión - Tierra Volga', margin, pageHeight - 12);
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Generado: ${formatearFecha(new Date().toISOString().split('T')[0])} ${new Date().toLocaleTimeString('es-ES')}`, margin, pageHeight - 8);
+      doc.text(`Orden de compra para: ${proveedor.nombre_proveedor}`, margin, pageHeight - 4);
+
+      // Descargar PDF
+      const fileName = `orden-compra-${proveedor.nombre_proveedor.replace(/\s+/g, '-')}-${cotizacionData.numero_cotizacion}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+      console.log(`PDF generado para ${proveedor.nombre_proveedor}`);
+
+    } catch (error) {
+      console.error('Error generando orden de compra por laboratorio:', error);
+      showError('Error', 'No se pudo generar la orden: ' + error.message);
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
+  const handleGenerarOrdenesLaboratorios = async () => {
+    if (!datosOrdenCompra) return;
+
+    const { proveedores } = datosOrdenCompra;
+    
+    for (let i = 0; i < proveedores.length; i++) {
+      await handleGenerarOrdenCompraLaboratorio(proveedores[i]);
+      // Pequeña pausa entre PDFs para que el navegador procese
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    showSuccess('Éxito', `${proveedores.length} órdenes de compra generadas (una por laboratorio)`);
+    setShowModalOrdenCompra(false);
+  };
+
+  const handleGenerarTodasLasOrdenes = async () => {
+    // Generar orden interna
+    await handleGenerarOrdenCompraInterna();
+    
+    // Pequeña pausa
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Generar órdenes por laboratorio
+    if (datosOrdenCompra) {
+      const { proveedores } = datosOrdenCompra;
+      for (let i = 0; i < proveedores.length; i++) {
+        await handleGenerarOrdenCompraLaboratorio(proveedores[i]);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    showSuccess('Éxito', 'Todas las órdenes de compra generadas correctamente');
+    setShowModalOrdenCompra(false);
   };
 
   const formatearFecha = (fecha) => {
@@ -2895,6 +3176,100 @@ const CalendarioVacunacion = () => {
                 <FaTimes className="me-1" />
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Selección de Orden de Compra */}
+      {showModalOrdenCompra && datosOrdenCompra && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header" style={{ backgroundColor: 'var(--color-principal)', color: 'white' }}>
+                <h5 className="modal-title">
+                  <FaBoxOpen className="me-2" />
+                  Generar Orden de Compra
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowModalOrdenCompra(false)}
+                  disabled={generandoPDF}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-info mb-3">
+                  <FaInfoCircle className="me-2" />
+                  <strong>Vacunas sin lote asignado:</strong> {datosOrdenCompra.resumen.total_proveedores} proveedor(es), {datosOrdenCompra.resumen.total_frascos_general} frascos totales
+                </div>
+                
+                <div className="list-group">
+                  <button
+                    className="list-group-item list-group-item-action d-flex align-items-start"
+                    onClick={handleGenerarOrdenCompraInterna}
+                    disabled={generandoPDF}
+                  >
+                    <div className="me-3" style={{ fontSize: '2rem' }}>📋</div>
+                    <div className="flex-grow-1">
+                      <h6 className="mb-1">Orden Interna Completa</h6>
+                      <small className="text-muted">
+                        Incluye todos los laboratorios en un solo documento para uso interno.
+                        Contiene información del cliente y detalle por proveedor.
+                      </small>
+                    </div>
+                  </button>
+                  
+                  <button
+                    className="list-group-item list-group-item-action d-flex align-items-start"
+                    onClick={handleGenerarOrdenesLaboratorios}
+                    disabled={generandoPDF}
+                  >
+                    <div className="me-3" style={{ fontSize: '2rem' }}>🏢</div>
+                    <div className="flex-grow-1">
+                      <h6 className="mb-1">Órdenes por Laboratorio</h6>
+                      <small className="text-muted">
+                        Genera una orden de compra individual para cada proveedor ({datosOrdenCompra.proveedores.length} PDFs).
+                        Formato profesional para enviar directamente a cada laboratorio.
+                      </small>
+                    </div>
+                  </button>
+                  
+                  <button
+                    className="list-group-item list-group-item-action d-flex align-items-start"
+                    onClick={handleGenerarTodasLasOrdenes}
+                    disabled={generandoPDF}
+                  >
+                    <div className="me-3" style={{ fontSize: '2rem' }}>📦</div>
+                    <div className="flex-grow-1">
+                      <h6 className="mb-1">Descargar Todo</h6>
+                      <small className="text-muted">
+                        Genera la orden interna completa + órdenes individuales por laboratorio
+                        ({datosOrdenCompra.proveedores.length + 1} PDFs en total).
+                      </small>
+                    </div>
+                  </button>
+                </div>
+
+                {generandoPDF && (
+                  <div className="text-center mt-3">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Generando PDFs...</span>
+                    </div>
+                    <p className="mt-2 text-muted">Generando documentos, por favor espere...</p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowModalOrdenCompra(false)}
+                  disabled={generandoPDF}
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -52,6 +52,32 @@ const CotizacionForm = () => {
   const [dosisAjustadas, setDosisAjustadas] = useState(null);
   const [generandoPDF, setGenerandoPDF] = useState(false);
 
+  // Función para formatear fecha sin problemas de timezone
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'No especificada';
+    
+    try {
+      // Si ya viene en formato string YYYY-MM-DD, formatear directamente
+      if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      
+      const dateObj = new Date(fecha);
+      if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+      
+      // Usar métodos UTC para evitar problemas de timezone
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
+  };
+
   useEffect(() => {
     cargarDatos();
     if (modoEdicion) {
@@ -275,11 +301,11 @@ const CotizacionForm = () => {
     }
 
     if (!formData.cantidad_animales) {
-      newErrors.cantidad_animales = 'Debe especificar la cantidad de pollos a vacunar';
+      newErrors.cantidad_animales = 'Debe especificar la cantidad de aves a vacunar';
     } else if (parseInt(formData.cantidad_animales) <= 0) {
       newErrors.cantidad_animales = 'La cantidad debe ser mayor a 0';
-    } else if (parseInt(formData.cantidad_animales) > 100000) {
-      newErrors.cantidad_animales = 'La cantidad no puede ser mayor a 100,000';
+    } else if (parseInt(formData.cantidad_animales) > 999999) {
+      newErrors.cantidad_animales = 'La cantidad no puede ser mayor a 999,999';
     }
 
     if (!formData.fecha_inicio_plan) {
@@ -505,7 +531,7 @@ const CotizacionForm = () => {
       doc.text(`Cliente: ${clienteSeleccionado.nombre}`, margin + 3, yPos + 15);
       doc.text(`Email: ${clienteSeleccionado.email || 'No especificado'}`, margin + 3, yPos + 20);
       doc.text(`Teléfono: ${clienteSeleccionado.telefono || 'No especificado'}`, margin + 3, yPos + 25);
-      doc.text(`Cantidad Pollos: ${parseInt(formData.cantidad_animales).toLocaleString()}`, margin + 3, yPos + 30);
+      doc.text(`Cantidad Aves: ${parseInt(formData.cantidad_animales).toLocaleString()}`, margin + 3, yPos + 30);
 
       // Recuadro derecho - Información de la cotización
       doc.setFillColor(...lightGray);
@@ -522,8 +548,8 @@ const CotizacionForm = () => {
       doc.setTextColor(...secondaryColor);
       doc.text(`Plan: ${planSeleccionado.nombre}`, margin + infoBoxWidth + 3, yPos + 15);
       doc.text(`Duración: ${planSeleccionado.duracion_semanas} semanas`, margin + infoBoxWidth + 3, yPos + 20);
-      doc.text(`Fecha Nacimiento: ${formData.fecha_inicio_plan ? new Date(formData.fecha_inicio_plan).toLocaleDateString('es-ES') : 'No especificada'}`, margin + infoBoxWidth + 3, yPos + 25);
-      doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, margin + infoBoxWidth + 3, yPos + 30);
+      doc.text(`Fecha Nacimiento: ${formatearFecha(formData.fecha_inicio_plan)}`, margin + infoBoxWidth + 3, yPos + 25);
+      doc.text(`Generado: ${formatearFecha(new Date().toISOString().split('T')[0])}`, margin + infoBoxWidth + 3, yPos + 30);
 
       // Separador
       yPos += 45;
@@ -767,7 +793,7 @@ const CotizacionForm = () => {
 
                   <div className="col-md-6">
                     <label className="form-label">
-                      Cantidad de Pollos a Vacunar <span className="text-danger">*</span>
+                      Cantidad de Aves a Vacunar <span className="text-danger">*</span>
                     </label>
                     <input
                       type="number"
@@ -802,7 +828,7 @@ const CotizacionForm = () => {
                       <div className="invalid-feedback">{errors.fecha_inicio_plan}</div>
                     )}
                     <small className="text-muted">
-                      Fecha de nacimiento de los pollos o inicio programado del plan
+                      Fecha de nacimiento de los animales o inicio programado del plan
                     </small>
                   </div>
 
@@ -892,7 +918,7 @@ const CotizacionForm = () => {
                                 // Para cotización: cada animal necesita 1 dosis (independiente del template)
                                 const totalDosis = cantidadAnimales > 0 ? 
                                   cantidadAnimales : 
-                                  `cantidad de pollos`;
+                                  `cantidad de aves`;
                                 
                                 // Calcular frascos necesarios basado en la presentación de la vacuna
                                 const presentacion = vp.vacuna?.presentacion;
@@ -1023,8 +1049,8 @@ const CotizacionForm = () => {
                     
                     {formData.cantidad_animales && (
                       <div className="mb-3">
-                        <small className="text-muted">Cantidad de pollos</small>
-                        <div className="fw-bold">{parseInt(formData.cantidad_animales).toLocaleString()} pollos</div>
+                        <small className="text-muted">Cantidad de aves</small>
+                        <div className="fw-bold">{parseInt(formData.cantidad_animales).toLocaleString()} aves</div>
                       </div>
                     )}
 
@@ -1232,12 +1258,12 @@ const CotizacionForm = () => {
                 ></button>
               </div>
               <div className="modal-body">
-                <div className="alert alert-info">
+                {/* <div className="alert alert-info">
                   <FaInfoCircle className="me-2" />
-                  <strong>Se detectó que algunas vacunas no tienen suficientes dosis para {cantidadSugerida} pollos.</strong>
-                </div>
+                  <strong>Se detectó que algunas vacunas no tienen suficientes dosis para {cantidadSugerida} aves.</strong>
+                </div> */}
                 <p>
-                  ¿Deseas ajustar automáticamente las dosis del <strong>calendario de vacunación</strong> para esta cantidad de pollos?
+                  ¿Deseas ajustar automáticamente las dosis del <strong>calendario de vacunación</strong> para esta cantidad de aves?
                 </p>
                 <div className="alert alert-success">
                   <strong>✅ Importante:</strong> Esto solo afectará <strong>esta cotización específica</strong>.
@@ -1246,18 +1272,18 @@ const CotizacionForm = () => {
                 <p className="text-muted">
                   <small>
                     Al confirmar, se ajustarán las dosis semanales necesarias para que el calendario tenga suficientes vacunas 
-                    para los {cantidadSugerida} pollos de esta cotización.
+                    para los {cantidadSugerida} aves de esta cotización.
                   </small>
                 </p>
               </div>
               <div className="modal-footer">
-                <button 
+                {/* <button 
                   type="button" 
                   className="btn btn-secondary" 
                   onClick={handleCancelarActualizarDosis}
                 >
                   No, mantener dosis originales
-                </button>
+                </button> */}
                 <button 
                   type="button" 
                   className="btn btn-primary" 

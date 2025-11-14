@@ -149,16 +149,54 @@ const CotizacionDetalleOptimizado = () => {
 
   const formatearFecha = (fecha) => {
     if (!fecha) return 'No definida';
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    
+    try {
+      // Si ya viene en formato string YYYY-MM-DD, formatear directamente
+      if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-');
+        const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        return `${parseInt(day)} de ${meses[parseInt(month) - 1]} de ${year}`;
+      }
+      
+      const dateObj = new Date(fecha);
+      if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+      
+      // Usar métodos UTC
+      const day = dateObj.getUTCDate();
+      const month = dateObj.getUTCMonth();
+      const year = dateObj.getUTCFullYear();
+      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      
+      return `${day} de ${meses[month]} de ${year}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
   };
 
   const formatearFechaCorta = (fecha) => {
     if (!fecha) return 'No definida';
-    return new Date(fecha).toLocaleDateString('es-ES');
+    
+    try {
+      // Si ya viene en formato string YYYY-MM-DD, formatear directamente
+      if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      
+      const dateObj = new Date(fecha);
+      if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+      
+      // Usar métodos UTC para evitar problemas de timezone
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
   };
 
   // Función para cargar el logo
@@ -362,7 +400,7 @@ const CotizacionDetalleOptimizado = () => {
       doc.text('CLIENTE:', leftColX, infoY);
       doc.text('EMAIL:', leftColX, infoY + offsetEmail);
       doc.text('TELÉFONO:', leftColX, infoY + offsetTelefono);
-      doc.text('CANTIDAD POLLOS:', leftColX, infoY + offsetCantidad);
+      doc.text('CANTIDAD AVES:', leftColX, infoY + offsetCantidad);
       
       // Columna derecha - Labels (posición fija)
       doc.text('PLAN VACUNAL:', rightColX, infoY);
@@ -383,8 +421,8 @@ const CotizacionDetalleOptimizado = () => {
       // Valores columna derecha
       const nombrePlan = cotizacion.plan?.nombre || 'Plan para 25000';
       const duracionSemanas = `${cotizacion.plan?.duracion_semanas || 'N/A'} semanas`;
-      const fechaNacimiento = cotizacion.fecha_inicio_plan ? new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES') : 'No especificada';
-      const fechaCotizacion = cotizacion.created_at ? new Date(cotizacion.created_at).toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES');
+      const fechaNacimiento = formatearFechaCorta(cotizacion.fecha_inicio_plan);
+      const fechaCotizacion = cotizacion.created_at ? formatearFechaCorta(cotizacion.created_at) : formatearFechaCorta(new Date().toISOString().split('T')[0]);
       
       doc.text(nombrePlan.length > 22 ? nombrePlan.substring(0, 22) + '...' : nombrePlan, rightColX + labelWidth, infoY);
       doc.text(duracionSemanas, rightColX + labelWidth, infoY + 6);

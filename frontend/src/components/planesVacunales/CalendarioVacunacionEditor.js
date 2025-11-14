@@ -253,8 +253,8 @@ const CalendarioVacunacionEditor = () => {
               </div>
             </div>
             <div className="text-end">
-              <small className="text-muted d-block">Cantidad de pollos:</small>
-              <strong className="text-primary">{cotizacion.cantidad_animales?.toLocaleString()} pollos</strong>
+              <small className="text-muted d-block">Cantidad de aves:</small>
+              <strong className="text-primary">{cotizacion.cantidad_animales?.toLocaleString()} aves</strong>
             </div>
           </div>
         </div>

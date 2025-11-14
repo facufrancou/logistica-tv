@@ -55,6 +55,37 @@ const CotizacionesList = () => {
     cargarDatos();
   }, []);
 
+  // Función para formatear fecha sin problemas de timezone
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'No especificada';
+    
+    try {
+      // Si ya viene en formato string YYYY-MM-DD, formatear directamente
+      if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [year, month, day] = fecha.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      
+      const dateObj = new Date(fecha);
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Fecha inválida para formatear:', fecha);
+        return 'Fecha inválida';
+      }
+      
+      // Usar métodos UTC para evitar problemas de timezone
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Error en fecha';
+    }
+  };
+
   const cargarDatos = async () => {
     try {
       cargarCotizaciones();
@@ -444,7 +475,7 @@ const CotizacionesList = () => {
                           )}
                         </td>
                         <td>
-                          {new Date(cotizacion.fecha_inicio_plan).toLocaleDateString('es-ES')}
+                          {formatearFecha(cotizacion.fecha_inicio_plan)}
                         </td>
                         <td>
                           <div className="btn-group">
