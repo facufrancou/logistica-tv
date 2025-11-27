@@ -16,6 +16,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build"
   },
+  "proxy": "https://api.tierravolga.com.ar",
   "browserslist": {
     "production": [
       ">0.2%",

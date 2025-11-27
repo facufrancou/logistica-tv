@@ -1,5 +1,11 @@
-const API_BASE_URL = 'https://api.tierravolga.com.ar'; // Backend API URL (corregido al puerto 3001)
-const OLD_API_BASE_URL = "https://api.tierravolga.com.ar"; // Sistema anterior de pedidos
+// En desarrollo usa el proxy configurado en package.json
+// En producción usa la URL directa
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://api.tierravolga.com.ar' 
+  : ''; // Vacío = usa proxy de package.json
+const OLD_API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://api.tierravolga.com.ar' 
+  : '';
 
 // Headers por defecto
 const defaultHeaders = {
@@ -444,6 +450,31 @@ export const reasignarTodosLotesCotizacion = async (id_cotizacion) => {
 
 export const verificarEstadoLotes = async (id_cotizacion) => {
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/verificar-lotes`);
+};
+
+// ==========================================
+// LIBERACIÓN DE LOTES
+// ==========================================
+
+// Liberar todos los lotes de una cotización
+export const liberarTodosLotes = async (id_cotizacion, motivo = '', solo_pendientes = true) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/liberar-todos-lotes`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo, solo_pendientes })
+  });
+};
+
+// Liberar lote de una aplicación individual
+export const liberarLoteIndividual = async (id_calendario, motivo = '') => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/liberar-lote`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo })
+  });
+};
+
+// Obtener resumen de lotes asignados en una cotización
+export const getResumenLotes = async (id_cotizacion) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/resumen-lotes`);
 };
 
 // ==========================================

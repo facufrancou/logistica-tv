@@ -1,4 +1,6 @@
-const API = "https://api.tierravolga.com.ar";
+const API = process.env.NODE_ENV === 'production' 
+  ? "https://api.tierravolga.com.ar" 
+  : ""; // En desarrollo usa el proxy
 
 // Función reutilizable para fetch con sesión
 const fetchConSesion = async (url, options = {}) => {

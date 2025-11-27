@@ -133,7 +133,17 @@ async function generarCalendarioVacunacionVacunas(cotizacionId, fechaInicio, vac
 }
 
 // Nueva función para asignar stock con lógica FIFO
+// NOTA: Reserva automática DESHABILITADA - Los lotes se asignan solo por orden del usuario
 async function asignarStockFIFO(idVacuna, cantidadRequerida, fechaAplicacion, tx = prisma) {
+  // ============================================================
+  // RESERVA AUTOMÁTICA DESHABILITADA
+  // Los lotes se asignarán manualmente desde el calendario
+  // usando las funciones: asignarLoteManual, asignarMultiplesLotes
+  // ============================================================
+  console.log(`[RESERVA DESHABILITADA] Vacuna ${idVacuna}: Se requieren ${cantidadRequerida} dosis para ${fechaAplicacion}. Asignar manualmente.`);
+  return null;
+
+  /* CÓDIGO DE RESERVA AUTOMÁTICA COMENTADO:
   try {
     // Buscar stock disponible para la vacuna, ordenado por fecha de vencimiento (FIFO)
     // Solo incluir lotes que no venzan antes de la fecha de aplicación
@@ -244,6 +254,7 @@ async function asignarStockFIFO(idVacuna, cantidadRequerida, fechaAplicacion, tx
     console.error('Error al asignar stock FIFO:', error);
     return null;
   }
+  */
 }
 
 // Nueva función para asignar lote manualmente a un elemento del calendario
@@ -1355,6 +1366,13 @@ exports.createCotizacion = async (req, res) => {
       return cotizacion;
     });
 
+    // ============================================================
+    // RESERVAS AUTOMÁTICAS DESHABILITADAS
+    // Los lotes se asignarán manualmente desde el calendario
+    // ============================================================
+    console.log('[RESERVA DESHABILITADA] Cotización creada sin reservas automáticas. Asignar lotes manualmente desde el calendario.');
+
+    /* CÓDIGO DE RESERVAS AUTOMÁTICAS COMENTADO:
     // RESERVAS AUTOMÁTICAS: Crear reservas al crear la cotización
     // Las reservas se crean SIEMPRE, sin importar si hay stock disponible
     try {
@@ -1422,6 +1440,7 @@ exports.createCotizacion = async (req, res) => {
       console.warn('Advertencia al crear reservas:', stockError.message);
       // No fallar la creación - las reservas son indicativas
     }
+    */
 
     res.status(201).json({
       message: 'Cotización creada exitosamente',
@@ -1927,6 +1946,72 @@ exports.eliminarCotizacion = async (req, res) => {
     // Liberar reservas de stock de vacunas activas (independientemente del estado)
     console.log('Verificando reservas de stock de vacunas para liberar...');
     
+    // PRIMERO: Liberar lotes asignados en el calendario de vacunación
+    const itemsConLote = await prisma.calendarioVacunacion.findMany({
+      where: { 
+        id_cotizacion: parseInt(id),
+        id_stock_vacuna: { not: null }
+      },
+      include: { stock_vacuna: true }
+    });
+
+    if (itemsConLote.length > 0) {
+      console.log(`Liberando ${itemsConLote.length} lotes asignados en calendario por eliminación...`);
+      
+      // Agrupar por lote para optimizar updates
+      const lotesALiberar = new Map();
+      for (const item of itemsConLote) {
+        const key = item.id_stock_vacuna;
+        if (lotesALiberar.has(key)) {
+          lotesALiberar.get(key).cantidad += item.cantidad_dosis;
+        } else {
+          lotesALiberar.set(key, {
+            id_stock_vacuna: item.id_stock_vacuna,
+            cantidad: item.cantidad_dosis,
+            lote: item.stock_vacuna?.lote
+          });
+        }
+      }
+
+      // Liberar cada lote
+      for (const [idStock, info] of lotesALiberar) {
+        await prisma.stockVacuna.update({
+          where: { id_stock_vacuna: idStock },
+          data: {
+            stock_reservado: { decrement: info.cantidad }
+          }
+        });
+
+        // Registrar movimiento
+        await prisma.movimientoStockVacuna.create({
+          data: {
+            id_stock_vacuna: idStock,
+            tipo_movimiento: 'liberacion_reserva',
+            cantidad: info.cantidad,
+            motivo: 'Liberación por eliminación de cotización',
+            observaciones: `Cotización eliminada: ${cotizacion.numero_cotizacion}`,
+            id_cotizacion: parseInt(id),
+            id_usuario: idUsuario
+          }
+        });
+
+        console.log(`Liberadas ${info.cantidad} dosis del lote ${info.lote}`);
+      }
+
+      // Limpiar asignaciones en calendario
+      await prisma.calendarioVacunacion.updateMany({
+        where: { id_cotizacion: parseInt(id) },
+        data: {
+          id_stock_vacuna: null,
+          lote_asignado: null,
+          fecha_vencimiento_lote: null
+        }
+      });
+
+      console.log(`Liberados ${lotesALiberar.size} lotes diferentes del calendario`);
+    }
+
+    // SEGUNDO: Liberar reservas antiguas (tabla reservaStockVacuna)
     const reservasActivas = await prisma.reservaStockVacuna.findMany({
       where: { 
         id_cotizacion: parseInt(id),
@@ -5093,6 +5178,365 @@ exports.generarOrdenCompra = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al generar orden de compra: ' + error.message
+    });
+  }
+};
+
+// ===== FUNCIONES DE LIBERACIÓN DE LOTES =====
+
+/**
+ * Liberar lote de una aplicación individual del calendario
+ * POST /cotizaciones/calendario/:id_calendario/liberar-lote
+ */
+exports.liberarLoteIndividual = async (req, res) => {
+  try {
+    const { id_calendario } = req.params;
+    const { motivo } = req.body;
+    const idUsuario = req.user?.id_usuario;
+
+    console.log('=== LIBERAR LOTE INDIVIDUAL ===');
+    console.log('ID Calendario:', id_calendario);
+    console.log('Motivo:', motivo);
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Obtener el elemento del calendario con su stock asignado
+      const calendarioItem = await tx.calendarioVacunacion.findUnique({
+        where: { id_calendario: parseInt(id_calendario) },
+        include: { 
+          stock_vacuna: true,
+          cotizacion: {
+            select: { numero_cotizacion: true, estado: true }
+          }
+        }
+      });
+
+      if (!calendarioItem) {
+        throw new Error('Elemento del calendario no encontrado');
+      }
+
+      // Verificar que no esté ya aplicada
+      if (calendarioItem.estado_dosis === 'aplicada') {
+        throw new Error('No se puede liberar el lote de una dosis ya aplicada');
+      }
+
+      // Verificar que tenga un lote asignado
+      if (!calendarioItem.id_stock_vacuna) {
+        throw new Error('Esta aplicación no tiene un lote asignado');
+      }
+
+      const stockAnterior = calendarioItem.stock_vacuna;
+      const cantidadALiberar = calendarioItem.cantidad_dosis;
+
+      // Liberar la reserva del stock
+      await tx.stockVacuna.update({
+        where: { id_stock_vacuna: calendarioItem.id_stock_vacuna },
+        data: {
+          stock_reservado: {
+            decrement: cantidadALiberar
+          }
+        }
+      });
+
+      // Registrar movimiento de liberación
+      await tx.movimientoStockVacuna.create({
+        data: {
+          id_stock_vacuna: calendarioItem.id_stock_vacuna,
+          tipo_movimiento: 'liberacion_reserva',
+          cantidad: cantidadALiberar,
+          stock_anterior: stockAnterior.stock_actual,
+          stock_posterior: stockAnterior.stock_actual, // No cambia el stock_actual
+          motivo: motivo || 'Liberación manual de lote',
+          observaciones: `Liberación individual - Calendario ID: ${id_calendario} - Cotización: ${calendarioItem.cotizacion.numero_cotizacion}`,
+          id_calendario: parseInt(id_calendario),
+          id_usuario: idUsuario
+        }
+      });
+
+      // Limpiar la asignación en el calendario
+      await tx.calendarioVacunacion.update({
+        where: { id_calendario: parseInt(id_calendario) },
+        data: {
+          id_stock_vacuna: null,
+          lote_asignado: null,
+          fecha_vencimiento_lote: null
+        }
+      });
+
+      return {
+        id_calendario: parseInt(id_calendario),
+        lote_liberado: stockAnterior.lote,
+        cantidad_liberada: cantidadALiberar,
+        cotizacion: calendarioItem.cotizacion.numero_cotizacion
+      };
+    });
+
+    res.json({
+      success: true,
+      message: 'Lote liberado exitosamente',
+      data: resultado
+    });
+
+  } catch (error) {
+    console.error('Error al liberar lote individual:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error al liberar el lote'
+    });
+  }
+};
+
+/**
+ * Liberar todos los lotes de una cotización/calendario completo
+ * POST /cotizaciones/:id/liberar-todos-lotes
+ */
+exports.liberarTodosLotes = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivo, solo_pendientes = true } = req.body;
+    const idUsuario = req.user?.id_usuario;
+
+    console.log('=== LIBERAR TODOS LOS LOTES ===');
+    console.log('ID Cotización:', id);
+    console.log('Motivo:', motivo);
+    console.log('Solo pendientes:', solo_pendientes);
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Obtener la cotización
+      const cotizacion = await tx.cotizacion.findUnique({
+        where: { id_cotizacion: parseInt(id) },
+        select: { numero_cotizacion: true, estado: true }
+      });
+
+      if (!cotizacion) {
+        throw new Error('Cotización no encontrada');
+      }
+
+      // Construir filtro para los items del calendario
+      const whereCalendario = {
+        id_cotizacion: parseInt(id),
+        id_stock_vacuna: { not: null } // Solo items con lote asignado
+      };
+
+      // Si solo_pendientes es true, excluir las ya aplicadas
+      if (solo_pendientes) {
+        whereCalendario.estado_dosis = { not: 'aplicada' };
+      }
+
+      // Obtener todos los items del calendario con lotes asignados
+      const itemsConLote = await tx.calendarioVacunacion.findMany({
+        where: whereCalendario,
+        include: { stock_vacuna: true }
+      });
+
+      if (itemsConLote.length === 0) {
+        throw new Error('No hay lotes asignados para liberar');
+      }
+
+      const lotesLiberados = [];
+      const resumenPorLote = new Map();
+
+      // Liberar cada lote
+      for (const item of itemsConLote) {
+        const cantidadALiberar = item.cantidad_dosis;
+        const loteKey = item.id_stock_vacuna;
+
+        // Acumular cantidades por lote para optimizar updates
+        if (resumenPorLote.has(loteKey)) {
+          resumenPorLote.get(loteKey).cantidad += cantidadALiberar;
+          resumenPorLote.get(loteKey).items.push(item.id_calendario);
+        } else {
+          resumenPorLote.set(loteKey, {
+            id_stock_vacuna: item.id_stock_vacuna,
+            lote: item.stock_vacuna.lote,
+            cantidad: cantidadALiberar,
+            stock_actual: item.stock_vacuna.stock_actual,
+            items: [item.id_calendario]
+          });
+        }
+
+        // Limpiar la asignación en el calendario
+        await tx.calendarioVacunacion.update({
+          where: { id_calendario: item.id_calendario },
+          data: {
+            id_stock_vacuna: null,
+            lote_asignado: null,
+            fecha_vencimiento_lote: null
+          }
+        });
+      }
+
+      // Actualizar stock y registrar movimientos por cada lote único
+      for (const [idStock, info] of resumenPorLote) {
+        // Liberar la reserva del stock
+        await tx.stockVacuna.update({
+          where: { id_stock_vacuna: idStock },
+          data: {
+            stock_reservado: {
+              decrement: info.cantidad
+            }
+          }
+        });
+
+        // Registrar movimiento de liberación
+        await tx.movimientoStockVacuna.create({
+          data: {
+            id_stock_vacuna: idStock,
+            tipo_movimiento: 'liberacion_reserva',
+            cantidad: info.cantidad,
+            stock_anterior: info.stock_actual,
+            stock_posterior: info.stock_actual, // No cambia el stock_actual
+            motivo: motivo || 'Liberación masiva de lotes',
+            observaciones: `Liberación completa - Cotización: ${cotizacion.numero_cotizacion} - ${info.items.length} aplicaciones`,
+            id_cotizacion: parseInt(id),
+            id_usuario: idUsuario
+          }
+        });
+
+        lotesLiberados.push({
+          lote: info.lote,
+          cantidad_liberada: info.cantidad,
+          aplicaciones_afectadas: info.items.length
+        });
+      }
+
+      return {
+        id_cotizacion: parseInt(id),
+        numero_cotizacion: cotizacion.numero_cotizacion,
+        total_aplicaciones_liberadas: itemsConLote.length,
+        lotes_liberados: lotesLiberados
+      };
+    });
+
+    res.json({
+      success: true,
+      message: `Se liberaron ${resultado.total_aplicaciones_liberadas} asignaciones de lote`,
+      data: resultado
+    });
+
+  } catch (error) {
+    console.error('Error al liberar todos los lotes:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error al liberar los lotes'
+    });
+  }
+};
+
+/**
+ * Obtener resumen de lotes asignados en una cotización
+ * GET /cotizaciones/:id/resumen-lotes
+ */
+exports.getResumenLotes = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        calendario_vacunacion: {
+          include: {
+            stock_vacuna: {
+              include: {
+                vacuna: {
+                  select: { nombre: true, codigo: true }
+                }
+              }
+            }
+          },
+          orderBy: [
+            { numero_semana: 'asc' },
+            { dia_plan: 'asc' }
+          ]
+        }
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cotización no encontrada'
+      });
+    }
+
+    // Agrupar por lote
+    const lotesMap = new Map();
+    let itemsSinLote = 0;
+    let itemsConLote = 0;
+    let itemsAplicados = 0;
+
+    for (const item of cotizacion.calendario_vacunacion) {
+      if (item.estado_dosis === 'aplicada') {
+        itemsAplicados++;
+      }
+
+      if (!item.id_stock_vacuna) {
+        itemsSinLote++;
+        continue;
+      }
+
+      itemsConLote++;
+      const loteKey = item.id_stock_vacuna;
+
+      if (lotesMap.has(loteKey)) {
+        const loteInfo = lotesMap.get(loteKey);
+        loteInfo.cantidad_reservada += item.cantidad_dosis;
+        loteInfo.aplicaciones.push({
+          id_calendario: item.id_calendario,
+          semana: item.numero_semana,
+          dia_plan: item.dia_plan,
+          fecha_programada: item.fecha_programada,
+          estado: item.estado_dosis,
+          cantidad_dosis: item.cantidad_dosis
+        });
+      } else {
+        lotesMap.set(loteKey, {
+          id_stock_vacuna: item.id_stock_vacuna,
+          lote: item.stock_vacuna.lote,
+          vacuna_nombre: item.stock_vacuna.vacuna?.nombre || 'Desconocida',
+          vacuna_codigo: item.stock_vacuna.vacuna?.codigo || '',
+          fecha_vencimiento: item.stock_vacuna.fecha_vencimiento,
+          stock_actual: item.stock_vacuna.stock_actual,
+          stock_reservado: item.stock_vacuna.stock_reservado,
+          cantidad_reservada: item.cantidad_dosis,
+          aplicaciones: [{
+            id_calendario: item.id_calendario,
+            semana: item.numero_semana,
+            dia_plan: item.dia_plan,
+            fecha_programada: item.fecha_programada,
+            estado: item.estado_dosis,
+            cantidad_dosis: item.cantidad_dosis
+          }]
+        });
+      }
+    }
+
+    const lotes = Array.from(lotesMap.values()).map(lote => ({
+      ...lote,
+      puede_liberar: lote.aplicaciones.some(a => a.estado !== 'aplicada')
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        id_cotizacion: parseInt(id),
+        numero_cotizacion: cotizacion.numero_cotizacion,
+        estado: cotizacion.estado,
+        resumen: {
+          total_aplicaciones: cotizacion.calendario_vacunacion.length,
+          aplicaciones_con_lote: itemsConLote,
+          aplicaciones_sin_lote: itemsSinLote,
+          aplicaciones_ya_aplicadas: itemsAplicados,
+          lotes_diferentes: lotes.length
+        },
+        lotes: lotes
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener resumen de lotes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener resumen de lotes'
     });
   }
 };

@@ -20,37 +20,9 @@ const AlertasStock = ({ cotizacionId, onProblemasDetectados, mostrarContenido = 
     try {
       console.log('🔍 Verificando estado de lotes para cotización:', cotizacionId);
       
-      // Hacer la petición directamente usando fetch para debugging
-      const url = `https://api.tierravolga.com.ar/cotizaciones/${cotizacionId}/verificar-lotes`;
-      console.log('📡 URL:', url);
+      // Usar el servicio API centralizado que maneja correctamente el proxy
+      const data = await planesVacunalesApi.verificarEstadoLotes(cotizacionId);
       
-      // Crear un timeout de 10 segundos
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-
-      console.log('📊 Response status:', response.status);
-      console.log('📊 Response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('❌ Error response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
       console.log('✅ Data received:', data);
       
       if (data.success) {

@@ -28,6 +28,11 @@ import {
 import { useNotification } from '../../context/NotificationContext';
 import './VentasDirectasVacunas.css';
 
+// Usar misma configuración de API que el resto de la aplicación
+const API = process.env.NODE_ENV === 'production' 
+  ? "https://api.tierravolga.com.ar" 
+  : ""; // En desarrollo usa el proxy configurado en package.json
+
 const VentasDirectasVacunasView = () => {
   const navigate = useNavigate();
   const { showSuccess, showError, showWarning } = useNotification();
@@ -87,9 +92,15 @@ const VentasDirectasVacunasView = () => {
   const cargarStocksDisponibles = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas/stocks-disponibles', {
+      const response = await fetch(`${API}/ventas-directas-vacunas/stocks-disponibles`, {
         credentials: 'include'
       });
+
+      if (response.status === 401) {
+        showError('Sesión no iniciada. Redirigiendo al login...');
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Error al cargar stocks de vacunas');
@@ -109,11 +120,12 @@ const VentasDirectasVacunasView = () => {
 
   const cargarClientes = async () => {
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/clientes', {
+      const response = await fetch(`${API}/clientes`, {
         credentials: 'include'
       });
 
       if (!response.ok) {
+        if (response.status === 401) return; // Silenciosamente ignorar si no está autenticado
         throw new Error('Error al cargar clientes');
       }
 
@@ -122,17 +134,21 @@ const VentasDirectasVacunasView = () => {
       setClientes(Array.isArray(data) ? data : (data.clientes || []));
     } catch (error) {
       console.error('Error cargando clientes:', error);
-      showError('Error al cargar la lista de clientes');
+      // No mostrar error si es problema de autenticación
     }
   };
 
   const cargarVentasDirectas = async () => {
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas', {
+      const response = await fetch(`${API}/ventas-directas-vacunas`, {
         credentials: 'include'
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setVentasDirectas([]);
+          return;
+        }
         throw new Error('Error al cargar ventas directas');
       }
 
@@ -144,17 +160,20 @@ const VentasDirectasVacunasView = () => {
     } catch (error) {
       console.error('Error cargando ventas directas:', error);
       setVentasDirectas([]); // Asegurar que sea un array vacío en caso de error
-      showWarning('No se pudieron cargar las ventas directas previas');
     }
   };
 
   const cargarListasPrecios = async () => {
     try {
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas/listas-precios', {
+      const response = await fetch(`${API}/ventas-directas-vacunas/listas-precios`, {
         credentials: 'include'
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setListasPrecios([]);
+          return;
+        }
         throw new Error('Error al cargar listas de precios');
       }
 
@@ -176,7 +195,6 @@ const VentasDirectasVacunasView = () => {
     } catch (error) {
       console.error('Error cargando listas de precios:', error);
       setListasPrecios([]);
-      showWarning('No se pudieron cargar las listas de precios');
     }
   };
 
@@ -205,7 +223,7 @@ const VentasDirectasVacunasView = () => {
       ubicacion_fisica: stock.ubicacion_fisica,
       cantidadDisponible: stock.cantidadDisponible,
       cantidadVenta: 1,
-      precioUnitario: stock.precioVenta || 0
+      precioUnitario: parseFloat(stock.vacuna?.precio_lista) || 0 // Precio desde vacuna.precio_lista (mismo que cotizaciones)
     };
 
     console.log('Nuevo item en carrito:', nuevoItem);
@@ -280,7 +298,7 @@ const VentasDirectasVacunasView = () => {
         }))
       };
 
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas-vacunas', {
+      const response = await fetch(`${API}/ventas-directas-vacunas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -322,7 +340,7 @@ const VentasDirectasVacunasView = () => {
     try {
       setLoading(true);
       
-      const response = await fetch(`https://api.tierravolga.com.ar/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
+      const response = await fetch(`${API}/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -361,7 +379,7 @@ const VentasDirectasVacunasView = () => {
 
   const confirmarEntrega = async (ventaId) => {
     try {
-      const response = await fetch(`https://api.tierravolga.com.ar/ventas-directas-vacunas/${ventaId}/confirmar`, {
+      const response = await fetch(`${API}/ventas-directas-vacunas/${ventaId}/confirmar`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -680,7 +698,7 @@ const VentasDirectasVacunasView = () => {
                                   <br />
                                   <strong>Ubic:</strong> {stock.ubicacion_fisica || '—'}
                                   <br />
-                                  <strong>Precio:</strong> ${stock.precioVenta || 0}
+                                  <strong>Precio:</strong> ${parseFloat(stock.vacuna?.precio_lista) || 0}
                                   {stock.stock_reservado > 0 && (
                                     <>
                                       <br />

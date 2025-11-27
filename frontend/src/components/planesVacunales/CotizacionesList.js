@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { usePlanesVacunales } from '../../context/PlanesVacunalesContext';
 import { useNotification } from '../../context/NotificationContext';
 import { getClientes } from '../../services/api';
-import { FaPlus, FaEdit, FaEye, FaSearch, FaFilter, FaFileInvoice, FaCalendarAlt, FaCheck, FaTimes, FaTrash, FaUndo } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaEye, FaSearch, FaFilter, FaFileInvoice, FaCalendarAlt, FaCheck, FaTimes, FaTrash, FaUndo, FaChevronLeft, FaChevronRight, FaEyeSlash } from 'react-icons/fa';
 import './PlanesVacunales.css';
+
+const ITEMS_POR_PAGINA = 10;
 
 const CotizacionesList = () => {
   const { 
@@ -24,6 +26,9 @@ const CotizacionesList = () => {
     fecha_desde: '',
     busqueda: ''
   });
+
+  const [mostrarEliminadas, setMostrarEliminadas] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
 
   const [modalStockInsuficiente, setModalStockInsuficiente] = useState({ 
     show: false, 
@@ -48,7 +53,6 @@ const CotizacionesList = () => {
     observaciones: '',
     forzarAceptacion: false
   });
-  const [showFilters, setShowFilters] = useState(false);
   const [clientes, setClientes] = useState([]);
 
   useEffect(() => {
@@ -107,8 +111,14 @@ const CotizacionesList = () => {
 
   const limpiarFiltros = () => {
     setFiltros({ estado: '', id_cliente: '', fecha_desde: '', busqueda: '' });
+    setPaginaActual(1);
     cargarCotizaciones();
   };
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtros, mostrarEliminadas]);
 
   const handleCambiarEstado = async (id, nuevoEstado, observaciones = '', forzarAceptacion = false) => {
     try {
@@ -229,12 +239,45 @@ const CotizacionesList = () => {
     }
   };
 
+  // Filtrar cotizaciones (busca en TODAS, sin importar paginación)
   const cotizacionesFiltradas = cotizaciones.filter(cotizacion => {
-    if (!filtros.busqueda) return true;
-    return cotizacion.numero_cotizacion.toLowerCase().includes(filtros.busqueda.toLowerCase()) ||
-           (cotizacion.cliente?.nombre && cotizacion.cliente.nombre.toLowerCase().includes(filtros.busqueda.toLowerCase())) ||
-           (cotizacion.plan?.nombre && cotizacion.plan.nombre.toLowerCase().includes(filtros.busqueda.toLowerCase()));
+    // Filtro de eliminadas
+    if (!mostrarEliminadas && cotizacion.estado === 'eliminada') return false;
+    
+    // Filtro por estado específico
+    if (filtros.estado && cotizacion.estado !== filtros.estado) return false;
+    
+    // Filtro por cliente
+    if (filtros.id_cliente && cotizacion.id_cliente !== parseInt(filtros.id_cliente)) return false;
+    
+    // Filtro por fecha
+    if (filtros.fecha_desde) {
+      const fechaCotizacion = new Date(cotizacion.created_at);
+      const fechaDesde = new Date(filtros.fecha_desde);
+      if (fechaCotizacion < fechaDesde) return false;
+    }
+    
+    // Filtro por búsqueda de texto
+    if (filtros.busqueda) {
+      const busqueda = filtros.busqueda.toLowerCase();
+      const coincide = 
+        cotizacion.numero_cotizacion?.toLowerCase().includes(busqueda) ||
+        cotizacion.cliente?.nombre?.toLowerCase().includes(busqueda) ||
+        cotizacion.plan?.nombre?.toLowerCase().includes(busqueda);
+      if (!coincide) return false;
+    }
+    
+    return true;
   });
+
+  // Calcular paginación
+  const totalPaginas = Math.ceil(cotizacionesFiltradas.length / ITEMS_POR_PAGINA);
+  const indiceInicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+  const indiceFin = indiceInicio + ITEMS_POR_PAGINA;
+  const cotizacionesPaginadas = cotizacionesFiltradas.slice(indiceInicio, indiceFin);
+
+  // Contar eliminadas
+  const cantidadEliminadas = cotizaciones.filter(c => c.estado === 'eliminada').length;
 
   const getEstadoBadge = (estado) => {
     const badges = {
@@ -293,94 +336,81 @@ const CotizacionesList = () => {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros - Siempre visibles */}
       <div className="card mb-4">
-        <div className="card-header">
-          <button 
-            className="btn btn-outline-primary d-flex align-items-center"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <FaFilter className="me-2" />
-            Filtros
-          </button>
-        </div>
-        {showFilters && (
-          <div className="card-body filtros-container">
-            <div className="row g-3">
-              <div className="col-md-3">
-                <label className="form-label">Buscar</label>
-                <div className="input-group">
-                  <span className="input-group-text">
-                    <FaSearch />
-                  </span>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Número, cliente, plan..."
-                    value={filtros.busqueda}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, busqueda: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="col-md-2">
-                <label className="form-label">Estado</label>
-                <select
-                  className="form-select"
-                  value={filtros.estado}
-                  onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value }))}
-                >
-                  <option value="">Todos</option>
-                  <option value="en_proceso">En Proceso</option>
-                  <option value="enviada">Enviada</option>
-                  <option value="aceptada">Aceptada</option>
-                  <option value="rechazada">Rechazada</option>
-                  <option value="cancelada">Cancelada</option>
-                  <option value="eliminada">Eliminada</option>
-                </select>
-              </div>
-              <div className="col-md-3">
-                <label className="form-label">Cliente</label>
-                <select
-                  className="form-select"
-                  value={filtros.id_cliente}
-                  onChange={(e) => setFiltros(prev => ({ ...prev, id_cliente: e.target.value }))}
-                >
-                  <option value="">Todos</option>
-                  {clientes.map(cliente => (
-                    <option key={cliente.id_cliente} value={cliente.id_cliente}>
-                      {cliente.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-md-2">
-                <label className="form-label">Desde</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={filtros.fecha_desde}
-                  onChange={(e) => setFiltros(prev => ({ ...prev, fecha_desde: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-2 d-flex align-items-end">
-                <div className="d-flex w-100 gap-2">
-                  <button 
-                    className="btn btn-primary flex-fill"
-                    onClick={aplicarFiltros}
-                  >
-                    Aplicar
-                  </button>
-                  <button 
-                    className="btn btn-outline-secondary flex-fill"
-                    onClick={limpiarFiltros}
-                  >
-                    Limpiar
-                  </button>
-                </div>
-              </div>
+        <div className="card-body">
+          <div className="row g-3 align-items-end">
+            <div className="col-md-3">
+              <label className="form-label"><FaSearch className="me-1" />Buscar</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Número, cliente, plan..."
+                value={filtros.busqueda}
+                onChange={(e) => setFiltros(prev => ({ ...prev, busqueda: e.target.value }))}
+              />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label">Estado</label>
+              <select
+                className="form-select"
+                value={filtros.estado}
+                onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value }))}
+              >
+                <option value="">Todos</option>
+                <option value="en_proceso">En Proceso</option>
+                <option value="enviada">Enviada</option>
+                <option value="aceptada">Aceptada</option>
+                <option value="rechazada">Rechazada</option>
+                <option value="cancelada">Cancelada</option>
+                {mostrarEliminadas && <option value="eliminada">Eliminada</option>}
+              </select>
+            </div>
+            <div className="col-md-2">
+              <label className="form-label">Cliente</label>
+              <select
+                className="form-select"
+                value={filtros.id_cliente}
+                onChange={(e) => setFiltros(prev => ({ ...prev, id_cliente: e.target.value }))}
+              >
+                <option value="">Todos</option>
+                {clientes.map(cliente => (
+                  <option key={cliente.id_cliente} value={cliente.id_cliente}>
+                    {cliente.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-2">
+              <label className="form-label">Desde</label>
+              <input
+                type="date"
+                className="form-control"
+                value={filtros.fecha_desde}
+                onChange={(e) => setFiltros(prev => ({ ...prev, fecha_desde: e.target.value }))}
+              />
+            </div>
+            <div className="col-md-3 d-flex gap-2">
+              <button 
+                className="btn btn-outline-secondary"
+                onClick={limpiarFiltros}
+              >
+                Limpiar
+              </button>
+              <button 
+                className={`btn ${mostrarEliminadas ? 'btn-dark' : 'btn-outline-dark'}`}
+                onClick={() => setMostrarEliminadas(!mostrarEliminadas)}
+                title={mostrarEliminadas ? 'Ocultar eliminadas' : 'Mostrar eliminadas'}
+              >
+                <FaEyeSlash className="me-1" />
+                {mostrarEliminadas ? 'Ocultar' : 'Mostrar'} eliminadas
+                {cantidadEliminadas > 0 && (
+                  <span className="badge bg-secondary ms-1">{cantidadEliminadas}</span>
+                )}
+              </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Lista de Cotizaciones */}
@@ -390,7 +420,11 @@ const CotizacionesList = () => {
             <div className="text-center py-5">
               <FaFileInvoice className="text-muted mb-3" style={{ fontSize: '3rem' }} />
               <h5 className="text-muted">No hay cotizaciones</h5>
-              <p className="text-muted">Crea tu primera cotización para comenzar</p>
+              <p className="text-muted">
+                {mostrarEliminadas 
+                  ? 'No se encontraron cotizaciones con los filtros aplicados' 
+                  : 'Crea tu primera cotización para comenzar'}
+              </p>
               <Link to="/cotizaciones/nueva" className="btn btn-primary">
                 <FaPlus className="me-2" />
                 Crear Cotización
@@ -412,7 +446,7 @@ const CotizacionesList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {cotizacionesFiltradas.map((cotizacion) => {
+                  {cotizacionesPaginadas.map((cotizacion) => {
                     const estadoBadge = getEstadoBadge(cotizacion.estado);
                     const acciones = getAccionesDisponibles(cotizacion.estado);
                     
@@ -554,6 +588,36 @@ const CotizacionesList = () => {
             </div>
           )}
         </div>
+        {/* Paginación inferior */}
+        {totalPaginas > 1 && (
+          <div className="card-footer d-flex justify-content-between align-items-center">
+            <span className="text-muted">
+              Página {paginaActual} de {totalPaginas}
+            </span>
+            <nav>
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${paginaActual === 1 ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                    disabled={paginaActual === 1}
+                  >
+                    <FaChevronLeft /> Anterior
+                  </button>
+                </li>
+                <li className={`page-item ${paginaActual === totalPaginas ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+                    disabled={paginaActual === totalPaginas}
+                  >
+                    Siguiente <FaChevronRight />
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* Modal de confirmación para eliminar */}

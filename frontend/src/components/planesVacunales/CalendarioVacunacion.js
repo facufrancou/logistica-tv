@@ -741,6 +741,33 @@ const CalendarioVacunacion = () => {
     }
   };
 
+  const handleLiberarTodosLotes = async () => {
+    try {
+      if (!window.confirm('¿Está seguro de que desea LIBERAR todos los lotes asignados de esta cotización?\n\nEsta acción liberará el stock reservado y dejará las aplicaciones sin lote asignado.')) {
+        return;
+      }
+
+      setRealizandoReasignacion(true);
+      const resultado = await planesApi.liberarTodosLotes(cotizacionId, 'Liberación manual desde calendario', true);
+      
+      if (resultado.success) {
+        showSuccess(
+          'Liberación completada', 
+          `Se liberaron ${resultado.data.total_aplicaciones_liberadas} asignaciones de lote`
+        );
+      } else {
+        showWarning('Advertencia', resultado.message || 'No se pudieron liberar los lotes');
+      }
+      
+      await cargarDatosIniciales();
+    } catch (error) {
+      console.error('Error al liberar todos los lotes:', error);
+      showError('Error', error.message || 'Error al liberar lotes de la cotización');
+    } finally {
+      setRealizandoReasignacion(false);
+    }
+  };
+
   // Función auxiliar para cargar el logo de la empresa
   const cargarLogo = () => {
     return new Promise((resolve, reject) => {
@@ -1663,7 +1690,19 @@ const CalendarioVacunacion = () => {
             </button>
             <FaCalendarAlt className="me-2 text-primary" />
             <div>
-              <h3 className="mb-0">Calendario de Vacunación</h3>
+              <h3 className="mb-0">
+                Calendario de Vacunación
+                {hayProblemasStock && (
+                  <span 
+                    className="badge bg-warning text-dark ms-2"
+                    style={{ fontSize: '0.5em', cursor: 'pointer', animation: 'pulse 2s infinite' }}
+                    onClick={() => setShowModalAlertas(true)}
+                    title="Hay alertas de stock - Click para ver detalles"
+                  >
+                    ⚠ Alertas
+                  </span>
+                )}
+              </h3>
               <small className="text-muted">
                 {cotizacion.numero_cotizacion} - {estadoPlan.cotizacion?.cliente}
               </small>
@@ -1671,94 +1710,34 @@ const CalendarioVacunacion = () => {
           </div>
           
           {/* Botones de Acción Centrales */}
-          <div className="d-flex align-items-center gap-2">
+          <div className="d-flex align-items-center gap-2" style={{ 
+            backgroundColor: 'rgba(0,0,0,0.05)', 
+            padding: '8px 12px', 
+            borderRadius: '8px' 
+          }}>
             <button 
-              className={`btn btn-sm ${
-                hayProblemasStock 
-                  ? 'btn-warning btn-warning-custom' 
-                  : 'btn-outline-light'
-              }`}
-              onClick={() => setShowModalAlertas(true)}
-              title={
-                hayProblemasStock 
-                  ? 'Ver alertas críticas detectadas'
-                  : 'Ver estado de alertas'
-              }
-              style={{
-                ...(hayProblemasStock ? {
-                  animation: 'pulse 2s infinite',
-                  boxShadow: '0 0 10px rgba(255, 193, 7, 0.5)'
-                } : {})
-              }}
-            >
-              {hayProblemasStock && (
-                <span className="badge bg-danger text-white me-1" style={{ fontSize: '0.7em' }}>!</span>
-              )}
-              <FaExclamationTriangle className="me-1" />
-              Alertas
-              {hayProblemasStock && (
-                <span className="badge bg-light text-dark ms-1" style={{ fontSize: '0.7em' }}>
-                  Revisar
-                </span>
-              )}
-            </button>
-            <button 
-              className="btn btn-outline-warning btn-sm"
-              onClick={handleReasignarTodosLotes}
+              className="btn btn-outline-secondary btn-sm"
+              onClick={handleLiberarTodosLotes}
               disabled={realizandoReasignacion}
-              title="Reasignar todos los lotes de esta cotización"
+              title="Liberar todos los lotes asignados"
             >
-              {realizandoReasignacion ? (
-                <>
-                  <div className="spinner-border spinner-border-sm me-2" role="status">
-                    <span className="visually-hidden">Reasignando...</span>
-                  </div>
-                  Reasignando...
-                </>
-              ) : (
-                <>
-                  Reasignar Todos los Lotes
-                </>
-              )}
+              {realizandoReasignacion ? 'Procesando...' : 'Liberar Lotes'}
             </button>
             <button 
-              className="btn btn-outline-primary btn-sm"
+              className="btn btn-outline-secondary btn-sm"
               onClick={handleExportarPDF}
               disabled={generandoPDF}
               title="Exportar calendario a PDF"
             >
-              {generandoPDF ? (
-                <>
-                  <div className="spinner-border spinner-border-sm me-2" role="status">
-                    <span className="visually-hidden">Generando...</span>
-                  </div>
-                  Generando PDF...
-                </>
-              ) : (
-                <>
-                  Exportar PDF
-                </>
-              )}
+              {generandoPDF ? 'Generando...' : 'Exportar PDF'}
             </button>
             <button 
-              className="btn btn-outline-warning btn-sm"
+              className="btn btn-outline-secondary btn-sm"
               onClick={handleGenerarOrdenCompra}
               disabled={generandoPDF}
-              title="Generar orden de compra para vacunas sin lote"
+              title="Generar orden de compra"
             >
-              {generandoPDF ? (
-                <>
-                  <div className="spinner-border spinner-border-sm me-2" role="status">
-                    <span className="visually-hidden">Generando...</span>
-                  </div>
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <FaBoxOpen className="me-1" />
-                  Orden de Compra
-                </>
-              )}
+              {generandoPDF ? 'Generando...' : 'Orden de Compra'}
             </button>
           </div>
           

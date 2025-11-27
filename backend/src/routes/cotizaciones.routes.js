@@ -72,6 +72,17 @@ router.post('/:id/reasignar-todos-lotes', validarSesion, cotizacionesController.
 // Verificar estado de todos los lotes asignados en una cotización
 router.get('/:id/verificar-lotes', validarSesion, cotizacionesController.verificarEstadoLotes);
 
+// ===== RUTAS PARA LIBERACIÓN DE LOTES =====
+
+// Obtener resumen de lotes asignados en una cotización
+router.get('/:id/resumen-lotes', validarSesion, cotizacionesController.getResumenLotes);
+
+// Liberar todos los lotes de una cotización
+router.post('/:id/liberar-todos-lotes', validarSesion, cotizacionesController.liberarTodosLotes);
+
+// Liberar lote de una aplicación individual
+router.post('/calendario/:id_calendario/liberar-lote', validarSesion, cotizacionesController.liberarLoteIndividual);
+
 // Finalizar plan vacunal (limpiar stock)
 router.post('/:id/finalizar-plan', validarSesion, cotizacionesController.finalizarPlan);
 

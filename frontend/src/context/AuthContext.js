@@ -23,7 +23,8 @@ export function AuthProvider({ children }) {
       } catch (error) {
         // Si falla la nueva API, intentar con la API legacy
         try {
-          const res = await fetch("https://api.tierravolga.com.ar/auth/me", { credentials: "include" });
+          const API_URL = process.env.NODE_ENV === 'production' ? 'https://api.tierravolga.com.ar' : '';
+          const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
           if (res.ok) {
             const data = await res.json();
             if (data) {
@@ -56,7 +57,8 @@ export function AuthProvider({ children }) {
     } catch (error) {
       // Si falla la nueva API, intentar con la API legacy
       try {
-        const res = await fetch("https://api.tierravolga.com.ar/auth/login", {
+        const API_URL = process.env.NODE_ENV === 'production' ? 'https://api.tierravolga.com.ar' : '';
+        const res = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -78,7 +80,8 @@ export function AuthProvider({ children }) {
       if (usuario?.apiType === 'planes-vacunales') {
         await logoutApi();
       } else {
-        await fetch("https://api.tierravolga.com.ar/auth/logout", {
+        const API_URL = process.env.NODE_ENV === 'production' ? 'https://api.tierravolga.com.ar' : '';
+        await fetch(`${API_URL}/auth/logout`, {
           method: "POST",
           credentials: "include",
         });

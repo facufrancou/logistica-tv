@@ -74,7 +74,8 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
   const cargarStock = async () => {
     setLoading(true);
     try {
-      const response = await getStockVacunas();
+      // Solicitar todos los lotes sin límite de paginación
+      const response = await getStockVacunas({ limit: 1000 });
       setStock(response.data || response);
     } catch (error) {
       console.error("Error cargando stock:", error);
