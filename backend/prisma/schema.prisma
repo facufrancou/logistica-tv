@@ -290,7 +290,7 @@ model AuditoriaAccion {
 
 model ListaPrecio {
   id_lista          Int               @id @default(autoincrement())
-  tipo              tipo_lista_precio @unique
+  tipo              tipo_lista_precio
   nombre            String            @db.VarChar(50)
   descripcion       String?           @db.Text
   porcentaje_recargo Decimal          @default(0) @db.Decimal(5, 2)
@@ -315,7 +315,7 @@ model PlanVacunal {
   duracion_semanas Int            @db.TinyInt
   estado           estado_plan    @default(borrador)
   id_lista_precio  Int?
-  precio_total     Decimal?       @db.Decimal(10, 2)
+  precio_total     Decimal?       @db.Decimal(15, 2)
   observaciones    String?        @db.Text
   created_at       DateTime?      @default(now()) @db.DateTime(0)
   updated_at       DateTime?      @default(now()) @db.DateTime(0)
@@ -407,7 +407,7 @@ model Cotizacion {
   estado                     estado_cotizacion         @default(en_proceso)
   fecha_inicio_plan          DateTime                  @db.Date
   cantidad_animales          Int                       @default(0)
-  precio_total               Decimal                   @db.Decimal(10, 2)
+  precio_total               Decimal                   @db.Decimal(15, 2)
   observaciones              String?                   @db.Text
   fecha_envio                DateTime?                 @db.DateTime(0)
   fecha_aceptacion           DateTime?                 @db.DateTime(0)
@@ -450,11 +450,11 @@ model DetalleCotizacion {
   id_cotizacion         Int
   id_producto           Int
   cantidad_total        Int
-  precio_base_producto  Decimal    @default(0) @db.Decimal(10, 2)
+  precio_base_producto  Decimal    @default(0) @db.Decimal(15, 2)
   porcentaje_aplicado   Decimal?   @db.Decimal(5, 2)
-  precio_unitario       Decimal    @db.Decimal(10, 2)
-  precio_final_calculado Decimal   @default(0) @db.Decimal(10, 2)
-  subtotal              Decimal    @db.Decimal(10, 2)
+  precio_unitario       Decimal    @db.Decimal(15, 2)
+  precio_final_calculado Decimal   @default(0) @db.Decimal(15, 2)
+  subtotal              Decimal    @db.Decimal(15, 2)
   facturacion_tipo      facturacion_tipo? @default(pendiente)
   editado_manualmente   Boolean    @default(false)
   semana_inicio         Int        @db.TinyInt
@@ -676,9 +676,9 @@ model Factura {
   fecha_emision        DateTime         @db.Date
   fecha_vencimiento    DateTime?        @db.Date
   fecha_pago           DateTime?        @db.Date
-  monto_total          Decimal          @db.Decimal(10, 2)
-  monto_pagado         Decimal?         @default(0.00) @db.Decimal(10, 2)
-  descuento_aplicado   Decimal?         @default(0.00) @db.Decimal(10, 2)
+  monto_total          Decimal          @db.Decimal(15, 2)
+  monto_pagado         Decimal?         @default(0.00) @db.Decimal(15, 2)
+  descuento_aplicado   Decimal?         @default(0.00) @db.Decimal(15, 2)
   porcentaje_facturado Decimal?         @db.Decimal(5, 2)
   observaciones        String?          @db.Text
   datos_fiscales       Json?
@@ -703,10 +703,10 @@ model DetalleFactura {
   concepto           String    @db.VarChar(255)
   descripcion        String?   @db.Text
   cantidad           Int       @default(1)
-  precio_unitario    Decimal   @db.Decimal(10, 2)
-  subtotal           Decimal   @db.Decimal(10, 2)
-  descuento          Decimal?  @default(0.00) @db.Decimal(10, 2)
-  impuestos          Decimal?  @default(0.00) @db.Decimal(10, 2)
+  precio_unitario    Decimal   @db.Decimal(15, 2)
+  subtotal           Decimal   @db.Decimal(15, 2)
+  descuento          Decimal?  @default(0.00) @db.Decimal(15, 2)
+  impuestos          Decimal?  @default(0.00) @db.Decimal(15, 2)
   tipo_item          String?   @db.VarChar(50)
   referencia_id      Int?
   created_at         DateTime? @default(now()) @db.DateTime(0)
@@ -882,8 +882,8 @@ model ItemFacturacion {
   id_item_facturacion   Int                 @id @default(autoincrement())
   id_detalle_cotizacion Int                 @unique
   tipo_facturacion      facturacion_tipo    @default(pendiente)
-  monto_negro           Decimal?            @db.Decimal(10, 2)
-  monto_blanco          Decimal?            @db.Decimal(10, 2)
+  monto_negro           Decimal?            @db.Decimal(15, 2)
+  monto_blanco          Decimal?            @db.Decimal(15, 2)
   observaciones         String?             @db.Text
   fecha_clasificacion   DateTime            @default(now()) @db.DateTime(0)
   clasificado_por       Int?
@@ -899,9 +899,9 @@ model ItemFacturacion {
 model ResumenLiquidacion {
   id_resumen        Int         @id @default(autoincrement())
   id_cotizacion     Int
-  total_negro       Decimal     @default(0) @db.Decimal(10, 2)
-  total_blanco      Decimal     @default(0) @db.Decimal(10, 2)
-  total_general     Decimal     @default(0) @db.Decimal(10, 2)
+  total_negro       Decimal     @default(0) @db.Decimal(15, 2)
+  total_blanco      Decimal     @default(0) @db.Decimal(15, 2)
+  total_general     Decimal     @default(0) @db.Decimal(15, 2)
   porcentaje_negro  Decimal?    @db.Decimal(5, 2)
   porcentaje_blanco Decimal?    @db.Decimal(5, 2)
   fecha_generacion  DateTime    @default(now()) @db.DateTime(0)
@@ -930,7 +930,7 @@ model Remito {
   fecha_entrega       DateTime? @db.DateTime(0)
   tipo_remito         TipoRemito @default(plan_vacunal)
   estado_remito       EstadoRemito @default(pendiente)
-  precio_total        Decimal? @db.Decimal(10, 2)
+  precio_total        Decimal? @db.Decimal(15, 2)
   observaciones       String?  @db.Text
   created_by          Int?
   created_at          DateTime @default(now()) @db.DateTime(0)
@@ -953,8 +953,8 @@ model DetalleRemito {
   id_remito           Int
   id_producto         Int
   cantidad_entregada  Int
-  precio_unitario     Decimal? @db.Decimal(10, 2)
-  subtotal            Decimal? @db.Decimal(10, 2)
+  precio_unitario     Decimal? @db.Decimal(15, 2)
+  subtotal            Decimal? @db.Decimal(15, 2)
   lote_producto       String? @db.VarChar(100)
   fecha_vencimiento   DateTime? @db.DateTime(0)
   observaciones       String? @db.Text
@@ -974,7 +974,7 @@ model VentaDirecta {
   id_cliente          Int
   id_lista_precio     Int?
   fecha_venta         DateTime @db.DateTime(0)
-  precio_total        Decimal  @db.Decimal(10, 2)
+  precio_total        Decimal  @db.Decimal(15, 2)
   estado_venta        EstadoVenta @default(pendiente)
   responsable_entrega String?  @db.VarChar(255)
   responsable_recibe  String?  @db.VarChar(255)
@@ -1000,8 +1000,8 @@ model DetalleVentaDirecta {
   id_venta_directa    Int
   id_producto         Int
   cantidad            Int
-  precio_unitario     Decimal @db.Decimal(10, 2)
-  subtotal            Decimal @db.Decimal(10, 2)
+  precio_unitario     Decimal @db.Decimal(15, 2)
+  subtotal            Decimal @db.Decimal(15, 2)
   observaciones       String? @db.Text
   created_at          DateTime @default(now()) @db.DateTime(0)
   

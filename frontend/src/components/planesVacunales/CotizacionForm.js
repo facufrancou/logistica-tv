@@ -304,8 +304,6 @@ const CotizacionForm = () => {
       newErrors.cantidad_animales = 'Debe especificar la cantidad de aves a vacunar';
     } else if (parseInt(formData.cantidad_animales) <= 0) {
       newErrors.cantidad_animales = 'La cantidad debe ser mayor a 0';
-    } else if (parseInt(formData.cantidad_animales) > 999999) {
-      newErrors.cantidad_animales = 'La cantidad no puede ser mayor a 999,999';
     }
 
     if (!formData.fecha_inicio_plan) {
