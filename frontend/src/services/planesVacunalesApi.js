@@ -417,6 +417,11 @@ export const asignarMultiplesLotesManual = async (id_calendario, data) => {
   });
 };
 
+// Obtener todos los lotes asignados a un calendario (incluyendo multi-lotes)
+export const getLotesAsignadosCalendario = async (id_calendario) => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/lotes-asignados`);
+};
+
 export const getStocksDisponibles = async (id_vacuna, fecha_aplicacion = null) => {
   try {
     console.log('🔵 getStocksDisponibles - Inicio');
@@ -464,11 +469,12 @@ export const liberarTodosLotes = async (id_cotizacion, motivo = '', solo_pendien
   });
 };
 
-// Liberar lote de una aplicación individual
-export const liberarLoteIndividual = async (id_calendario, motivo = '') => {
+// Liberar lote(s) de una aplicación individual
+// Si se pasa id_stock_vacuna, libera solo ese lote. Si no, libera todos.
+export const liberarLoteIndividual = async (id_calendario, { id_stock_vacuna = null, motivo = '' } = {}) => {
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/liberar-lote`, {
     method: 'POST',
-    body: JSON.stringify({ motivo })
+    body: JSON.stringify({ motivo, id_stock_vacuna })
   });
 };
 

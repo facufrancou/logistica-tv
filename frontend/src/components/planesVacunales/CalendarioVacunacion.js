@@ -30,7 +30,9 @@ import {
   FaWarehouse,
   FaLock,
   FaCheckSquare,
-  FaCircle
+  FaCircle,
+  FaTrashAlt,
+  FaSpinner
 } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -38,6 +40,7 @@ import * as planesApi from '../../services/planesVacunalesApi';
 import AlertasStock from './AlertasStock';
 import './ModalAsignacionLotes.css';
 import ModalGestionLotes from './ModalGestionLotes';
+import LotesAsignadosCell from './LotesAsignadosCell';
 import { useNotification } from '../../context/NotificationContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import './PlanesVacunales.css';
@@ -104,6 +107,11 @@ const CalendarioVacunacion = () => {
   // Estados para modal de gestión de lotes
   const [showModalGestionLotes, setShowModalGestionLotes] = useState(false);
   const [itemGestionLotes, setItemGestionLotes] = useState(null);
+
+  // Estados para modal de confirmación de liberación
+  const [showConfirmLiberarLote, setShowConfirmLiberarLote] = useState(false);
+  const [itemParaLiberar, setItemParaLiberar] = useState(null);
+  const [lotesDelItem, setLotesDelItem] = useState([]); // Lotes asignados al item
 
   // Estados para modal de orden de compra
   const [showModalOrdenCompra, setShowModalOrdenCompra] = useState(false);
@@ -604,6 +612,74 @@ const CalendarioVacunacion = () => {
       showError('Error', 'Error al reasignar lote automáticamente');
     } finally {
       setRealizandoReasignacion(false);
+    }
+  };
+
+  // Handler para liberar lote de una aplicación individual
+  const handleLiberarLoteIndividual = async (calendarioItem) => {
+    if (!calendarioItem.id_stock_vacuna && !calendarioItem.lote_asignado) {
+      showWarning('Advertencia', 'Esta aplicación no tiene lote asignado');
+      return;
+    }
+
+    // Obtener los lotes asignados a este item
+    let lotes = [];
+    try {
+      const resultado = await planesApi.getLotesAsignadosCalendario(calendarioItem.id_calendario);
+      if (resultado.success && resultado.data?.lotes && Array.isArray(resultado.data.lotes)) {
+        lotes = resultado.data.lotes;
+      }
+    } catch (error) {
+      console.error('Error al obtener lotes:', error);
+    }
+
+    // Si no hay lotes del API, usar la info del item
+    if (lotes.length === 0 && calendarioItem.id_stock_vacuna) {
+      lotes = [{
+        id_stock_vacuna: calendarioItem.id_stock_vacuna,
+        lote: calendarioItem.lote_asignado,
+        cantidad_asignada: calendarioItem.cantidad_dosis,
+        ubicacion_fisica: calendarioItem.ubicacion_fisica
+      }];
+    }
+
+    setLotesDelItem(lotes);
+
+    // Guardar item y mostrar modal de confirmación
+    setItemParaLiberar(calendarioItem);
+    setShowConfirmLiberarLote(true);
+  };
+
+  // Confirmar liberación de lote (siempre libera todos los lotes de la semana)
+  const confirmarLiberarLote = async () => {
+    if (!itemParaLiberar) return;
+
+    try {
+      setRealizandoReasignacion(true);
+      
+      // Siempre liberar todos los lotes (id_stock_vacuna: null)
+      const resultado = await planesApi.liberarLoteIndividual(
+        itemParaLiberar.id_calendario, 
+        { id_stock_vacuna: null }
+      );
+      
+      if (resultado.success) {
+        setShowConfirmLiberarLote(false);
+        // Cerrar también el modal de gestión de lotes
+        setShowModalGestionLotes(false);
+        setItemGestionLotes(null);
+        showSuccess('Éxito', resultado.message || 'Lotes liberados correctamente');
+        await cargarDatosIniciales();
+      } else {
+        showError('Error', resultado.message || 'No se pudo liberar los lotes');
+      }
+    } catch (error) {
+      console.error('Error al liberar lotes:', error);
+      showError('Error', 'Error al liberar los lotes');
+    } finally {
+      setRealizandoReasignacion(false);
+      setItemParaLiberar(null);
+      setLotesDelItem([]);
     }
   };
 
@@ -1882,44 +1958,14 @@ const CalendarioVacunacion = () => {
                           </div>
                         </td>
                         <td>
-                          <div>
-                            {item.lote_asignado ? (
-                              <>
-                                <div className="d-flex align-items-center">
-                                  <strong className="text-primary">{item.lote_asignado}</strong>
-                                  {item.lote_asignado.includes('+') && (
-                                    <button
-                                      className="btn btn-sm btn-outline-info ms-2"
-                                      onClick={() => {
-                                        setItemGestionLotes(item);
-                                        setShowModalGestionLotes(true);
-                                      }}
-                                      title="Ver todos los lotes asignados"
-                                    >
-                                      <FaEye />
-                                    </button>
-                                  )}
-                                </div>
-                                {item.fecha_vencimiento_lote && (
-                                  <small className="d-block text-muted">
-                                    <FaClock className="me-1" />
-                                    Vence: {formatearFecha(item.fecha_vencimiento_lote)}
-                                  </small>
-                                )}
-                                {item.ubicacion_fisica && (
-                                  <small className="d-block text-info">
-                                    <FaBoxOpen className="me-1" />
-                                    {item.ubicacion_fisica}
-                                  </small>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-muted">
-                                <FaExclamationTriangle className="me-1" />
-                                Sin lote asignado
-                              </span>
-                            )}
-                          </div>
+                          <LotesAsignadosCell 
+                            item={item} 
+                            formatearFecha={formatearFecha}
+                            onOpenGestionLotes={() => {
+                              setItemGestionLotes(item);
+                              setShowModalGestionLotes(true);
+                            }}
+                          />
                         </td>
                         <td>
                           <span className="badge bg-light text-dark">
@@ -3271,7 +3317,135 @@ const CalendarioVacunacion = () => {
           // Abrir el modal de reasignación en modo vista
           handleAbrirReasignacion(item, 'simple');
         }}
+        onLiberarLote={handleLiberarLoteIndividual}
       />
+
+      {/* Modal de Confirmación para Liberar Lote */}
+      {showConfirmLiberarLote && itemParaLiberar && (
+        <>
+          <div className="modal-backdrop fade show" style={{ zIndex: 1060 }}></div>
+          <div className="modal fade show d-block" style={{ zIndex: 1070 }} tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-danger text-white py-2">
+                  <h6 className="modal-title">
+                    <FaTrashAlt className="me-2" />
+                    Liberar Lotes - Semana {itemParaLiberar.semana_aplicacion}
+                  </h6>
+                  <button 
+                    type="button" 
+                    className="btn-close btn-close-white" 
+                    onClick={() => {
+                      setShowConfirmLiberarLote(false);
+                      setItemParaLiberar(null);
+                      setLotesDelItem([]);
+                    }}
+                    disabled={realizandoReasignacion}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  {/* Info de la vacuna */}
+                  <div className="mb-3 p-2 bg-light rounded">
+                    <strong>{itemParaLiberar.vacuna_nombre}</strong>
+                    <div className="text-muted small">
+                      {itemParaLiberar.cantidad_dosis?.toLocaleString()} dosis requeridas
+                    </div>
+                  </div>
+
+                  {/* Lotes que se van a liberar */}
+                  <div className="mb-3">
+                    <label className="form-label fw-bold text-danger">
+                      <FaTrashAlt className="me-1" />
+                      Lotes a liberar:
+                    </label>
+                    
+                    <div className="border rounded">
+                      <table className="table table-sm mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Lote</th>
+                            <th className="text-end">Dosis</th>
+                            <th>Ubicación</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(lotesDelItem || []).map((lote, idx) => (
+                            <tr key={lote.id_stock_vacuna || idx}>
+                              <td>
+                                <strong className="text-primary">{lote.lote}</strong>
+                              </td>
+                              <td className="text-end">
+                                <span className="badge bg-info">
+                                  {(lote.cantidad_asignada || 0).toLocaleString()}
+                                </span>
+                              </td>
+                              <td>
+                                <small className="text-muted">
+                                  {lote.ubicacion_fisica || '-'}
+                                </small>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="table-light">
+                          <tr>
+                            <th>Total a liberar</th>
+                            <th className="text-end">
+                              <span className="badge bg-danger">
+                                {(lotesDelItem || []).reduce((sum, l) => sum + (l.cantidad_asignada || 0), 0).toLocaleString()} dosis
+                              </span>
+                            </th>
+                            <th></th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="alert alert-warning py-2 mb-0">
+                    <small>
+                      <strong>⚠️ Atención:</strong> Se liberará el stock reservado de todos los lotes. 
+                      Las dosis quedarán disponibles para otras cotizaciones.
+                    </small>
+                  </div>
+                </div>
+                <div className="modal-footer py-2">
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowConfirmLiberarLote(false);
+                      setItemParaLiberar(null);
+                      setLotesDelItem([]);
+                    }}
+                    disabled={realizandoReasignacion}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-danger"
+                    onClick={confirmarLiberarLote}
+                    disabled={realizandoReasignacion}
+                  >
+                    {realizandoReasignacion ? (
+                      <>
+                        <FaSpinner className="fa-spin me-2" />
+                        Liberando...
+                      </>
+                    ) : (
+                      <>
+                        <FaTrashAlt className="me-2" />
+                        Liberar Lotes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

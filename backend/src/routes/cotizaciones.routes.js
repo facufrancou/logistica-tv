@@ -66,6 +66,9 @@ router.post('/calendario/:id_calendario/asignar-multilote', validarSesion, cotiz
 // Asignar múltiples lotes manualmente seleccionados por el usuario
 router.post('/calendario/:id_calendario/asignar-multilote-manual', validarSesion, cotizacionesController.asignarMultiplesLotesManual);
 
+// Obtener todos los lotes asignados a un calendario (incluyendo multi-lotes)
+router.get('/calendario/:id_calendario/lotes-asignados', validarSesion, cotizacionesController.getLotesAsignadosCalendario);
+
 // Reasignar todos los lotes de una cotización
 router.post('/:id/reasignar-todos-lotes', validarSesion, cotizacionesController.reasignarTodosLotesCotizacion);
 

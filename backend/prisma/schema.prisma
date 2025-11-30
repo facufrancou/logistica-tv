@@ -22,6 +22,7 @@ model Usuario {
   password                   String            @db.VarChar(255)
   rol_id                     BigInt            @db.UnsignedBigInt
   aplicaciones_dosis_creadas AplicacionDosis[]
+  asignaciones_lote          AsignacionLote[]
   auditoria_acciones         AuditoriaAccion[]
   configuraciones            Configuracion[]
   historial_precios          HistorialPrecio[]
@@ -476,7 +477,7 @@ model CalendarioVacunacion {
   id_calendario              Int                      @id @default(autoincrement())
   id_cotizacion              Int
   id_producto                Int
-  id_stock_vacuna            Int?                     // Referencia al lote específico de stock
+  id_stock_vacuna            Int?                     // Referencia al lote principal (legacy, para compatibilidad)
   numero_semana              Int                      @db.TinyInt
   dia_plan                   Int?                     // Día del plan (1-N) calculado desde fecha_inicio_plan
   fecha_programada           DateTime                 @db.Date
@@ -492,11 +493,12 @@ model CalendarioVacunacion {
   es_desdoblamiento          Boolean                  @default(false)
   dosis_original_id          Int?
   numero_desdoblamiento      Int                      @default(1)
-  lote_asignado              String?                  @db.VarChar(100) // Campo para mostrar el lote sin JOIN
-  fecha_vencimiento_lote     DateTime?                @db.Date         // Campo para mostrar vencimiento sin JOIN
+  lote_asignado              String?                  @db.VarChar(100) // Campo para mostrar el lote sin JOIN (legacy)
+  fecha_vencimiento_lote     DateTime?                @db.Date         // Campo para mostrar vencimiento sin JOIN (legacy)
   created_at                 DateTime?                @default(now()) @db.DateTime(0)
   updated_at                 DateTime?                @default(now()) @db.DateTime(0)
   aplicaciones_dosis         AplicacionDosis[]
+  asignaciones_lote          AsignacionLote[]         // Nueva relación: lotes asignados a este calendario
   cotizacion                 Cotizacion               @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
   producto                   Producto                 @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   stock_vacuna               StockVacuna?             @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna], onUpdate: NoAction)
@@ -1180,12 +1182,31 @@ model StockVacuna {
   vacuna            Vacuna          @relation(fields: [id_vacuna], references: [id_vacuna])
   movimientos_stock MovimientoStockVacuna[]
   calendario_vacunacion CalendarioVacunacion[]
+  asignaciones_lote AsignacionLote[]
   
   @@unique([id_vacuna, lote], map: "unique_vacuna_lote")
   @@index([lote], map: "idx_stock_vacuna_lote")
   @@index([fecha_vencimiento], map: "idx_stock_vacuna_vencimiento")
   @@index([estado_stock], map: "idx_stock_vacuna_estado")
   @@map("stock_vacunas")
+}
+
+// Tabla para gestionar asignaciones de lotes a calendarios (soporta multi-lote)
+model AsignacionLote {
+  id_asignacion     Int             @id @default(autoincrement())
+  id_calendario     Int
+  id_stock_vacuna   Int
+  cantidad_asignada Int
+  created_at        DateTime        @default(now()) @db.DateTime(0)
+  created_by        Int?
+  
+  calendario        CalendarioVacunacion @relation(fields: [id_calendario], references: [id_calendario], onDelete: Cascade)
+  stock_vacuna      StockVacuna     @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
+  usuario           Usuario?        @relation(fields: [created_by], references: [id_usuario])
+  
+  @@index([id_calendario], map: "idx_asignacion_calendario")
+  @@index([id_stock_vacuna], map: "idx_asignacion_stock")
+  @@map("asignaciones_lote")
 }
 
 model MovimientoStockVacuna {

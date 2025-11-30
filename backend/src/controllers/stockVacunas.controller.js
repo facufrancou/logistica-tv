@@ -993,9 +993,10 @@ exports.getReservasLote = async (req, res) => {
       return res.status(404).json({ error: 'Lote no encontrado' });
     }
 
+    const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
+
     // Si no hay stock reservado, retornar vacío
     if (!lote.stock_reservado || lote.stock_reservado <= 0) {
-      const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
       return res.json({
         success: true,
         lote: {
@@ -1017,58 +1018,52 @@ exports.getReservasLote = async (req, res) => {
       });
     }
 
-    // Buscar todos los calendarios que tienen este lote asignado Y tienen entregas pendientes
-    console.log(`Buscando calendarios para lote ID: ${id}, stock_reservado: ${lote.stock_reservado}`);
+    // NUEVO: Buscar asignaciones directas desde la tabla AsignacionLote
+    console.log(`Buscando asignaciones para lote ID: ${id}, stock_reservado: ${lote.stock_reservado}`);
     
-    const calendarios = await prisma.calendarioVacunacion.findMany({
-      where: {
-        id_stock_vacuna: parseInt(id),
-        estado_entrega: {
-          in: ['pendiente', 'parcial'] // Solo los que aún tienen reservas activas
-        }
-      },
+    const asignaciones = await prisma.asignacionLote.findMany({
+      where: { id_stock_vacuna: parseInt(id) },
       include: {
-        cotizacion: {
+        calendario: {
           select: {
-            numero_cotizacion: true,
-            estado: true,
-            created_at: true,
-            cliente: {
+            id_calendario: true,
+            numero_semana: true,
+            fecha_programada: true,
+            cantidad_dosis: true,
+            dosis_entregadas: true,
+            estado_entrega: true,
+            cotizacion: {
               select: {
-                nombre: true
-              }
-            },
-            plan: {
-              select: {
-                nombre: true
+                id_cotizacion: true,
+                numero_cotizacion: true,
+                estado: true,
+                created_at: true,
+                cliente: {
+                  select: { nombre: true }
+                },
+                plan: {
+                  select: { nombre: true }
+                }
               }
             }
-          }
-        },
-        producto: {
-          select: {
-            nombre: true
           }
         }
       },
       orderBy: {
-        fecha_programada: 'asc'
+        calendario: { fecha_programada: 'asc' }
       }
     });
 
-    console.log(`Calendarios encontrados: ${calendarios.length}`);
+    console.log(`Asignaciones encontradas: ${asignaciones.length}`);
 
     // Agrupar por cotización
     const cotizacionesMap = new Map();
 
-    calendarios.forEach(calendario => {
-      const idCotizacion = calendario.id_cotizacion;
+    asignaciones.forEach(asig => {
+      const calendario = asig.calendario;
+      const idCotizacion = calendario.cotizacion.id_cotizacion;
       
       if (!cotizacionesMap.has(idCotizacion)) {
-        const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
-        const dosisReservadas = calendario.cantidad_dosis - (calendario.dosis_entregadas || 0);
-        const frascosReservados = Math.ceil(dosisReservadas / dosisPorFrasco);
-
         cotizacionesMap.set(idCotizacion, {
           id_cotizacion: idCotizacion,
           numero_cotizacion: calendario.cotizacion.numero_cotizacion,
@@ -1076,44 +1071,37 @@ exports.getReservasLote = async (req, res) => {
           plan: calendario.cotizacion.plan?.nombre || 'Sin plan',
           estado: calendario.cotizacion.estado,
           fecha_creacion: calendario.cotizacion.created_at,
-          total_dosis_reservadas: dosisReservadas,
-          total_frascos_reservados: frascosReservados,
+          total_dosis_reservadas: 0,
+          total_frascos_reservados: 0,
           entregas: []
         });
       }
 
-      // Agregar detalle de esta entrega
-      const dosisReservadas = calendario.cantidad_dosis - (calendario.dosis_entregadas || 0);
-      const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
-      const frascosReservados = Math.ceil(dosisReservadas / dosisPorFrasco);
-
+      // Agregar detalle de esta entrega con la cantidad específica asignada de este lote
       cotizacionesMap.get(idCotizacion).entregas.push({
         id_calendario: calendario.id_calendario,
+        id_asignacion: asig.id_asignacion,
+        semana: calendario.numero_semana,
         fecha_programada: calendario.fecha_programada,
-        producto: lote.vacuna.nombre, // Mostrar nombre de la vacuna del lote, no el producto genérico
+        producto: lote.vacuna.nombre,
+        cantidad_asignada: asig.cantidad_asignada, // Cantidad específica de este lote
         cantidad_total: calendario.cantidad_dosis,
         dosis_entregadas: calendario.dosis_entregadas || 0,
-        dosis_pendientes: dosisReservadas,
-        frascos_pendientes: frascosReservados,
+        frascos_asignados: Math.ceil(asig.cantidad_asignada / dosisPorFrasco),
         estado_entrega: calendario.estado_entrega
       });
 
       // Actualizar total
       const cotizacion = cotizacionesMap.get(idCotizacion);
-      cotizacion.total_dosis_reservadas = cotizacion.entregas.reduce(
-        (sum, e) => sum + e.dosis_pendientes, 0
-      );
-      cotizacion.total_frascos_reservados = Math.ceil(
-        cotizacion.total_dosis_reservadas / dosisPorFrasco
-      );
+      cotizacion.total_dosis_reservadas += asig.cantidad_asignada;
+      cotizacion.total_frascos_reservados = Math.ceil(cotizacion.total_dosis_reservadas / dosisPorFrasco);
     });
 
     const cotizaciones = Array.from(cotizacionesMap.values());
 
     // Calcular totales
-    const dosisPorFrasco = lote.vacuna?.presentacion?.dosis_por_frasco || 1000;
-    const totalDosisReservadas = cotizaciones.reduce(
-      (sum, cot) => sum + cot.total_dosis_reservadas, 0
+    const totalDosisReservadas = asignaciones.reduce(
+      (sum, asig) => sum + asig.cantidad_asignada, 0
     );
     const totalFrascosReservados = Math.ceil(totalDosisReservadas / dosisPorFrasco);
 

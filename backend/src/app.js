@@ -89,6 +89,7 @@ app.use('/indicadores-stock', require('./routes/indicadoresStock.routes'));
 app.use('/vacunas', require('./routes/vacunas.routes'));
 app.use('/catalogos', require('./routes/catalogos.routes'));
 app.use('/stock-vacunas', require('./routes/stockVacunas.routes'));
+app.use('/asignaciones', require('./routes/asignaciones.routes'));
 
 // Nuevas rutas para ventas directas de vacunas (entregas fuera de plan)
 app.use('/ventas-directas-vacunas', require('./routes/ventasDirectasVacunas'));

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FaBoxOpen, FaTimes, FaSyringe, FaEdit, FaPlus, FaEye } from 'react-icons/fa';
+import React from 'react';
+import { FaBoxOpen, FaSyringe, FaEdit, FaPlus, FaEye, FaClock, FaCheckCircle, FaExclamationTriangle, FaTrashAlt } from 'react-icons/fa';
 
 const ModalGestionLotes = ({ 
   item, 
@@ -10,7 +10,8 @@ const ModalGestionLotes = ({
   onAsignarManual, 
   onAsignarMultiples,
   onAsignarFaltante, 
-  onVerStocks 
+  onVerStocks,
+  onLiberarLote
 }) => {
   if (!isOpen || !item) return null;
 
@@ -23,6 +24,16 @@ const ModalGestionLotes = ({
   const dosisEntregadas = item.dosis_entregadas || 0;
   const dosisFaltantes = item.cantidad_dosis - dosisEntregadas;
   const hayFaltante = dosisEntregadas > 0 && dosisFaltantes > 0;
+
+  // Verificar si tiene lote asignado - usar los datos del item directamente
+  const tieneLoteAsignado = item.lote_asignado || item.id_stock_vacuna;
+  const coberturaCompleta = tieneLoteAsignado;
+
+  // Formatear fecha
+  const formatearFecha = (fecha) => {
+    if (!fecha) return '-';
+    return new Date(fecha).toLocaleDateString('es-ES');
+  };
 
   return (
     <>
@@ -39,7 +50,7 @@ const ModalGestionLotes = ({
         style={{ zIndex: 1050 }}
         tabIndex="-1"
       >
-        <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '500px' }}>
+        <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '600px' }}>
           <div className="modal-content">
             {/* Header minimalista */}
             <div className="modal-header border-bottom py-2">
@@ -55,30 +66,82 @@ const ModalGestionLotes = ({
               ></button>
             </div>
             
-            {/* Body ultra compacto */}
+            {/* Body */}
             <div className="modal-body p-3">
               {/* Info condensada */}
               <div className="d-flex justify-content-between align-items-start mb-3 p-2 bg-light rounded">
                 <div>
                   <div className="fw-bold text-dark">{item.vacuna_nombre}</div>
                   <small className="text-muted">
-                    Semana {item.semana_aplicacion} • {new Date(item.fecha_aplicacion_programada).toLocaleDateString('es-ES')} • {item.cantidad_dosis} dosis
+                    Semana {item.semana_aplicacion} • {new Date(item.fecha_aplicacion_programada).toLocaleDateString('es-ES')} • {item.cantidad_dosis?.toLocaleString()} dosis
                   </small>
                 </div>
                 <div className="text-end">
-                  {item.lote_asignado ? (
-                    <div>
-                      <div className="badge bg-success">{item.lote_asignado}</div>
-                      {item.fecha_vencimiento_lote && (
-                        <div className="small text-muted mt-1">
-                          Vence: {new Date(item.fecha_vencimiento_lote).toLocaleDateString('es-ES')}
-                        </div>
-                      )}
-                    </div>
+                  {coberturaCompleta ? (
+                    <span className="badge bg-success">
+                      <FaCheckCircle className="me-1" />
+                      Cobertura completa
+                    </span>
                   ) : (
-                    <span className="badge bg-warning text-dark">Sin lote asignado</span>
+                    <span className="badge bg-secondary">Sin lote asignado</span>
                   )}
                 </div>
+              </div>
+
+              {/* Lote asignado - usar datos del item */}
+              <div className="mb-3">
+                <h6 className="text-muted mb-2 small">
+                  <FaBoxOpen className="me-1" />
+                  Lote Asignado
+                </h6>
+                
+                {!tieneLoteAsignado ? (
+                  <div className="alert alert-warning py-2 small mb-0">
+                    <FaExclamationTriangle className="me-1" />
+                    No hay lote asignado a esta aplicación
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-sm table-hover mb-0">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Lote</th>
+                          <th className="text-end">Dosis</th>
+                          <th className="text-end">Vencimiento</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <strong className="text-primary">{item.lote_asignado}</strong>
+                          </td>
+                          <td className="text-end">
+                            <span className="badge bg-info">
+                              {item.cantidad_dosis?.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="text-end">
+                            <small className="text-muted">
+                              <FaClock className="me-1" />
+                              {formatearFecha(item.fecha_vencimiento_lote)}
+                            </small>
+                          </td>
+                        </tr>
+                      </tbody>
+                      <tfoot className="table-light">
+                        <tr>
+                          <th>Total</th>
+                          <th className="text-end">
+                            <span className="badge bg-success">
+                              {item.cantidad_dosis?.toLocaleString()} / {item.cantidad_dosis?.toLocaleString()}
+                            </span>
+                          </th>
+                          <th></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {/* Alerta de faltante */}
@@ -87,7 +150,7 @@ const ModalGestionLotes = ({
                   <div className="me-auto">
                     <strong>Entrega parcial detectada:</strong>
                     <div className="small">
-                      Entregadas: {dosisEntregadas} | Faltantes: {dosisFaltantes} dosis
+                      Entregadas: {dosisEntregadas.toLocaleString()} | Faltantes: {dosisFaltantes.toLocaleString()} dosis
                     </div>
                   </div>
                 </div>
@@ -104,7 +167,7 @@ const ModalGestionLotes = ({
                       style={{ borderWidth: '2px' }}
                     >
                       <FaPlus className="me-2" style={{ fontSize: '1.2rem' }} />
-                      Asignar Faltante ({dosisFaltantes} dosis)
+                      Asignar Faltante ({dosisFaltantes.toLocaleString()} dosis)
                     </button>
                   </div>
                 )}
@@ -152,6 +215,20 @@ const ModalGestionLotes = ({
                     <div className="small fw-bold">Inventario</div>
                   </button>
                 </div>
+
+                {/* Botón Liberar Lote - solo si tiene lote asignado */}
+                {tieneLoteAsignado && onLiberarLote && (
+                  <div className="col-12 mt-2">
+                    <button 
+                      className="btn btn-outline-danger w-100 py-2 text-center"
+                      onClick={() => handleAction(() => onLiberarLote(item))}
+                      disabled={realizandoReasignacion}
+                    >
+                      <FaTrashAlt className="me-2" style={{ fontSize: '1rem' }} />
+                      <span className="fw-bold">Liberar Lote Asignado</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
