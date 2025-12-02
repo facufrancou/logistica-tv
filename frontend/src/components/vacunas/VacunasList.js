@@ -6,10 +6,11 @@ import {
   getViasAplicacion,
   getProveedores,
   eliminarVacuna,
+  actualizarVacuna,
 } from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import FormularioVacuna from "../planesVacunales/FormularioVacuna";
-import { FaList, FaPlus, FaCheck, FaTimes, FaEye, FaEdit, FaTrash, FaInbox } from 'react-icons/fa';
+import { FaList, FaPlus, FaCheck, FaTimes, FaEye, FaEdit, FaTrash, FaInbox, FaDollarSign, FaSave } from 'react-icons/fa';
 
 function VacunasList({ vacunas: vacunasProp, onRefresh }) {
   const { usuario } = useContext(AuthContext);
@@ -27,6 +28,11 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [vacunaSeleccionada, setVacunaSeleccionada] = useState(null);
   const [modo, setModo] = useState("crear");
+
+  // Estados para edición masiva de precios
+  const [modoEditarPrecios, setModoEditarPrecios] = useState(false);
+  const [preciosEditados, setPreciosEditados] = useState({});
+  const [guardandoPrecios, setGuardandoPrecios] = useState(false);
 
   useEffect(() => {
     if (vacunasProp) {
@@ -109,6 +115,58 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
     }
   };
 
+  // Funciones para edición masiva de precios
+  const handleToggleModoPrecios = () => {
+    if (modoEditarPrecios) {
+      // Si estamos saliendo del modo edición, limpiar cambios
+      setPreciosEditados({});
+    }
+    setModoEditarPrecios(!modoEditarPrecios);
+  };
+
+  const handlePrecioChange = (idVacuna, nuevoPrecio) => {
+    setPreciosEditados(prev => ({
+      ...prev,
+      [idVacuna]: nuevoPrecio
+    }));
+  };
+
+  const handleGuardarPrecios = async () => {
+    const cambios = Object.entries(preciosEditados);
+    if (cambios.length === 0) {
+      setModoEditarPrecios(false);
+      return;
+    }
+
+    setGuardandoPrecios(true);
+    let errores = 0;
+
+    for (const [idVacuna, nuevoPrecio] of cambios) {
+      try {
+        await actualizarVacuna(idVacuna, { precio_lista: parseFloat(nuevoPrecio) });
+      } catch (error) {
+        console.error(`Error actualizando precio de vacuna ${idVacuna}:`, error);
+        errores++;
+      }
+    }
+
+    setGuardandoPrecios(false);
+    setPreciosEditados({});
+    setModoEditarPrecios(false);
+    handleRefresh();
+
+    if (errores > 0) {
+      alert(`Se actualizaron ${cambios.length - errores} precios. Hubo ${errores} error(es).`);
+    }
+  };
+
+  const handleCancelarEdicionPrecios = () => {
+    setPreciosEditados({});
+    setModoEditarPrecios(false);
+  };
+
+  const tieneCambiosPendientes = Object.keys(preciosEditados).length > 0;
+
   const getNombrePatologia = (id) => {
     const patologia = patologias.find(p => p.id_patologia === id);
     return patologia?.nombre || "—";
@@ -139,13 +197,62 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
     <div>
       <div className="card-header d-flex justify-content-between align-items-center">
         <h3 className="mb-0"><FaList className="me-2 text-primary" />Administración de Vacunas</h3>
-        <button
-          className="btn btn-success"
-          onClick={() => abrirModal()}
-        >
-          <FaPlus className="me-1" />Nueva Vacuna
-        </button>
+        <div className="d-flex gap-2">
+          {/* Botón Modificar/Guardar Precios */}
+          {modoEditarPrecios ? (
+            <>
+              <button
+                className="btn btn-outline-secondary"
+                onClick={handleCancelarEdicionPrecios}
+                disabled={guardandoPrecios}
+              >
+                <FaTimes className="me-1" />Cancelar
+              </button>
+              <button
+                className="btn btn-success"
+                onClick={handleGuardarPrecios}
+                disabled={guardandoPrecios || !tieneCambiosPendientes}
+              >
+                {guardandoPrecios ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-1"></span>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <FaSave className="me-1" />
+                    Guardar Precios {tieneCambiosPendientes && `(${Object.keys(preciosEditados).length})`}
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn btn-success"
+              onClick={handleToggleModoPrecios}
+            >
+              <FaDollarSign className="me-1" />Modificar Precios
+            </button>
+          )}
+          <button
+            className="btn btn-success"
+            onClick={() => abrirModal()}
+            disabled={modoEditarPrecios}
+          >
+            <FaPlus className="me-1" />Nueva Vacuna
+          </button>
+        </div>
       </div>
+
+      {/* Indicador de modo edición de precios */}
+      {modoEditarPrecios && (
+        <div className="alert alert-info d-flex align-items-center mb-3">
+          <FaDollarSign className="me-2" />
+          <span>
+            <strong>Modo edición de precios activo.</strong> Modifique los precios en la columna "Precio" y haga clic en "Guardar Precios" para confirmar los cambios.
+          </span>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="row mb-3">
@@ -203,6 +310,7 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
               <th className="text-dark">Patología</th>
               <th className="text-dark">Presentación</th>
               <th className="text-dark">Proveedor</th>
+              <th className="text-dark">Precio</th>
               <th className="text-dark">Estado</th>
               <th className="text-dark">Acciones</th>
             </tr>
@@ -238,6 +346,35 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
                   {getNombreProveedor(vacuna.id_proveedor)}
                 </td>
                 <td>
+                  {modoEditarPrecios ? (
+                    <div className="d-flex align-items-center" style={{ maxWidth: '120px' }}>
+                      <span className="text-success fw-bold me-1">$</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="form-control form-control-sm"
+                        value={preciosEditados[vacuna.id_vacuna] !== undefined ? preciosEditados[vacuna.id_vacuna] : (vacuna.precio_lista || 0)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            handlePrecioChange(vacuna.id_vacuna, val);
+                          }
+                        }}
+                        style={{ 
+                          textAlign: 'right',
+                          fontWeight: '500',
+                          backgroundColor: preciosEditados[vacuna.id_vacuna] !== undefined ? '#fff3cd' : 'white',
+                          borderColor: preciosEditados[vacuna.id_vacuna] !== undefined ? '#ffc107' : '#ced4da'
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-success fw-bold">
+                      ${Number(vacuna.precio_lista || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </td>
+                <td>
                   <span className={`badge ${vacuna.activa ? 'bg-success' : 'bg-secondary'} text-white`}>
                     {vacuna.activa ? <FaCheck className="mr-1" /> : <FaTimes className="mr-1" />}
                     {vacuna.activa ? 'Activa' : 'Inactiva'}
@@ -249,6 +386,7 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
                       className="btn btn-sm btn-outline-primary"
                       onClick={() => abrirModal(vacuna, "ver")}
                       title="Ver detalles"
+                      disabled={modoEditarPrecios}
                     >
                       <FaEye />
                     </button>
@@ -256,6 +394,7 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
                       className="btn btn-sm btn-outline-secondary"
                       onClick={() => abrirModal(vacuna, "editar")}
                       title="Editar"
+                      disabled={modoEditarPrecios}
                     >
                       <FaEdit />
                     </button>
@@ -263,6 +402,7 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
                       className="btn btn-sm btn-outline-danger"
                       onClick={() => handleEliminar(vacuna.id_vacuna)}
                       title="Eliminar"
+                      disabled={modoEditarPrecios}
                     >
                       <FaTrash />
                     </button>

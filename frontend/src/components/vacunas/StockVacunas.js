@@ -321,29 +321,26 @@ function StockVacunas({ stockData: stockProp, alertas: alertasProp, onRefresh })
             <FaPlus className="mr-1" />Nuevo Lote
           </button>
           <button
-            className={`btn ${mostrarStockCero ? "btn-secondary" : "btn-outline-secondary"}`}
+            className={`btn ${mostrarStockCero ? "btn-outline-secondary" : "btn-outline-secondary"}`}
             onClick={() => setMostrarStockCero(!mostrarStockCero)}
             title={mostrarStockCero ? "Ocultar lotes sin stock" : "Mostrar lotes sin stock"}
+            style={mostrarStockCero ? { backgroundColor: '#6c757d', color: 'white' } : {}}
           >
             <FaEye className="mr-1" />
             {mostrarStockCero ? "Ocultar stock 0" : "Ver todos"}
           </button>
           <div className="btn-group">
             <button
-              className={`btn ${vistaActiva === "stock" ? "btn-primary" : "btn-outline-primary"}`}
+              className={`btn btn-outline-secondary`}
               onClick={() => setVistaActiva("stock")}
+              style={vistaActiva === "stock" ? { backgroundColor: '#6c757d', color: 'white' } : {}}
             >
               <FaWarehouse className="mr-1" />Stock ({vacunasAgrupadas.length} vacunas)
             </button>
             <button
-              className={`btn ${vistaActiva === "alertas" ? "btn-warning" : "btn-outline-warning"}`}
-              onClick={() => setVistaActiva("alertas")}
-            >
-              <FaExclamationTriangle className="mr-1" />Alertas ({Object.keys(alertas).length})
-            </button>
-            <button
-              className={`btn ${vistaActiva === "movimientos" ? "btn-info" : "btn-outline-info"}`}
+              className={`btn btn-outline-secondary`}
               onClick={() => setVistaActiva("movimientos")}
+              style={vistaActiva === "movimientos" ? { backgroundColor: '#6c757d', color: 'white' } : {}}
             >
               <FaInbox className="mr-1" />Movimientos
             </button>
