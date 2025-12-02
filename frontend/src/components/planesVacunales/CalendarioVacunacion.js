@@ -297,21 +297,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
-        console.error('Error del servidor:', error);
-        throw new Error(error.message || 'Error al generar el remito PDF');
-      }
-      
-      const pdfBlob = await response.blob();
+      const pdfBlob = await planesApi.reimprimirRemitoEntrega(calendarioItem.id_calendario);
       
       // Asegurar que el loading se muestre por al menos 1.5 segundos
       const elapsedTime = Date.now() - startTime;
@@ -358,21 +344,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${id_calendario}/remito`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
-        console.error('Error del servidor:', error);
-        throw new Error(error.message || 'Error al generar el remito PDF');
-      }
-      
-      const pdfBlob = await response.blob();
+      const pdfBlob = await planesApi.reimprimirRemitoEntrega(id_calendario);
       
       // Asegurar que el loading se muestre por al menos 1.5 segundos
       const elapsedTime = Date.now() - startTime;

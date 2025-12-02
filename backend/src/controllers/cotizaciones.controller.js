@@ -3593,6 +3593,7 @@ exports.generarRemitoPDF = async (req, res) => {
         lotesEntregados.push({
           lote: mov.stock_vacuna.lote,
           fecha_vencimiento: mov.stock_vacuna.fecha_vencimiento,
+          ubicacion: mov.stock_vacuna.ubicacion_fisica || 'Sin ubicación',
           cantidad: mov.cantidad
         });
       }
@@ -3625,6 +3626,7 @@ exports.generarRemitoPDF = async (req, res) => {
               lotesEntregados.push({
                 lote: stock.lote,
                 fecha_vencimiento: stock.fecha_vencimiento,
+                ubicacion: stock.ubicacion_fisica || 'Sin ubicación',
                 cantidad: cantidad
               });
               
@@ -3637,6 +3639,7 @@ exports.generarRemitoPDF = async (req, res) => {
         lotesEntregados = [{
           lote: calendario.stock_vacuna.lote,
           fecha_vencimiento: calendario.stock_vacuna.fecha_vencimiento,
+          ubicacion: calendario.stock_vacuna.ubicacion_fisica || 'Sin ubicación',
           cantidad: datosEntrega.cantidad_entregada
         }];
       }
@@ -3682,6 +3685,7 @@ exports.generarRemitoPDF = async (req, res) => {
         nombre: calendario.stock_vacuna?.vacuna?.nombre || vacunaInfo?.nombre || calendario.vacuna_nombre || 'Producto no encontrado',
         descripcion: calendario.stock_vacuna?.vacuna?.detalle || vacunaInfo?.detalle || calendario.vacuna_descripcion || 'Sin descripción',
         codigo: calendario.stock_vacuna?.vacuna?.codigo || vacunaInfo?.codigo || 'SIN-CODIGO',
+        ubicacion: calendario.stock_vacuna?.ubicacion_fisica || 'Sin ubicación',
         lote: calendario.stock_vacuna?.lote || calendario.lote_asignado || 'N/A',
         fecha_vencimiento: calendario.stock_vacuna?.fecha_vencimiento || calendario.fecha_vencimiento_lote || null,
         cantidad_programada: calendario.cantidad_dosis || 0,

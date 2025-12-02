@@ -421,7 +421,7 @@
             <thead>
               <tr>
                 <th>Vacuna</th>
-                <th>Código</th>
+                <th>Ubicación</th>
                 <th style="text-align: center">Lote</th>
                 <th style="text-align: center">F. Vencimiento</th>
                 <th style="text-align: center">Cant. Lote</th>
@@ -437,8 +437,8 @@
                     <strong>{{../producto.nombre}}</strong>
                     <br><small>{{../producto.descripcion}}</small>
                   </td>
-                  <td rowspan="{{../producto.lotes_entregados.length}}">{{../producto.codigo}}</td>
                   {{/if}}
+                  <td>{{this.ubicacion}}</td>
                   <td style="text-align: center"><strong>{{this.lote}}</strong></td>
                   <td style="text-align: center">{{formatDate this.fecha_vencimiento}}</td>
                   <td class="cantidad">{{this.cantidad}} dosis</td>
@@ -455,7 +455,7 @@
                     <strong>{{producto.nombre}}</strong>
                     <br><small>{{producto.descripcion}}</small>
                   </td>
-                  <td>{{producto.codigo}}</td>
+                  <td>{{producto.ubicacion}}</td>
                   <td style="text-align: center">{{producto.lote}}</td>
                   <td style="text-align: center">{{formatDate producto.fecha_vencimiento}}</td>
                   <td class="cantidad">{{entrega.cantidadEntregada}} dosis</td>
