@@ -438,7 +438,6 @@ const CotizacionesList = () => {
                     <th>Número</th>
                     <th>Cliente</th>
                     <th>Plan</th>
-                    <th>Lista Precio</th>
                     <th>Estado</th>
                     <th>Precio Total</th>
                     <th>Fecha Inicio</th>
@@ -474,18 +473,6 @@ const CotizacionesList = () => {
                             <small className="d-block text-muted">
                               {cotizacion.plan.duracion_semanas} semanas
                             </small>
-                          )}
-                        </td>
-                        <td>
-                          {cotizacion.lista_precio ? (
-                            <>
-                              <strong>{cotizacion.lista_precio.nombre}</strong>
-                              <small className="d-block text-muted">
-                                {cotizacion.lista_precio.tipo} (+{cotizacion.lista_precio.porcentaje_recargo}%)
-                              </small>
-                            </>
-                          ) : (
-                            <span className="text-muted">Sin lista asignada</span>
                           )}
                         </td>
                         <td>

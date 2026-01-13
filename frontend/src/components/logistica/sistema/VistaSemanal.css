@@ -1,47 +1,461 @@
+/* ============================================
+   VISTA SEMANAL - ESTILOS MEJORADOS
+   ============================================ */
+
+/* Contenedor principal */
+.vista-semanal-container {
+  background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+  min-height: calc(100vh - 100px);
+  padding: 30px;
+  border-radius: 16px;
+}
+
+/* Header con título y selector de año */
+.vista-semanal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 25px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.vista-semanal-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-principal, #3D2113);
+}
+
+.vista-semanal-titulo .icono {
+  font-size: 2rem;
+}
+
+/* Selector de año */
+.año-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3018 100%);
+  padding: 8px 12px;
+  border-radius: 50px;
+}
+
+.año-selector .btn-año {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.año-selector .btn-año:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.año-selector .btn-año:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.año-selector .año-badge {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
+  padding: 0 15px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Carrusel de semanas */
 .carrusel-semanal {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   overflow-x: auto;
-  padding: 10px;
+  padding: 20px 10px 30px;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
 }
 
+.carrusel-semanal::-webkit-scrollbar {
+  height: 10px;
+}
+
+.carrusel-semanal::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border-radius: 10px;
+}
+
+.carrusel-semanal::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3018 100%);
+  border-radius: 10px;
+}
+
+.carrusel-semanal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a3018 0%, var(--color-principal, #3D2113) 100%);
+}
+
+/* Tarjeta de semana */
 .tarjeta-semana {
   flex: 0 0 auto;
-  width: 220px;
-  min-height: 580px; /* ⬅️ AGREGÁ o MODIFICÁ esta línea */
-  border-radius: 12px;
-  border: 1px solid #ddd;
-  background-color: #f9f9f9;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 240px;
+  min-height: 450px;
+  border-radius: 16px;
+  background: white;
+  padding: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  overflow: visible;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  margin-top: 15px;
 }
 
-.titulo-semana {
+.tarjeta-semana:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Header de la tarjeta */
+.tarjeta-header {
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3018 100%);
+  padding: 20px 20px 24px;
   text-align: center;
-  font-weight: 600;
+  position: relative;
+  border-radius: 14px 14px 0 0;
+}
+
+.tarjeta-header::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 10px solid #5a3018;
+}
+
+.tarjeta-header .titulo-semana {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.tarjeta-header .subtitulo-semana {
+  font-size: 0.8rem;
+  color: #ffffff !important;
+  margin-top: 6px;
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+/* Contador de clientes */
+.contador-clientes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.contador-clientes .numero {
+  background: linear-gradient(135deg, var(--color-secundario, #7D0C0A) 0%, #a1100c 100%);
+  color: white;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+
+/* Cuerpo de la tarjeta con lista de clientes */
+.tarjeta-body {
+  flex: 1;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.tarjeta-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tarjeta-body::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.lista-clientes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lista-clientes li {
   margin-bottom: 10px;
-  color: #333;
+}
+
+.lista-clientes li:last-child {
+  margin-bottom: 0;
 }
 
 .btn-nombre {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  background: none;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: none;
-  color: #007bff;
+  border-radius: 10px;
+  color: #2d3436;
   text-align: left;
-  padding: 4px 0;
+  padding: 12px 16px;
+  font-size: 0.88rem;
   font-weight: 500;
-  transition: 0.2s;
+  line-height: 1.3;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-left: 3px solid transparent;
 }
 
 .btn-nombre:hover {
-  color: #0056b3;
-  text-decoration: underline;
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3018 100%);
+  color: white;
+  transform: translateX(5px);
+  border-left-color: var(--color-acento, #CCB137);
+}
+
+.btn-nombre .icono-cliente {
+  margin-right: 10px;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Estado vacío */
+.tarjeta-vacia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 150px;
+  color: #adb5bd;
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.tarjeta-vacia .icono-vacio {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.tarjeta-vacia span {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Semana actual */
+.tarjeta-semana.semana-actual {
+  border: 3px solid var(--color-acento, #CCB137);
+  box-shadow: 0 0 0 4px rgba(204, 177, 55, 0.2), 0 8px 30px rgba(204, 177, 55, 0.3);
+}
+
+.tarjeta-semana.semana-actual .tarjeta-header {
+  background: linear-gradient(135deg, var(--color-secundario, #7D0C0A) 0%, #a1100c 100%);
+}
+
+.tarjeta-semana.semana-actual .tarjeta-header::after {
+  border-top-color: #a1100c;
+}
+
+.tarjeta-semana.semana-actual .badge-actual {
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  background: var(--color-acento, #CCB137);
+  color: var(--color-principal, #3D2113);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* Modal mejorado */
+.modal-pedido-detalle .modal-content {
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.modal-pedido-detalle .modal-header {
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3018 100%);
+  color: white;
+  border: none;
+  padding: 20px 25px;
+}
+
+.modal-pedido-detalle .modal-title {
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.modal-pedido-detalle .btn-close {
+  filter: brightness(0) invert(1);
+  opacity: 0.8;
+}
+
+.modal-pedido-detalle .modal-body {
+  padding: 25px;
+}
+
+.modal-pedido-detalle .info-cliente {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.modal-pedido-detalle .info-cliente h6 {
+  color: var(--color-secundario, #7D0C0A);
+  font-weight: 700;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-pedido-detalle .info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed #dee2e6;
+}
+
+.modal-pedido-detalle .info-item:last-child {
+  border-bottom: none;
+}
+
+.modal-pedido-detalle .info-label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.modal-pedido-detalle .info-value {
+  color: #2d3436;
+  font-weight: 600;
+}
+
+.modal-pedido-detalle .productos-lista {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-pedido-detalle .productos-lista h6 {
+  background: linear-gradient(135deg, var(--color-secundario, #7D0C0A) 0%, #a1100c 100%);
+  color: white;
+  margin: 0;
+  padding: 12px 20px;
+  font-weight: 600;
+}
+
+.modal-pedido-detalle .productos-lista ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.modal-pedido-detalle .productos-lista li {
+  padding: 12px 20px;
+  border-bottom: 1px solid #f1f3f4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-pedido-detalle .productos-lista li:last-child {
+  border-bottom: none;
+}
+
+.modal-pedido-detalle .producto-nombre {
+  font-weight: 600;
+  color: #2d3436;
+}
+
+.modal-pedido-detalle .producto-cantidad {
+  background: #e9ecef;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.modal-pedido-detalle .modal-footer {
+  border: none;
+  padding: 15px 25px 25px;
+}
+
+.modal-pedido-detalle .btn-cerrar {
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3018 100%);
+  border: none;
+  padding: 10px 30px;
+  border-radius: 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.modal-pedido-detalle .btn-cerrar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(61, 33, 19, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vista-semanal-container {
+    padding: 15px;
+  }
+  
+  .vista-semanal-header {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .vista-semanal-titulo {
+    font-size: 1.4rem;
+  }
+  
+  .tarjeta-semana {
+    width: 200px;
+    min-height: 380px;
+  }
 }

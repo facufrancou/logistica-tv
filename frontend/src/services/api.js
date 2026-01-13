@@ -198,7 +198,7 @@ export const getPedidosPorFecha = (desde, hasta) => {
   }).then((res) => (res.ok ? res.json() : []));
 };
 
-export const getPedidosPorSemana = () => fetchConSesion(`${API}/pedidos/semanal`);
+export const getPedidosPorSemana = (año) => fetchConSesion(`${API}/pedidos/semanal${año ? `?año=${año}` : ''}`);
 export const getUltimoPedidoPorCliente = (id_cliente) => fetchConSesion(`${API}/pedidos/ultimo/${id_cliente}`);
 
 // PROVEEDORES

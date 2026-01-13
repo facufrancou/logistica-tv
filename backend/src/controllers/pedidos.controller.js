@@ -611,11 +611,19 @@ exports.getPedidosProximos = async (req, res) => {
 
 exports.getPedidosPorSemana = async (req, res) => {
   try {
-    // Obtener pedidos con fecha_proximo_pedido definida
+    const año = parseInt(req.query.año) || new Date().getFullYear();
+    
+    // Filtrar pedidos del año seleccionado
+    const inicioAño = new Date(año, 0, 1);
+    const finAño = new Date(año, 11, 31, 23, 59, 59);
+    
+    // Obtener pedidos con fecha_proximo_pedido definida dentro del año
     const pedidos = await prisma.pedido.findMany({
       where: {
         fecha_proximo_pedido: {
-          not: null
+          not: null,
+          gte: inicioAño,
+          lte: finAño
         }
       },
       select: {
