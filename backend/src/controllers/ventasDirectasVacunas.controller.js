@@ -28,12 +28,11 @@ exports.getStocksDisponibles = async (req, res) => {
       id_vacuna,
       solo_disponibles = 'true',
       page = 1,
-      limit = 50
+      limit = 100
     } = req.query;
 
-    // Construir filtros
+    // Construir filtros - Mostrar todos los stocks con stock físico > 0
     const where = {
-      estado_stock: 'disponible',
       stock_actual: { gt: 0 }
     };
 
@@ -48,6 +47,8 @@ exports.getStocksDisponibles = async (req, res) => {
         { vacuna: { codigo: { contains: search } } }
       ];
     }
+
+    console.log('getStocksDisponibles - Filtros aplicados:', JSON.stringify(where));
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -64,7 +65,7 @@ exports.getStocksDisponibles = async (req, res) => {
                 select: { nombre: true }
               },
               presentacion: {
-                select: { nombre: true, unidad_medida: true }
+                select: { nombre: true, unidad_medida: true, dosis_por_frasco: true }
               }
             }
           }
@@ -79,6 +80,8 @@ exports.getStocksDisponibles = async (req, res) => {
       prisma.stockVacuna.count({ where })
     ]);
 
+    console.log(`getStocksDisponibles - Encontrados: ${stocks.length} stocks de ${totalCount} total`);
+
     // Formatear respuesta con información adicional
     const stocksFormatted = stocks.map(stock => {
       const today = new Date();
@@ -90,7 +93,7 @@ exports.getStocksDisponibles = async (req, res) => {
       const dosisDisponibles = stock.stock_actual;
       
       // Calcular en frascos basado en el stock actual total
-      const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
+      const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1;
       const frascosDisponibles = Math.floor(dosisDisponibles / dosisPorFrasco);
 
       return {
@@ -282,7 +285,7 @@ exports.crearVentaDirecta = async (req, res) => {
 
         // Convertir cantidad de FRASCOS a DOSIS
         const cantidadFrascos = parseInt(item.cantidad);
-        const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1;
         const cantidadDosis = cantidadFrascos * dosisPorFrasco;
 
         // Precio base del stock
@@ -345,7 +348,7 @@ exports.crearVentaDirecta = async (req, res) => {
 
         // Convertir frascos a dosis para descontar
         const cantidadFrascos = parseInt(item.cantidad);
-        const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1000;
+        const dosisPorFrasco = stock.vacuna?.presentacion?.dosis_por_frasco || 1;
         const cantidadDosisADescontar = cantidadFrascos * dosisPorFrasco;
         
         console.log(`Descontando stock - ID: ${item.id_stock_vacuna}, Frascos: ${cantidadFrascos}, Dosis a descontar: ${cantidadDosisADescontar}, Stock anterior: ${stock.stock_actual}`);

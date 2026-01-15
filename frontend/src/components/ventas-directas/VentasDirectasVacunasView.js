@@ -92,7 +92,7 @@ const VentasDirectasVacunasView = () => {
   const cargarStocksDisponibles = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API}/ventas-directas-vacunas/stocks-disponibles`, {
+      const response = await fetch(`${API}/ventas-directas-vacunas/stocks-disponibles?limit=500`, {
         credentials: 'include'
       });
 
