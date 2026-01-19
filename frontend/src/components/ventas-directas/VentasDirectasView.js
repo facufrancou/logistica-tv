@@ -47,7 +47,7 @@ const VentasDirectasView = () => {
   const cargarProductos = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://api.tierravolga.com.ar/productos/disponibles', {
+      const response = await fetch('/productos/disponibles', {
         credentials: 'include'
       });
 
@@ -163,7 +163,7 @@ const VentasDirectasView = () => {
         observaciones: observaciones
       };
 
-      const response = await fetch('https://api.tierravolga.com.ar/ventas-directas', {
+      const response = await fetch('/ventas-directas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -1,10 +1,10 @@
 // En desarrollo usa el proxy configurado en package.json
 // En producción usa la URL directa
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.tierravolga.com.ar' 
+  ? 'http://localhost:3001' 
   : ''; // Vacío = usa proxy de package.json
 const OLD_API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.tierravolga.com.ar' 
+  ? 'http://localhost:3001' 
   : '';
 
 // Headers por defecto

@@ -1,5 +1,5 @@
 const API = process.env.NODE_ENV === 'production' 
-  ? "https://api.tierravolga.com.ar" 
+  ? "http://localhost:3001" 
   : ""; // En desarrollo usa el proxy
 
 // Función reutilizable para fetch con sesión
@@ -654,4 +654,182 @@ export const crearMovimientoStock = async (movimiento) => {
     throw new Error("Error al crear movimiento: " + err.message);
   }
 };
+
+// ========================
+// ÓRDENES DE COMPRA
+// ========================
+
+export const getOrdenesCompra = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.estado) queryParams.append('estado', params.estado);
+    if (params.id_proveedor) queryParams.append('id_proveedor', params.id_proveedor);
+    if (params.fecha_desde) queryParams.append('fecha_desde', params.fecha_desde);
+    if (params.fecha_hasta) queryParams.append('fecha_hasta', params.fecha_hasta);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+
+    const url = `${API}/ordenes-compra?${queryParams.toString()}`;
+    return await fetchConSesion(url);
+  } catch (err) {
+    throw new Error("Error al obtener órdenes de compra: " + err.message);
+  }
+};
+
+export const getOrdenCompraById = async (id) => {
+  try {
+    return await fetchConSesion(`${API}/ordenes-compra/${id}`);
+  } catch (err) {
+    throw new Error("Error al obtener orden de compra: " + err.message);
+  }
+};
+
+export const crearOrdenCompra = async (orden) => {
+  try {
+    const res = await fetch(`${API}/ordenes-compra`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orden),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo crear la orden de compra");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al crear orden de compra: " + err.message);
+  }
+};
+
+export const actualizarOrdenCompra = async (id, orden) => {
+  try {
+    const res = await fetch(`${API}/ordenes-compra/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orden),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo actualizar la orden de compra");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al actualizar orden de compra: " + err.message);
+  }
+};
+
+export const cambiarEstadoOrden = async (id, estado) => {
+  try {
+    const res = await fetch(`${API}/ordenes-compra/${id}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado }),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo cambiar el estado");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al cambiar estado: " + err.message);
+  }
+};
+
+export const registrarIngresoOrden = async (idOrden, data) => {
+  try {
+    const res = await fetch(`${API}/ordenes-compra/${idOrden}/ingreso`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo registrar el ingreso");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al registrar ingreso: " + err.message);
+  }
+};
+
+export const eliminarOrdenCompra = async (id) => {
+  try {
+    const res = await fetch(`${API}/ordenes-compra/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "No se pudo eliminar la orden");
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw new Error("Error al eliminar orden: " + err.message);
+  }
+};
+
+export const getStockGlobalVacunas = async (idCotizacion = null, mostrarTodo = false) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (idCotizacion) queryParams.append('id_cotizacion', idCotizacion);
+    if (mostrarTodo) queryParams.append('mostrar_todo', 'true');
+    
+    const url = `${API}/ordenes-compra/stock-global?${queryParams.toString()}`;
+    return await fetchConSesion(url);
+  } catch (err) {
+    throw new Error("Error al obtener stock global: " + err.message);
+  }
+};
+
+export const getSugerenciaCotizacion = async (idCotizacion) => {
+  try {
+    return await fetchConSesion(`${API}/ordenes-compra/sugerencia-cotizacion/${idCotizacion}`);
+  } catch (err) {
+    throw new Error("Error al obtener sugerencia: " + err.message);
+  }
+};
+
+export const getProveedoresOrden = async () => {
+  try {
+    return await fetchConSesion(`${API}/ordenes-compra/proveedores`);
+  } catch (err) {
+    throw new Error("Error al obtener proveedores: " + err.message);
+  }
+};
+
+export const getCotizacionesDisponibles = async () => {
+  try {
+    return await fetchConSesion(`${API}/ordenes-compra/cotizaciones-disponibles`);
+  } catch (err) {
+    throw new Error("Error al obtener cotizaciones: " + err.message);
+  }
+};
+
+export const getOrdenParaPDF = async (id, idProveedor = null) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (idProveedor) queryParams.append('id_proveedor', idProveedor);
+    
+    const url = `${API}/ordenes-compra/${id}/pdf?${queryParams.toString()}`;
+    return await fetchConSesion(url);
+  } catch (err) {
+    throw new Error("Error al obtener datos PDF: " + err.message);
+  }
+};
+
 

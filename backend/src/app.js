@@ -13,13 +13,15 @@ app.set('trust proxy', 1);
 app.use(cors({
 //  origin: true,           // o tu dominio exacto
   origin: ['http://localhost:3000', 'http://localhost:3001', 'https://gestion.tierravolga.com.ar'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control']
 }));
 /* // CORS - Configuración para múltiples orígenes permitidos
 const allowedOrigins = [
   'https://gestion.tierravolga.com.ar',
-  'https://api.tierravolga.com.ar',
-  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3001',
   'http://localhost:3001',
   'http://localhost:5173', // Vite dev server
   'http://127.0.0.1:3000',
@@ -93,5 +95,8 @@ app.use('/asignaciones', require('./routes/asignaciones.routes'));
 
 // Nuevas rutas para ventas directas de vacunas (entregas fuera de plan)
 app.use('/ventas-directas-vacunas', require('./routes/ventasDirectasVacunas'));
+
+// Sistema de Órdenes de Compra
+app.use('/ordenes-compra', require('./routes/ordenesCompra.routes'));
 
 module.exports = app;

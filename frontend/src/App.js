@@ -109,6 +109,9 @@ import CatalogosVacunas from "./components/vacunas/CatalogosVacunas";
 import AdminVacunas from "./components/planesVacunales/AdminVacunas";
 import CalendarioVacunacionEditor from "./components/planesVacunales/CalendarioVacunacionEditor";
 
+// Componentes de Órdenes de Compra
+import { OrdenesCompra } from "./components/ordenes-compra";
+
 import { getPedidos } from "./services/api";
 import { useEffect, useState, useContext } from "react";
 import { observeTableMutations } from './utils/responsiveTables';
@@ -204,6 +207,8 @@ function Navbar() {
                 <li><Link className="dropdown-item d-flex align-items-center" to="/remitos/generar"><FaFileInvoice className="me-2" /> Generar Remitos</Link></li>
                 {/* <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li> */}
                 <li><Link className="dropdown-item d-flex align-items-center" to="/entregas-fuera-de-plan"><FaSyringe className="me-2" /> Entregas Fuera de Plan</Link></li>
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/ordenes-compra"><FaShoppingCart className="me-2" /> <strong>Órdenes de Compra</strong></Link></li>
                 {/* <li><Link className="dropdown-item d-flex align-items-center" to="/indicadores-stock"><FaChartBar className="me-2" /> Indicadores Stock</Link></li> */}
               </ul>
             </li>
@@ -555,7 +560,17 @@ function MainRoutes() {
           }
         />
 
-        {/* 📦 STOCK & INVENTARIO (Sprint 3) */}
+        {/* � ÓRDENES DE COMPRA */}
+        <Route
+          path="/ordenes-compra"
+          element={
+            <RutaPrivada>
+              <OrdenesCompra />
+            </RutaPrivada>
+          }
+        />
+
+        {/* �📦 STOCK & INVENTARIO (Sprint 3) */}
         <Route
           path="/stock"
           element={

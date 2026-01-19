@@ -16,11 +16,11 @@ model Rol {
 }
 
 model Usuario {
-  id_usuario                 Int               @id @default(autoincrement())
-  nombre                     String            @db.VarChar(100)
-  email                      String?           @db.VarChar(100)
-  password                   String            @db.VarChar(255)
-  rol_id                     BigInt            @db.UnsignedBigInt
+  id_usuario                 Int                     @id @default(autoincrement())
+  nombre                     String                  @db.VarChar(100)
+  email                      String?                 @db.VarChar(100)
+  password                   String                  @db.VarChar(255)
+  rol_id                     BigInt                  @db.UnsignedBigInt
   aplicaciones_dosis_creadas AplicacionDosis[]
   asignaciones_lote          AsignacionLote[]
   auditoria_acciones         AuditoriaAccion[]
@@ -31,7 +31,7 @@ model Usuario {
   notificaciones             Notificacion[]
   pedidos                    Pedido[]
   retiros_campo_creados      RetiroCampo[]
-  rol                        Rol               @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
+  rol                        Rol                     @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
 
   @@index([email], map: "idx_usuarios_email")
   @@index([rol_id], map: "rol_id")
@@ -68,15 +68,16 @@ model Cliente {
 }
 
 model Proveedor {
-  id_proveedor Int        @id @default(autoincrement())
-  nombre       String     @db.VarChar(255)
-  activo       Boolean?   @default(true)
-  created_at   DateTime?  @default(now()) @db.DateTime(0)
-  updated_at   DateTime?  @default(now()) @db.DateTime(0)
-  created_by   Int?
-  updated_by   Int?
-  productos    Producto[]
-  vacunas      Vacuna[]
+  id_proveedor           Int                  @id @default(autoincrement())
+  nombre                 String               @db.VarChar(255)
+  activo                 Boolean?             @default(true)
+  created_at             DateTime?            @default(now()) @db.DateTime(0)
+  updated_at             DateTime?            @default(now()) @db.DateTime(0)
+  created_by             Int?
+  updated_by             Int?
+  productos              Producto[]
+  vacunas                Vacuna[]
+  detalle_ordenes_compra DetalleOrdenCompra[]
 
   @@map("proveedores")
 }
@@ -290,42 +291,42 @@ model AuditoriaAccion {
 }
 
 model ListaPrecio {
-  id_lista          Int               @id @default(autoincrement())
-  tipo              tipo_lista_precio
-  nombre            String            @db.VarChar(50)
-  descripcion       String?           @db.Text
-  porcentaje_recargo Decimal          @default(0) @db.Decimal(5, 2)
-  activa            Boolean           @default(true)
-  created_at        DateTime?         @default(now()) @db.DateTime(0)
-  updated_at        DateTime?         @default(now()) @db.DateTime(0)
-  created_by        Int?
-  updated_by        Int?
-  cotizaciones      Cotizacion[]
-  historial_precios HistorialPrecio[]
-  planes_vacunales  PlanVacunal[]
-  precios_por_lista PrecioPorLista[]
-  ventas_directas   VentaDirecta[]
+  id_lista           Int               @id @default(autoincrement())
+  tipo               tipo_lista_precio
+  nombre             String            @db.VarChar(50)
+  descripcion        String?           @db.Text
+  porcentaje_recargo Decimal           @default(0) @db.Decimal(5, 2)
+  activa             Boolean           @default(true)
+  created_at         DateTime?         @default(now()) @db.DateTime(0)
+  updated_at         DateTime?         @default(now()) @db.DateTime(0)
+  created_by         Int?
+  updated_by         Int?
+  cotizaciones       Cotizacion[]
+  historial_precios  HistorialPrecio[]
+  planes_vacunales   PlanVacunal[]
+  precios_por_lista  PrecioPorLista[]
+  ventas_directas    VentaDirecta[]
 
   @@map("listas_precios")
 }
 
 model PlanVacunal {
-  id_plan          Int            @id @default(autoincrement())
-  nombre           String         @db.VarChar(255)
-  descripcion      String?        @db.Text
-  duracion_semanas Int            @db.TinyInt
-  estado           estado_plan    @default(borrador)
-  id_lista_precio  Int?
-  precio_total     Decimal?       @db.Decimal(15, 2)
-  observaciones    String?        @db.Text
-  created_at       DateTime?      @default(now()) @db.DateTime(0)
-  updated_at       DateTime?      @default(now()) @db.DateTime(0)
-  created_by       Int?
-  updated_by       Int?
-  cotizaciones     Cotizacion[]
-  productos_plan   PlanProducto[]
-  vacunas_plan     PlanVacuna[]
-  lista_precio     ListaPrecio?   @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction)
+  id_plan           Int                  @id @default(autoincrement())
+  nombre            String               @db.VarChar(255)
+  descripcion       String?              @db.Text
+  duracion_semanas  Int                  @db.TinyInt
+  estado            estado_plan          @default(borrador)
+  id_lista_precio   Int?
+  precio_total      Decimal?             @db.Decimal(15, 2)
+  observaciones     String?              @db.Text
+  created_at        DateTime?            @default(now()) @db.DateTime(0)
+  updated_at        DateTime?            @default(now()) @db.DateTime(0)
+  created_by        Int?
+  updated_by        Int?
+  cotizaciones      Cotizacion[]
+  productos_plan    PlanProducto[]
+  vacunas_plan      PlanVacuna[]
+  lista_precio      ListaPrecio?         @relation(fields: [id_lista_precio], references: [id_lista], onUpdate: NoAction)
   indicadores_stock IndicadorStockPlan[]
 
   @@index([estado], map: "idx_planes_estado")
@@ -362,7 +363,7 @@ model PlanVacuna {
   dosis_por_semana Int         @default(1)
   semana_inicio    Int         @db.TinyInt
   semana_fin       Int?        @db.TinyInt
-  dia_plan         Int?        // Día del plan para la aplicación (1, 2, 3... N)
+  dia_plan         Int? // Día del plan para la aplicación (1, 2, 3... N)
   observaciones    String?     @db.Text
   created_at       DateTime?   @default(now()) @db.DateTime(0)
   updated_at       DateTime?   @default(now()) @db.DateTime(0)
@@ -433,6 +434,7 @@ model Cotizacion {
   seguimiento_cumplimiento   SeguimientoCumplimiento[]
   resumen_liquidacion        ResumenLiquidacion?
   remitos                    Remito[]
+  ordenes_compra             OrdenCompra[]
 
   @@index([id_cliente], map: "idx_cotizaciones_cliente")
   @@index([id_plan], map: "idx_cotizaciones_plan")
@@ -447,25 +449,25 @@ model Cotizacion {
 }
 
 model DetalleCotizacion {
-  id_detalle_cotizacion Int        @id @default(autoincrement())
-  id_cotizacion         Int
-  id_producto           Int
-  cantidad_total        Int
-  precio_base_producto  Decimal    @default(0) @db.Decimal(15, 2)
-  porcentaje_aplicado   Decimal?   @db.Decimal(5, 2)
-  precio_unitario       Decimal    @db.Decimal(15, 2)
-  precio_final_calculado Decimal   @default(0) @db.Decimal(15, 2)
-  subtotal              Decimal    @db.Decimal(15, 2)
-  facturacion_tipo      facturacion_tipo? @default(pendiente)
-  editado_manualmente   Boolean    @default(false)
-  semana_inicio         Int        @db.TinyInt
-  semana_fin            Int?       @db.TinyInt
-  dosis_por_semana      Int        @default(1)
-  observaciones         String?    @db.Text
-  created_at            DateTime?  @default(now()) @db.DateTime(0)
-  cotizacion            Cotizacion @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
-  producto              Producto   @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
-  item_facturacion      ItemFacturacion?
+  id_detalle_cotizacion  Int               @id @default(autoincrement())
+  id_cotizacion          Int
+  id_producto            Int
+  cantidad_total         Int
+  precio_base_producto   Decimal           @default(0) @db.Decimal(15, 2)
+  porcentaje_aplicado    Decimal?          @db.Decimal(5, 2)
+  precio_unitario        Decimal           @db.Decimal(15, 2)
+  precio_final_calculado Decimal           @default(0) @db.Decimal(15, 2)
+  subtotal               Decimal           @db.Decimal(15, 2)
+  facturacion_tipo       facturacion_tipo? @default(pendiente)
+  editado_manualmente    Boolean           @default(false)
+  semana_inicio          Int               @db.TinyInt
+  semana_fin             Int?              @db.TinyInt
+  dosis_por_semana       Int               @default(1)
+  observaciones          String?           @db.Text
+  created_at             DateTime?         @default(now()) @db.DateTime(0)
+  cotizacion             Cotizacion        @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  producto               Producto          @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
+  item_facturacion       ItemFacturacion?
 
   @@index([id_cotizacion], map: "idx_detalle_cotizacion")
   @@index([id_producto], map: "idx_detalle_producto")
@@ -477,9 +479,9 @@ model CalendarioVacunacion {
   id_calendario              Int                      @id @default(autoincrement())
   id_cotizacion              Int
   id_producto                Int
-  id_stock_vacuna            Int?                     // Referencia al lote principal (legacy, para compatibilidad)
+  id_stock_vacuna            Int? // Referencia al lote principal (legacy, para compatibilidad)
   numero_semana              Int                      @db.TinyInt
-  dia_plan                   Int?                     // Día del plan (1-N) calculado desde fecha_inicio_plan
+  dia_plan                   Int? // Día del plan (1-N) calculado desde fecha_inicio_plan
   fecha_programada           DateTime                 @db.Date
   cantidad_dosis             Int
   estado_dosis               estado_dosis             @default(pendiente)
@@ -494,11 +496,11 @@ model CalendarioVacunacion {
   dosis_original_id          Int?
   numero_desdoblamiento      Int                      @default(1)
   lote_asignado              String?                  @db.VarChar(100) // Campo para mostrar el lote sin JOIN (legacy)
-  fecha_vencimiento_lote     DateTime?                @db.Date         // Campo para mostrar vencimiento sin JOIN (legacy)
+  fecha_vencimiento_lote     DateTime?                @db.Date // Campo para mostrar vencimiento sin JOIN (legacy)
   created_at                 DateTime?                @default(now()) @db.DateTime(0)
   updated_at                 DateTime?                @default(now()) @db.DateTime(0)
   aplicaciones_dosis         AplicacionDosis[]
-  asignaciones_lote          AsignacionLote[]         // Nueva relación: lotes asignados a este calendario
+  asignaciones_lote          AsignacionLote[] // Nueva relación: lotes asignados a este calendario
   cotizacion                 Cotizacion               @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
   producto                   Producto                 @relation(fields: [id_producto], references: [id_producto], onUpdate: NoAction)
   stock_vacuna               StockVacuna?             @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna], onUpdate: NoAction)
@@ -881,17 +883,17 @@ enum tipo_entrega {
 }
 
 model ItemFacturacion {
-  id_item_facturacion   Int                 @id @default(autoincrement())
-  id_detalle_cotizacion Int                 @unique
-  tipo_facturacion      facturacion_tipo    @default(pendiente)
-  monto_negro           Decimal?            @db.Decimal(15, 2)
-  monto_blanco          Decimal?            @db.Decimal(15, 2)
-  observaciones         String?             @db.Text
-  fecha_clasificacion   DateTime            @default(now()) @db.DateTime(0)
+  id_item_facturacion   Int               @id @default(autoincrement())
+  id_detalle_cotizacion Int               @unique
+  tipo_facturacion      facturacion_tipo  @default(pendiente)
+  monto_negro           Decimal?          @db.Decimal(15, 2)
+  monto_blanco          Decimal?          @db.Decimal(15, 2)
+  observaciones         String?           @db.Text
+  fecha_clasificacion   DateTime          @default(now()) @db.DateTime(0)
   clasificado_por       Int?
-  created_at            DateTime?           @default(now()) @db.DateTime(0)
-  updated_at            DateTime?           @default(now()) @db.DateTime(0)
-  detalle_cotizacion    DetalleCotizacion   @relation(fields: [id_detalle_cotizacion], references: [id_detalle_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  created_at            DateTime?         @default(now()) @db.DateTime(0)
+  updated_at            DateTime?         @default(now()) @db.DateTime(0)
+  detalle_cotizacion    DetalleCotizacion @relation(fields: [id_detalle_cotizacion], references: [id_detalle_cotizacion], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tipo_facturacion], map: "idx_item_facturacion_tipo")
   @@index([fecha_clasificacion], map: "idx_item_facturacion_fecha")
@@ -899,19 +901,19 @@ model ItemFacturacion {
 }
 
 model ResumenLiquidacion {
-  id_resumen        Int         @id @default(autoincrement())
+  id_resumen        Int        @id @default(autoincrement())
   id_cotizacion     Int
-  total_negro       Decimal     @default(0) @db.Decimal(15, 2)
-  total_blanco      Decimal     @default(0) @db.Decimal(15, 2)
-  total_general     Decimal     @default(0) @db.Decimal(15, 2)
-  porcentaje_negro  Decimal?    @db.Decimal(5, 2)
-  porcentaje_blanco Decimal?    @db.Decimal(5, 2)
-  fecha_generacion  DateTime    @default(now()) @db.DateTime(0)
+  total_negro       Decimal    @default(0) @db.Decimal(15, 2)
+  total_blanco      Decimal    @default(0) @db.Decimal(15, 2)
+  total_general     Decimal    @default(0) @db.Decimal(15, 2)
+  porcentaje_negro  Decimal?   @db.Decimal(5, 2)
+  porcentaje_blanco Decimal?   @db.Decimal(5, 2)
+  fecha_generacion  DateTime   @default(now()) @db.DateTime(0)
   generado_por      Int?
-  observaciones     String?     @db.Text
-  created_at        DateTime?   @default(now()) @db.DateTime(0)
-  updated_at        DateTime?   @default(now()) @db.DateTime(0)
-  cotizacion        Cotizacion  @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
+  observaciones     String?    @db.Text
+  created_at        DateTime?  @default(now()) @db.DateTime(0)
+  updated_at        DateTime?  @default(now()) @db.DateTime(0)
+  cotizacion        Cotizacion @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([id_cotizacion], map: "unique_resumen_cotizacion")
   @@index([fecha_generacion], map: "idx_resumen_fecha")
@@ -923,26 +925,26 @@ model ResumenLiquidacion {
 // NUEVOS MODELOS PARA REMITOS Y VENTAS DIRECTAS
 
 model Remito {
-  id_remito           Int      @id @default(autoincrement())
-  numero_remito       String   @unique @db.VarChar(50)
-  id_cotizacion       Int?
-  id_cliente          Int
-  id_venta_directa    Int?
-  fecha_emision       DateTime @db.DateTime(0)
-  fecha_entrega       DateTime? @db.DateTime(0)
-  tipo_remito         TipoRemito @default(plan_vacunal)
-  estado_remito       EstadoRemito @default(pendiente)
-  precio_total        Decimal? @db.Decimal(15, 2)
-  observaciones       String?  @db.Text
-  created_by          Int?
-  created_at          DateTime @default(now()) @db.DateTime(0)
-  updated_at          DateTime @updatedAt @db.DateTime(0)
-  
-  cliente             Cliente @relation(fields: [id_cliente], references: [id_cliente])
-  cotizacion          Cotizacion? @relation(fields: [id_cotizacion], references: [id_cotizacion])
-  venta_directa       VentaDirecta? @relation(fields: [id_venta_directa], references: [id_venta_directa])
-  detalle_remito      DetalleRemito[]
-  
+  id_remito        Int          @id @default(autoincrement())
+  numero_remito    String       @unique @db.VarChar(50)
+  id_cotizacion    Int?
+  id_cliente       Int
+  id_venta_directa Int?
+  fecha_emision    DateTime     @db.DateTime(0)
+  fecha_entrega    DateTime?    @db.DateTime(0)
+  tipo_remito      TipoRemito   @default(plan_vacunal)
+  estado_remito    EstadoRemito @default(pendiente)
+  precio_total     Decimal?     @db.Decimal(15, 2)
+  observaciones    String?      @db.Text
+  created_by       Int?
+  created_at       DateTime     @default(now()) @db.DateTime(0)
+  updated_at       DateTime     @updatedAt @db.DateTime(0)
+
+  cliente        Cliente         @relation(fields: [id_cliente], references: [id_cliente])
+  cotizacion     Cotizacion?     @relation(fields: [id_cotizacion], references: [id_cotizacion])
+  venta_directa  VentaDirecta?   @relation(fields: [id_venta_directa], references: [id_venta_directa])
+  detalle_remito DetalleRemito[]
+
   @@index([numero_remito], map: "idx_remito_numero")
   @@index([fecha_emision], map: "idx_remito_fecha_emision")
   @@index([estado_remito], map: "idx_remito_estado")
@@ -951,45 +953,45 @@ model Remito {
 }
 
 model DetalleRemito {
-  id_detalle_remito   Int @id @default(autoincrement())
-  id_remito           Int
-  id_producto         Int
-  cantidad_entregada  Int
-  precio_unitario     Decimal? @db.Decimal(15, 2)
-  subtotal            Decimal? @db.Decimal(15, 2)
-  lote_producto       String? @db.VarChar(100)
-  fecha_vencimiento   DateTime? @db.DateTime(0)
-  observaciones       String? @db.Text
-  created_at          DateTime @default(now()) @db.DateTime(0)
-  
-  remito              Remito @relation(fields: [id_remito], references: [id_remito], onDelete: Cascade)
-  producto            Producto @relation(fields: [id_producto], references: [id_producto])
-  
+  id_detalle_remito  Int       @id @default(autoincrement())
+  id_remito          Int
+  id_producto        Int
+  cantidad_entregada Int
+  precio_unitario    Decimal?  @db.Decimal(15, 2)
+  subtotal           Decimal?  @db.Decimal(15, 2)
+  lote_producto      String?   @db.VarChar(100)
+  fecha_vencimiento  DateTime? @db.DateTime(0)
+  observaciones      String?   @db.Text
+  created_at         DateTime  @default(now()) @db.DateTime(0)
+
+  remito   Remito   @relation(fields: [id_remito], references: [id_remito], onDelete: Cascade)
+  producto Producto @relation(fields: [id_producto], references: [id_producto])
+
   @@index([id_remito], map: "idx_detalle_remito_remito")
   @@index([id_producto], map: "idx_detalle_remito_producto")
   @@map("detalle_remitos")
 }
 
 model VentaDirecta {
-  id_venta_directa    Int      @id @default(autoincrement())
-  numero_venta        String   @unique @db.VarChar(50)
+  id_venta_directa    Int         @id @default(autoincrement())
+  numero_venta        String      @unique @db.VarChar(50)
   id_cliente          Int
   id_lista_precio     Int?
-  fecha_venta         DateTime @db.DateTime(0)
-  precio_total        Decimal  @db.Decimal(15, 2)
+  fecha_venta         DateTime    @db.DateTime(0)
+  precio_total        Decimal     @db.Decimal(15, 2)
   estado_venta        EstadoVenta @default(pendiente)
-  responsable_entrega String?  @db.VarChar(255)
-  responsable_recibe  String?  @db.VarChar(255)
-  observaciones       String?  @db.Text
+  responsable_entrega String?     @db.VarChar(255)
+  responsable_recibe  String?     @db.VarChar(255)
+  observaciones       String?     @db.Text
   created_by          Int?
-  created_at          DateTime @default(now()) @db.DateTime(0)
-  updated_at          DateTime @updatedAt @db.DateTime(0)
-  
-  cliente             Cliente @relation(fields: [id_cliente], references: [id_cliente])
-  listaPrecio         ListaPrecio? @relation(fields: [id_lista_precio], references: [id_lista])
-  detalle_venta       DetalleVentaDirecta[]
-  remitos             Remito[]
-  
+  created_at          DateTime    @default(now()) @db.DateTime(0)
+  updated_at          DateTime    @updatedAt @db.DateTime(0)
+
+  cliente       Cliente               @relation(fields: [id_cliente], references: [id_cliente])
+  listaPrecio   ListaPrecio?          @relation(fields: [id_lista_precio], references: [id_lista])
+  detalle_venta DetalleVentaDirecta[]
+  remitos       Remito[]
+
   @@index([numero_venta], map: "idx_venta_directa_numero")
   @@index([fecha_venta], map: "idx_venta_directa_fecha")
   @@index([estado_venta], map: "idx_venta_directa_estado")
@@ -998,40 +1000,40 @@ model VentaDirecta {
 }
 
 model DetalleVentaDirecta {
-  id_detalle_venta    Int @id @default(autoincrement())
-  id_venta_directa    Int
-  id_producto         Int
-  cantidad            Int
-  precio_unitario     Decimal @db.Decimal(15, 2)
-  subtotal            Decimal @db.Decimal(15, 2)
-  observaciones       String? @db.Text
-  created_at          DateTime @default(now()) @db.DateTime(0)
-  
-  venta_directa       VentaDirecta @relation(fields: [id_venta_directa], references: [id_venta_directa], onDelete: Cascade)
-  producto            Producto @relation(fields: [id_producto], references: [id_producto])
-  
+  id_detalle_venta Int      @id @default(autoincrement())
+  id_venta_directa Int
+  id_producto      Int
+  cantidad         Int
+  precio_unitario  Decimal  @db.Decimal(15, 2)
+  subtotal         Decimal  @db.Decimal(15, 2)
+  observaciones    String?  @db.Text
+  created_at       DateTime @default(now()) @db.DateTime(0)
+
+  venta_directa VentaDirecta @relation(fields: [id_venta_directa], references: [id_venta_directa], onDelete: Cascade)
+  producto      Producto     @relation(fields: [id_producto], references: [id_producto])
+
   @@index([id_venta_directa], map: "idx_detalle_venta_directa_venta")
   @@index([id_producto], map: "idx_detalle_venta_directa_producto")
   @@map("detalle_ventas_directas")
 }
 
 model IndicadorStockPlan {
-  id_indicador        Int      @id @default(autoincrement())
-  id_plan_vacunal     Int
-  id_producto         Int
-  stock_necesario     Int
-  stock_reservado     Int      @default(0)
-  stock_disponible    Int      @default(0)
-  stock_minimo        Int?
-  fecha_calculo       DateTime @db.DateTime(0)
-  estado_stock        EstadoStock @default(suficiente)
-  observaciones       String?  @db.Text
-  created_at          DateTime @default(now()) @db.DateTime(0)
-  updated_at          DateTime @updatedAt @db.DateTime(0)
-  
-  plan_vacunal        PlanVacunal @relation(fields: [id_plan_vacunal], references: [id_plan])
-  producto            Producto @relation(fields: [id_producto], references: [id_producto])
-  
+  id_indicador     Int         @id @default(autoincrement())
+  id_plan_vacunal  Int
+  id_producto      Int
+  stock_necesario  Int
+  stock_reservado  Int         @default(0)
+  stock_disponible Int         @default(0)
+  stock_minimo     Int?
+  fecha_calculo    DateTime    @db.DateTime(0)
+  estado_stock     EstadoStock @default(suficiente)
+  observaciones    String?     @db.Text
+  created_at       DateTime    @default(now()) @db.DateTime(0)
+  updated_at       DateTime    @updatedAt @db.DateTime(0)
+
+  plan_vacunal PlanVacunal @relation(fields: [id_plan_vacunal], references: [id_plan])
+  producto     Producto    @relation(fields: [id_producto], references: [id_producto])
+
   @@unique([id_plan_vacunal, id_producto])
   @@index([fecha_calculo], map: "idx_indicador_stock_fecha")
   @@index([estado_stock], map: "idx_indicador_stock_estado")
@@ -1072,38 +1074,38 @@ enum EstadoStock {
 // NUEVAS TABLAS PARA SISTEMA DE VACUNAS
 
 model Patologia {
-  id_patologia    Int      @id @default(autoincrement())
-  codigo          String   @unique @db.VarChar(20)
-  nombre          String   @db.VarChar(100)
-  descripcion     String?  @db.Text
-  activa          Boolean  @default(true)
-  created_at      DateTime @default(now()) @db.DateTime(0)
-  updated_at      DateTime @updatedAt @db.DateTime(0)
-  created_by      Int?
-  updated_by      Int?
-  
-  vacunas         Vacuna[]
-  
+  id_patologia Int      @id @default(autoincrement())
+  codigo       String   @unique @db.VarChar(20)
+  nombre       String   @db.VarChar(100)
+  descripcion  String?  @db.Text
+  activa       Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.DateTime(0)
+  updated_at   DateTime @updatedAt @db.DateTime(0)
+  created_by   Int?
+  updated_by   Int?
+
+  vacunas Vacuna[]
+
   @@index([codigo], map: "idx_patologia_codigo")
   @@index([nombre], map: "idx_patologia_nombre")
   @@map("patologias")
 }
 
 model Presentacion {
-  id_presentacion Int      @id @default(autoincrement())
-  codigo          String   @unique @db.VarChar(20)
-  nombre          String   @db.VarChar(100)
-  descripcion     String?  @db.Text
-  unidad_medida   String?  @db.VarChar(50)
-  dosis_por_frasco Int?    @default(1)  // Cantidad de dosis que contiene cada frasco
-  activa          Boolean  @default(true)
-  created_at      DateTime @default(now()) @db.DateTime(0)
-  updated_at      DateTime @updatedAt @db.DateTime(0)
-  created_by      Int?
-  updated_by      Int?
-  
-  vacunas         Vacuna[]
-  
+  id_presentacion  Int      @id @default(autoincrement())
+  codigo           String   @unique @db.VarChar(20)
+  nombre           String   @db.VarChar(100)
+  descripcion      String?  @db.Text
+  unidad_medida    String?  @db.VarChar(50)
+  dosis_por_frasco Int?     @default(1) // Cantidad de dosis que contiene cada frasco
+  activa           Boolean  @default(true)
+  created_at       DateTime @default(now()) @db.DateTime(0)
+  updated_at       DateTime @updatedAt @db.DateTime(0)
+  created_by       Int?
+  updated_by       Int?
+
+  vacunas Vacuna[]
+
   @@index([codigo], map: "idx_presentacion_codigo")
   @@index([nombre], map: "idx_presentacion_nombre")
   @@map("presentaciones")
@@ -1119,40 +1121,41 @@ model ViaAplicacion {
   updated_at        DateTime @updatedAt @db.DateTime(0)
   created_by        Int?
   updated_by        Int?
-  
-  vacunas           Vacuna[]
-  
+
+  vacunas Vacuna[]
+
   @@index([codigo], map: "idx_via_aplicacion_codigo")
   @@index([nombre], map: "idx_via_aplicacion_nombre")
   @@map("vias_aplicacion")
 }
 
 model Vacuna {
-  id_vacuna         Int             @id @default(autoincrement())
-  codigo            String          @unique @db.VarChar(50)
-  nombre            String          @db.VarChar(255)
-  detalle           String?         @db.Text
+  id_vacuna         Int      @id @default(autoincrement())
+  codigo            String   @unique @db.VarChar(50)
+  nombre            String   @db.VarChar(255)
+  detalle           String?  @db.Text
   id_proveedor      Int
   id_patologia      Int
   id_presentacion   Int
   id_via_aplicacion Int
-  precio_lista      Decimal         @db.Decimal(10, 2)
-  activa            Boolean         @default(true)
-  requiere_frio     Boolean?        @default(false)
+  precio_lista      Decimal  @db.Decimal(10, 2)
+  activa            Boolean  @default(true)
+  requiere_frio     Boolean? @default(false)
   dias_vencimiento  Int?
-  observaciones     String?         @db.Text
-  created_at        DateTime        @default(now()) @db.DateTime(0)
-  updated_at        DateTime        @updatedAt @db.DateTime(0)
+  observaciones     String?  @db.Text
+  created_at        DateTime @default(now()) @db.DateTime(0)
+  updated_at        DateTime @updatedAt @db.DateTime(0)
   created_by        Int?
   updated_by        Int?
-  
-  proveedor         Proveedor       @relation(fields: [id_proveedor], references: [id_proveedor])
-  patologia         Patologia       @relation(fields: [id_patologia], references: [id_patologia])
-  presentacion      Presentacion    @relation(fields: [id_presentacion], references: [id_presentacion])
-  via_aplicacion    ViaAplicacion   @relation(fields: [id_via_aplicacion], references: [id_via_aplicacion])
-  stock_vacunas     StockVacuna[]
-  planes_vacuna     PlanVacuna[]
-  
+
+  proveedor              Proveedor            @relation(fields: [id_proveedor], references: [id_proveedor])
+  patologia              Patologia            @relation(fields: [id_patologia], references: [id_patologia])
+  presentacion           Presentacion         @relation(fields: [id_presentacion], references: [id_presentacion])
+  via_aplicacion         ViaAplicacion        @relation(fields: [id_via_aplicacion], references: [id_via_aplicacion])
+  stock_vacunas          StockVacuna[]
+  planes_vacuna          PlanVacuna[]
+  detalle_ordenes_compra DetalleOrdenCompra[]
+
   @@index([codigo], map: "idx_vacuna_codigo")
   @@index([nombre], map: "idx_vacuna_nombre")
   @@index([id_proveedor], map: "idx_vacuna_proveedor")
@@ -1162,28 +1165,29 @@ model Vacuna {
 }
 
 model StockVacuna {
-  id_stock_vacuna   Int             @id @default(autoincrement())
+  id_stock_vacuna   Int               @id @default(autoincrement())
   id_vacuna         Int
-  lote              String          @db.VarChar(100)
-  fecha_vencimiento DateTime        @db.Date
-  stock_actual      Int             @default(0)
-  stock_minimo      Int?            @default(0)
-  stock_reservado   Int             @default(0)
-  precio_compra     Decimal?        @db.Decimal(10, 2)
-  ubicacion_fisica  String?         @db.VarChar(100)
-  temperatura_req   String?         @db.VarChar(50)
+  lote              String            @db.VarChar(100)
+  fecha_vencimiento DateTime          @db.Date
+  stock_actual      Int               @default(0)
+  stock_minimo      Int?              @default(0)
+  stock_reservado   Int               @default(0)
+  precio_compra     Decimal?          @db.Decimal(10, 2)
+  ubicacion_fisica  String?           @db.VarChar(100)
+  temperatura_req   String?           @db.VarChar(50)
   estado_stock      EstadoStockVacuna @default(disponible)
-  observaciones     String?         @db.Text
-  created_at        DateTime        @default(now()) @db.DateTime(0)
-  updated_at        DateTime        @updatedAt @db.DateTime(0)
+  observaciones     String?           @db.Text
+  created_at        DateTime          @default(now()) @db.DateTime(0)
+  updated_at        DateTime          @updatedAt @db.DateTime(0)
   created_by        Int?
   updated_by        Int?
-  
-  vacuna            Vacuna          @relation(fields: [id_vacuna], references: [id_vacuna])
-  movimientos_stock MovimientoStockVacuna[]
+
+  vacuna                Vacuna                  @relation(fields: [id_vacuna], references: [id_vacuna])
+  movimientos_stock     MovimientoStockVacuna[]
   calendario_vacunacion CalendarioVacunacion[]
-  asignaciones_lote AsignacionLote[]
-  
+  asignaciones_lote     AsignacionLote[]
+  ingresos_orden        IngresoOrdenCompra[]
+
   @@unique([id_vacuna, lote], map: "unique_vacuna_lote")
   @@index([lote], map: "idx_stock_vacuna_lote")
   @@index([fecha_vencimiento], map: "idx_stock_vacuna_vencimiento")
@@ -1193,42 +1197,42 @@ model StockVacuna {
 
 // Tabla para gestionar asignaciones de lotes a calendarios (soporta multi-lote)
 model AsignacionLote {
-  id_asignacion     Int             @id @default(autoincrement())
+  id_asignacion     Int      @id @default(autoincrement())
   id_calendario     Int
   id_stock_vacuna   Int
   cantidad_asignada Int
-  created_at        DateTime        @default(now()) @db.DateTime(0)
+  created_at        DateTime @default(now()) @db.DateTime(0)
   created_by        Int?
-  
-  calendario        CalendarioVacunacion @relation(fields: [id_calendario], references: [id_calendario], onDelete: Cascade)
-  stock_vacuna      StockVacuna     @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
-  usuario           Usuario?        @relation(fields: [created_by], references: [id_usuario])
-  
+
+  calendario   CalendarioVacunacion @relation(fields: [id_calendario], references: [id_calendario], onDelete: Cascade)
+  stock_vacuna StockVacuna          @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
+  usuario      Usuario?             @relation(fields: [created_by], references: [id_usuario])
+
   @@index([id_calendario], map: "idx_asignacion_calendario")
   @@index([id_stock_vacuna], map: "idx_asignacion_stock")
   @@map("asignaciones_lote")
 }
 
 model MovimientoStockVacuna {
-  id_movimiento     Int                     @id @default(autoincrement())
-  id_stock_vacuna   Int
-  tipo_movimiento   TipoMovimientoStock
-  cantidad          Int
-  stock_anterior    Int
-  stock_posterior   Int
-  motivo            String                  @db.VarChar(255)
-  observaciones     String?                 @db.Text
-  precio_unitario   Decimal?                @db.Decimal(10, 2)
-  id_usuario        Int?
-  id_cotizacion     Int?                    // Para rastrear a qué cotización se asigna
-  id_calendario     Int?                    // Para rastrear la aplicación específica
-  created_at        DateTime                @default(now()) @db.DateTime(0)
-  
-  stock_vacuna      StockVacuna             @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
-  usuario           Usuario?                @relation(fields: [id_usuario], references: [id_usuario])
-  cotizacion        Cotizacion?             @relation(fields: [id_cotizacion], references: [id_cotizacion])
-  calendario        CalendarioVacunacion?   @relation(fields: [id_calendario], references: [id_calendario])
-  
+  id_movimiento   Int                 @id @default(autoincrement())
+  id_stock_vacuna Int
+  tipo_movimiento TipoMovimientoStock
+  cantidad        Int
+  stock_anterior  Int
+  stock_posterior Int
+  motivo          String              @db.VarChar(255)
+  observaciones   String?             @db.Text
+  precio_unitario Decimal?            @db.Decimal(10, 2)
+  id_usuario      Int?
+  id_cotizacion   Int? // Para rastrear a qué cotización se asigna
+  id_calendario   Int? // Para rastrear la aplicación específica
+  created_at      DateTime            @default(now()) @db.DateTime(0)
+
+  stock_vacuna StockVacuna           @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna])
+  usuario      Usuario?              @relation(fields: [id_usuario], references: [id_usuario])
+  cotizacion   Cotizacion?           @relation(fields: [id_cotizacion], references: [id_cotizacion])
+  calendario   CalendarioVacunacion? @relation(fields: [id_calendario], references: [id_calendario])
+
   @@index([id_stock_vacuna], map: "idx_movimiento_stock_vacuna")
   @@index([tipo_movimiento], map: "idx_movimiento_tipo")
   @@index([created_at], map: "idx_movimiento_fecha")
@@ -1256,4 +1260,99 @@ enum TipoMovimientoStock {
   liberacion_reserva
   vencimiento
   transferencia
+}
+
+// =====================================================
+// SISTEMA DE ÓRDENES DE COMPRA
+// =====================================================
+
+model OrdenCompra {
+  id_orden_compra        Int               @id @default(autoincrement())
+  numero_orden           String            @unique @db.VarChar(50)
+  estado                 EstadoOrdenCompra @default(borrador)
+  fecha_creacion         DateTime          @default(now()) @db.DateTime(0)
+  fecha_esperada         DateTime?         @db.Date
+  fecha_ingreso_completo DateTime?         @db.DateTime(0)
+  id_cotizacion          Int?
+  observaciones          String?           @db.Text
+  total_estimado         Decimal?          @db.Decimal(15, 2)
+  created_by             Int?
+  updated_by             Int?
+  created_at             DateTime          @default(now()) @db.DateTime(0)
+  updated_at             DateTime          @updatedAt @db.DateTime(0)
+
+  cotizacion    Cotizacion?          @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: SetNull)
+  detalle_orden DetalleOrdenCompra[]
+
+  @@index([numero_orden], map: "idx_orden_numero")
+  @@index([estado], map: "idx_orden_estado")
+  @@index([fecha_creacion], map: "idx_orden_fecha_creacion")
+  @@index([id_cotizacion], map: "idx_orden_cotizacion")
+  @@map("ordenes_compra")
+}
+
+model DetalleOrdenCompra {
+  id_detalle_orden    Int             @id @default(autoincrement())
+  id_orden_compra     Int
+  id_vacuna           Int
+  id_proveedor        Int
+  cantidad_solicitada Int
+  cantidad_recibida   Int             @default(0)
+  precio_estimado     Decimal?        @db.Decimal(10, 2)
+  estado_item         EstadoItemOrden @default(pendiente)
+  observaciones       String?         @db.Text
+  created_at          DateTime        @default(now()) @db.DateTime(0)
+  updated_at          DateTime        @updatedAt @db.DateTime(0)
+
+  orden_compra OrdenCompra          @relation(fields: [id_orden_compra], references: [id_orden_compra], onDelete: Cascade)
+  vacuna       Vacuna               @relation(fields: [id_vacuna], references: [id_vacuna], onDelete: Restrict)
+  proveedor    Proveedor            @relation(fields: [id_proveedor], references: [id_proveedor], onDelete: Restrict)
+  ingresos     IngresoOrdenCompra[]
+
+  @@index([id_orden_compra], map: "idx_detalle_orden")
+  @@index([id_vacuna], map: "idx_detalle_vacuna")
+  @@index([id_proveedor], map: "idx_detalle_proveedor")
+  @@index([estado_item], map: "idx_detalle_estado")
+  @@map("detalle_orden_compra")
+}
+
+model IngresoOrdenCompra {
+  id_ingreso         Int      @id @default(autoincrement())
+  id_detalle_orden   Int
+  id_stock_vacuna    Int?
+  cantidad_ingresada Int
+  lote               String   @db.VarChar(100)
+  fecha_vencimiento  DateTime @db.Date
+  precio_compra      Decimal? @db.Decimal(10, 2)
+  ubicacion_fisica   String?  @db.VarChar(100)
+  temperatura_req    String?  @db.VarChar(50)
+  fecha_ingreso      DateTime @default(now()) @db.DateTime(0)
+  observaciones      String?  @db.Text
+  created_by         Int?
+  created_at         DateTime @default(now()) @db.DateTime(0)
+
+  detalle_orden DetalleOrdenCompra @relation(fields: [id_detalle_orden], references: [id_detalle_orden], onDelete: Cascade)
+  stock_vacuna  StockVacuna?       @relation(fields: [id_stock_vacuna], references: [id_stock_vacuna], onDelete: SetNull)
+
+  @@index([id_detalle_orden], map: "idx_ingreso_detalle")
+  @@index([id_stock_vacuna], map: "idx_ingreso_stock")
+  @@index([fecha_ingreso], map: "idx_ingreso_fecha")
+  @@index([lote], map: "idx_ingreso_lote")
+  @@map("ingresos_orden_compra")
+}
+
+enum EstadoOrdenCompra {
+  borrador
+  pendiente
+  confirmada
+  parcial
+  ingresada
+  cancelada
+}
+
+enum EstadoItemOrden {
+  pendiente
+  parcial
+  completo
+  cancelado
 }

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orden de Compra - {{numero_orden}}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 10px;
+        line-height: 1.3;
+        color: #000;
+        background: white;
+        margin: 15px;
+      }
+
+      .header {
+        border-bottom: 2px solid #2c5282;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .logo-section {
+        flex: 1;
+      }
+
+      .logo {
+        width: 80px;
+        height: auto;
+        margin-bottom: 5px;
+      }
+
+      .company-info {
+        color: #333;
+        font-size: 9px;
+      }
+
+      .company-name {
+        font-size: 16px;
+        color: #2c5282;
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
+
+      .document-info {
+        text-align: right;
+        flex: 1;
+      }
+
+      .document-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #2c5282;
+        margin-bottom: 8px;
+      }
+
+      .document-number {
+        font-size: 14px;
+        font-weight: bold;
+        background: #ebf8ff;
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 2px solid #2c5282;
+        color: #2c5282;
+      }
+
+      .estado-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 8px;
+      }
+
+      .estado-borrador { background: #e2e8f0; color: #4a5568; }
+      .estado-pendiente { background: #fef3c7; color: #92400e; }
+      .estado-confirmada { background: #dbeafe; color: #1e40af; }
+      .estado-parcial { background: #fed7aa; color: #c2410c; }
+      .estado-ingresada { background: #d1fae5; color: #065f46; }
+      .estado-cancelada { background: #fee2e2; color: #991b1b; }
+
+      .info-section {
+        margin-bottom: 15px;
+        background: #f7fafc;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .info-item label {
+        font-weight: bold;
+        color: #4a5568;
+        font-size: 9px;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .info-item span {
+        color: #1a202c;
+        font-size: 11px;
+      }
+
+      .section-title {
+        font-size: 13px;
+        font-weight: bold;
+        color: #2c5282;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #cbd5e0;
+      }
+
+      .proveedor-section {
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+      }
+
+      .proveedor-header {
+        background: #2c5282;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px 6px 0 0;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .proveedor-subtotal {
+        font-size: 11px;
+        background: rgba(255,255,255,0.2);
+        padding: 4px 10px;
+        border-radius: 4px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+        font-size: 9px;
+      }
+
+      th {
+        background: #edf2f7;
+        padding: 8px 6px;
+        text-align: left;
+        font-weight: bold;
+        color: #4a5568;
+        border: 1px solid #cbd5e0;
+        font-size: 9px;
+      }
+
+      td {
+        padding: 6px;
+        border: 1px solid #e2e8f0;
+        vertical-align: middle;
+      }
+
+      tr:nth-child(even) {
+        background: #f7fafc;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      .vacuna-nombre {
+        font-weight: bold;
+        color: #2d3748;
+      }
+
+      .vacuna-codigo {
+        font-size: 8px;
+        color: #718096;
+      }
+
+      .totales-section {
+        margin-top: 20px;
+        border-top: 2px solid #2c5282;
+        padding-top: 15px;
+      }
+
+      .totales-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+      }
+
+      .total-item {
+        text-align: center;
+        padding: 12px;
+        background: #f7fafc;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .total-item.destacado {
+        background: #ebf8ff;
+        border: 2px solid #2c5282;
+      }
+
+      .total-label {
+        font-size: 9px;
+        color: #718096;
+        margin-bottom: 4px;
+      }
+
+      .total-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #2c5282;
+      }
+
+      .observaciones-section {
+        margin-top: 20px;
+        padding: 12px;
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        border-radius: 6px;
+      }
+
+      .observaciones-title {
+        font-weight: bold;
+        color: #92400e;
+        margin-bottom: 5px;
+      }
+
+      .footer {
+        margin-top: 25px;
+        padding-top: 15px;
+        border-top: 1px solid #e2e8f0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        font-size: 9px;
+      }
+
+      .firma-box {
+        text-align: center;
+        padding-top: 40px;
+        border-top: 1px solid #000;
+      }
+
+      .firma-label {
+        font-size: 10px;
+        color: #4a5568;
+      }
+
+      .generado-info {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 8px;
+        color: #a0aec0;
+      }
+
+      @media print {
+        body {
+          margin: 10mm;
+        }
+        .proveedor-section {
+          page-break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo-section">
+        <img src="{{logo_url}}" alt="Logo" class="logo" />
+        <div class="company-name">TIERRA VOLGA S.A.</div>
+        <div class="company-info">
+          Sanidad Animal y Nutrición<br />
+          Tel: (011) 4xxx-xxxx<br />
+          info@tierravolga.com.ar
+        </div>
+      </div>
+      <div class="document-info">
+        <div class="document-title">ORDEN DE COMPRA</div>
+        <div class="document-number">{{numero_orden}}</div>
+        <div class="estado-badge estado-{{estado}}">{{estado_texto}}</div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Fecha de Emisión</label>
+          <span>{{fecha_creacion}}</span>
+        </div>
+        <div class="info-item">
+          <label>Fecha Esperada</label>
+          <span>{{fecha_esperada}}</span>
+        </div>
+        <div class="info-item">
+          <label>Cotización Asociada</label>
+          <span>{{numero_cotizacion}}</span>
+        </div>
+        {{#if cliente_nombre}}
+        <div class="info-item">
+          <label>Cliente</label>
+          <span>{{cliente_nombre}}</span>
+        </div>
+        {{/if}}
+        <div class="info-item">
+          <label>Total Proveedores</label>
+          <span>{{total_proveedores}}</span>
+        </div>
+        <div class="info-item">
+          <label>Total Items</label>
+          <span>{{total_items}}</span>
+        </div>
+      </div>
+    </div>
+
+    {{#each proveedores}}
+    <div class="proveedor-section">
+      <div class="proveedor-header">
+        <span>{{nombre}}</span>
+        <span class="proveedor-subtotal">Subtotal: ${{subtotal_formatted}}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 12%">Código</th>
+            <th style="width: 35%">Vacuna</th>
+            <th style="width: 15%">Presentación</th>
+            <th style="width: 12%" class="text-right">Cantidad</th>
+            <th style="width: 13%" class="text-right">Precio Unit.</th>
+            <th style="width: 13%" class="text-right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each items}}
+          <tr>
+            <td><span class="vacuna-codigo">{{vacuna_codigo}}</span></td>
+            <td><span class="vacuna-nombre">{{vacuna_nombre}}</span></td>
+            <td>{{presentacion}}</td>
+            <td class="text-right">{{cantidad_solicitada}} dosis</td>
+            <td class="text-right">${{precio_formatted}}</td>
+            <td class="text-right"><strong>${{subtotal_formatted}}</strong></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{/each}}
+
+    <div class="totales-section">
+      <div class="totales-grid">
+        <div class="total-item">
+          <div class="total-label">Total Items</div>
+          <div class="total-value">{{total_items}}</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Total Dosis</div>
+          <div class="total-value">{{total_dosis}}</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Proveedores</div>
+          <div class="total-value">{{total_proveedores}}</div>
+        </div>
+        <div class="total-item destacado">
+          <div class="total-label">TOTAL GENERAL</div>
+          <div class="total-value">${{total_general_formatted}}</div>
+        </div>
+      </div>
+    </div>
+
+    {{#if observaciones}}
+    <div class="observaciones-section">
+      <div class="observaciones-title">📝 Observaciones</div>
+      <div>{{observaciones}}</div>
+    </div>
+    {{/if}}
+
+    <div class="footer">
+      <div class="firma-box">
+        <div class="firma-label">Autorizado por</div>
+      </div>
+      <div class="firma-box">
+        <div class="firma-label">Recibido por</div>
+      </div>
+    </div>
+
+    <div class="generado-info">
+      Documento generado el {{fecha_generacion}} - Sistema de Gestión Tierra Volga
+    </div>
+  </body>
+</html>

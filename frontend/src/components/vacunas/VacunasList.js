@@ -47,9 +47,11 @@ function VacunasList({ vacunas: vacunasProp, onRefresh }) {
     setLoading(true);
     try {
       const response = await getVacunasNuevas();
-      setVacunas(response.data || response);
+      console.log('Respuesta vacunas:', response);
+      setVacunas(response.data || response || []);
     } catch (error) {
       console.error("Error cargando vacunas:", error);
+      setVacunas([]);
     } finally {
       setLoading(false);
     }

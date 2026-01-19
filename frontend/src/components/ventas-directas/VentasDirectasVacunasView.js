@@ -30,7 +30,7 @@ import './VentasDirectasVacunas.css';
 
 // Usar misma configuración de API que el resto de la aplicación
 const API = process.env.NODE_ENV === 'production' 
-  ? "https://api.tierravolga.com.ar" 
+  ? "http://localhost:3001" 
   : ""; // En desarrollo usa el proxy configurado en package.json
 
 const VentasDirectasVacunasView = () => {

@@ -30,7 +30,7 @@ function PedidoAcceso() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`https://api.tierravolga.com.ar/pedidos/token/${token}`)
+    fetch(`/pedidos/token/${token}`)
       .then((res) =>
         res.ok ? res.json() : Promise.reject("Token inválido o expirado")
       )
@@ -71,7 +71,7 @@ function PedidoAcceso() {
   const cargarUltimoPedido = () => {
     if (!cliente?.id_cliente) return;
 
-    fetch(`https://api.tierravolga.com.ar/pedidos/ultimo/${cliente.id_cliente}`)
+    fetch(`/pedidos/ultimo/${cliente.id_cliente}`)
       .then((res) => {
         if (!res.ok) throw new Error("No hay pedidos anteriores");
         return res.json();
@@ -147,7 +147,7 @@ function PedidoAcceso() {
   };
 
   const enviarPedido = () => {
-    fetch("https://api.tierravolga.com.ar/pedidos", {
+    fetch("/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

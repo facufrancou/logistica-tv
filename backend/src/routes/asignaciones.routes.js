@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const asignacionesController = require('../controllers/asignaciones.controller');
-const { verificarToken } = require('../middlewares/auth.middleware');
+const { validarSesion: verificarToken } = require('../middlewares/auth');
 
 // =====================================================
 // RUTAS DE ASIGNACIONES DE LOTES

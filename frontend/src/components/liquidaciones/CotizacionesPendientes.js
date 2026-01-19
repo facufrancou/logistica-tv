@@ -36,7 +36,7 @@ const CotizacionesPendientes = () => {
       setLoading(true);
       setError(null);
       
-      const API_BASE = "https://api.tierravolga.com.ar";
+      const API_BASE = "http://localhost:3001";
       
       // Obtener cotizaciones aceptadas
       const response = await fetch(`${API_BASE}/cotizaciones?estado=aceptada`, {

@@ -502,27 +502,15 @@ exports.getAlertas = async (req, res) => {
   try {
     const { dias_vencimiento = 30 } = req.query;
 
-    // Stock bajo (por debajo del mínimo)
-    const stockBajo = await prisma.stockVacuna.findMany({
-      where: {
-        OR: [
-          {
-            stock_actual: {
-              lte: prisma.stockVacuna.fields.stock_minimo
-            }
-          }
-        ],
-        estado_stock: 'disponible'
-      },
-      include: {
-        vacuna: {
-          select: {
-            codigo: true,
-            nombre: true
-          }
-        }
-      }
-    });
+    // Stock bajo (por debajo del mínimo) - usando raw query porque Prisma no soporta comparar columnas
+    const stockBajo = await prisma.$queryRaw`
+      SELECT sv.*, v.codigo, v.nombre as vacuna_nombre
+      FROM stock_vacunas sv
+      JOIN vacunas v ON sv.id_vacuna = v.id_vacuna
+      WHERE sv.stock_actual <= sv.stock_minimo 
+      AND sv.stock_minimo > 0
+      AND sv.estado_stock = 'disponible'
+    `;
 
     // Vacunas próximas a vencer
     const fechaLimite = new Date();
@@ -573,9 +561,17 @@ exports.getAlertas = async (req, res) => {
       success: true,
       alertas: {
         stock_bajo: stockBajo.map(stock => ({
-          ...stock,
           id_stock_vacuna: Number(stock.id_stock_vacuna),
-          deficit: Math.max(0, stock.stock_minimo - stock.stock_actual)
+          id_vacuna: Number(stock.id_vacuna),
+          lote: stock.lote,
+          stock_actual: Number(stock.stock_actual),
+          stock_minimo: Number(stock.stock_minimo),
+          fecha_vencimiento: stock.fecha_vencimiento,
+          vacuna: {
+            codigo: stock.codigo,
+            nombre: stock.vacuna_nombre
+          },
+          deficit: Math.max(0, Number(stock.stock_minimo) - Number(stock.stock_actual))
         })),
         proximos_vencimientos: proximosVencimientos.map(stock => {
           const diasHastaVencimiento = Math.ceil(

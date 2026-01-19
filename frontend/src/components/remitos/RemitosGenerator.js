@@ -49,7 +49,7 @@ const RemitosGenerator = () => {
   const cargarCotizaciones = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones?` + new URLSearchParams({
+      const response = await fetch(`/cotizaciones?` + new URLSearchParams({
         page: paginacion.page,
         limit: paginacion.limit,
         estado: 'aceptada', // Solo cotizaciones aceptadas pueden generar remitos
@@ -83,7 +83,7 @@ const RemitosGenerator = () => {
       // Delay mínimo para mostrar la animación
       const startTime = Date.now();
       
-      const response = await fetch(`https://api.tierravolga.com.ar/remitos/cotizacion/${cotizacionSeleccionada.id_cotizacion}`, {
+      const response = await fetch(`/remitos/cotizacion/${cotizacionSeleccionada.id_cotizacion}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -130,7 +130,7 @@ const RemitosGenerator = () => {
       // Delay mínimo para mostrar la animación
       const startTime = Date.now();
       
-      const response = await fetch(`https://api.tierravolga.com.ar/remitos/${idRemito}/pdf`, {
+      const response = await fetch(`/remitos/${idRemito}/pdf`, {
         credentials: 'include'
       });
 
