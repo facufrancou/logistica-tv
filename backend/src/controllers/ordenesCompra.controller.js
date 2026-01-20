@@ -227,7 +227,10 @@ exports.getOrdenCompraById = async (req, res) => {
             cliente: {
               select: {
                 id_cliente: true,
-                nombre: true
+                nombre: true,
+                cuit: true,
+                email: true,
+                telefono: true
               }
             },
             plan: {
@@ -1128,6 +1131,174 @@ exports.getOrdenParaPDF = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener orden para PDF:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
+ * Descargar PDF de Orden de Compra Completa (uso interno)
+ */
+exports.descargarOrdenCompraPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pdfService = require('../services/pdfService');
+
+    const orden = await prisma.ordenCompra.findUnique({
+      where: { id_orden_compra: parseInt(id) },
+      include: {
+        cotizacion: {
+          select: {
+            numero_cotizacion: true,
+            cliente: {
+              select: { nombre: true, cuit: true, direccion: true, telefono: true }
+            }
+          }
+        },
+        detalle_orden: {
+          include: {
+            vacuna: {
+              include: {
+                presentacion: { select: { nombre: true, dosis_por_frasco: true } },
+                patologia: { select: { nombre: true } }
+              }
+            },
+            proveedor: true
+          }
+        }
+      }
+    });
+
+    if (!orden) {
+      return res.status(404).json({ error: 'Orden de compra no encontrada' });
+    }
+
+    // Agrupar por proveedor
+    const porProveedor = {};
+    orden.detalle_orden.forEach(d => {
+      const provId = d.id_proveedor;
+      if (!porProveedor[provId]) {
+        porProveedor[provId] = {
+          proveedor: d.proveedor,
+          items: [],
+          subtotal: 0
+        };
+      }
+      const subtotalItem = (d.precio_estimado || 0) * d.cantidad_solicitada;
+      porProveedor[provId].items.push({
+        ...d,
+        subtotal: subtotalItem
+      });
+      porProveedor[provId].subtotal += subtotalItem;
+    });
+
+    const totalGeneral = Object.values(porProveedor).reduce((sum, p) => sum + p.subtotal, 0);
+
+    const pdfData = {
+      orden: {
+        numero_orden: orden.numero_orden,
+        estado: orden.estado,
+        fecha_creacion: orden.fecha_creacion,
+        fecha_esperada: orden.fecha_esperada,
+        observaciones: orden.observaciones
+      },
+      cotizacion: orden.cotizacion,
+      proveedores: Object.values(porProveedor),
+      total_general: totalGeneral
+    };
+
+    const pdfBuffer = await pdfService.generateOrdenCompraCompletaPDF(pdfData);
+
+    // Asegurar que el buffer es válido
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('El PDF generado está vacío');
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Content-Disposition', `attachment; filename="Orden_Compra_${orden.numero_orden}.pdf"`);
+    res.end(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error al generar PDF de orden completa:', error);
+    res.status(500).json({ error: 'Error al generar PDF: ' + error.message });
+  }
+};
+
+/**
+ * Descargar PDF de Orden de Compra por Proveedor (para enviar al laboratorio)
+ */
+exports.descargarOrdenCompraProveedorPDF = async (req, res) => {
+  try {
+    const { id, id_proveedor } = req.params;
+    const pdfService = require('../services/pdfService');
+
+    const orden = await prisma.ordenCompra.findUnique({
+      where: { id_orden_compra: parseInt(id) },
+      include: {
+        cotizacion: {
+          select: {
+            numero_cotizacion: true,
+            cliente: {
+              select: { nombre: true }
+            }
+          }
+        },
+        detalle_orden: {
+          where: { id_proveedor: parseInt(id_proveedor) },
+          include: {
+            vacuna: {
+              include: {
+                presentacion: { select: { nombre: true, dosis_por_frasco: true } },
+                patologia: { select: { nombre: true } }
+              }
+            },
+            proveedor: true
+          }
+        }
+      }
+    });
+
+    if (!orden) {
+      return res.status(404).json({ error: 'Orden de compra no encontrada' });
+    }
+
+    if (orden.detalle_orden.length === 0) {
+      return res.status(404).json({ error: 'No hay items para este proveedor en la orden' });
+    }
+
+    const proveedor = orden.detalle_orden[0].proveedor;
+    const subtotal = orden.detalle_orden.reduce((sum, d) => 
+      sum + ((d.precio_estimado || 0) * d.cantidad_solicitada), 0);
+
+    const pdfData = {
+      orden: {
+        numero_orden: orden.numero_orden,
+        estado: orden.estado,
+        fecha_creacion: orden.fecha_creacion,
+        fecha_esperada: orden.fecha_esperada,
+        observaciones: orden.observaciones
+      },
+      cotizacion: orden.cotizacion,
+      proveedor: proveedor,
+      items: orden.detalle_orden,
+      subtotal: subtotal
+    };
+
+    const pdfBuffer = await pdfService.generateOrdenCompraProveedorPDF(pdfData);
+
+    // Asegurar que el buffer es válido
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('El PDF generado está vacío');
+    }
+
+    const nombreProveedor = proveedor.nombre.replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Content-Disposition', `attachment; filename="Orden_${orden.numero_orden}_${nombreProveedor}.pdf"`);
+    res.end(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error al generar PDF de orden por proveedor:', error);
+    res.status(500).json({ error: 'Error al generar PDF: ' + error.message });
   }
 };
 

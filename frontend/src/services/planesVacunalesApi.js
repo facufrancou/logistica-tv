@@ -371,24 +371,6 @@ export const generarRemitoEntrega = async (id_calendario, entregaData = {}) => {
   return await response.blob();
 };
 
-// Reimprimir remito existente (usa GET)
-export const reimprimirRemitoEntrega = async (id_calendario) => {
-  const response = await fetch(`${API_BASE_URL}/cotizaciones/calendario/${id_calendario}/remito`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest'
-    }
-  });
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
-    throw new Error(error.message || 'Error al generar el remito PDF');
-  }
-  
-  return await response.blob();
-};
-
 export const ajustarStockCalendario = async (id_cotizacion, id_calendario, ajusteData) => {
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/calendario/${id_calendario}/ajustar-stock`, {
     method: 'PUT',
@@ -834,7 +816,6 @@ export const planesVacunalesApi = {
   marcarEntregaDosis,
   getControlEntregas,
   generarRemitoEntrega,
-  reimprimirRemitoEntrega,
   ajustarStockCalendario,
   finalizarPlan,
   getEstadoPlan,

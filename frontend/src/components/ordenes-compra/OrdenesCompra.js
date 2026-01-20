@@ -66,7 +66,7 @@ const OrdenesCompra = () => {
       const params = {
         ...filtros,
         page: pagination.current_page,
-        limit: 15
+        limit: 5
       };
       const response = await getOrdenesCompra(params);
       if (response.success) {

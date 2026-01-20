@@ -832,4 +832,83 @@ export const getOrdenParaPDF = async (id, idProveedor = null) => {
   }
 };
 
+// Descargar PDF completo de orden de compra (uso interno)
+export const descargarOrdenCompraPDF = async (id) => {
+  try {
+    const url = `${API}/ordenes-compra/${id}/pdf/descargar`;
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/pdf'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al descargar PDF');
+    }
+    
+    const blob = await response.blob();
+    const fileName = `Orden_Compra_${id}.pdf`;
+    
+    // Crear enlace de descarga
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    
+    return { success: true };
+  } catch (err) {
+    throw new Error("Error al descargar PDF: " + err.message);
+  }
+};
+
+// Descargar PDF de orden por proveedor (para enviar al laboratorio)
+export const descargarOrdenCompraProveedorPDF = async (idOrden, idProveedor) => {
+  try {
+    const url = `${API}/ordenes-compra/${idOrden}/pdf/proveedor/${idProveedor}`;
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/pdf'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al descargar PDF');
+    }
+    
+    const blob = await response.blob();
+    
+    // Extraer nombre del archivo del header si está disponible
+    const contentDisposition = response.headers.get('content-disposition');
+    let fileName = `Orden_${idOrden}_Proveedor_${idProveedor}.pdf`;
+    if (contentDisposition) {
+      const matches = contentDisposition.match(/filename="(.+)"/);
+      if (matches && matches[1]) {
+        fileName = matches[1];
+      }
+    }
+    
+    // Crear enlace de descarga
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    
+    return { success: true };
+  } catch (err) {
+    throw new Error("Error al descargar PDF: " + err.message);
+  }
+};
+
 

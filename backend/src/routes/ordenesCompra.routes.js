@@ -29,6 +29,12 @@ router.get('/:id', ordenesCompraController.getOrdenCompraById);
 // Obtener datos para PDF (total o por proveedor)
 router.get('/:id/pdf', ordenesCompraController.getOrdenParaPDF);
 
+// Descargar PDF completo de orden de compra (uso interno)
+router.get('/:id/pdf/descargar', ordenesCompraController.descargarOrdenCompraPDF);
+
+// Descargar PDF de orden de compra por proveedor (para laboratorio)
+router.get('/:id/pdf/proveedor/:id_proveedor', ordenesCompraController.descargarOrdenCompraProveedorPDF);
+
 // ===== RUTAS DE CREACIÓN Y MODIFICACIÓN =====
 
 // Crear nueva orden de compra

@@ -31,6 +31,7 @@ const OrdenCompraForm = ({ orden, onClose, onSuccess }) => {
   // Modal de selección de vacunas
   const [showVacunasModal, setShowVacunasModal] = useState(false);
   const [vacunasSeleccionadas, setVacunasSeleccionadas] = useState({});
+  const [busquedaVacuna, setBusquedaVacuna] = useState('');
 
   // Búsqueda de cotización
   const [busquedaCotizacion, setBusquedaCotizacion] = useState('');
@@ -174,6 +175,7 @@ const OrdenCompraForm = ({ orden, onClose, onSuccess }) => {
   const handleAbrirSelectorVacunas = () => {
     cargarVacunas(formData.id_cotizacion || null);
     setShowVacunasModal(true);
+    setBusquedaVacuna(''); // Limpiar búsqueda al abrir
     // Marcar las ya seleccionadas
     const seleccionadas = {};
     items.forEach(item => {
@@ -530,6 +532,19 @@ const OrdenCompraForm = ({ orden, onClose, onSuccess }) => {
               <button className="modal-close" onClick={() => setShowVacunasModal(false)}>×</button>
             </div>
             <div className="modal-body">
+              {/* Buscador de vacunas */}
+              <div style={{ marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Buscar vacuna por nombre, código o patología..."
+                  value={busquedaVacuna}
+                  onChange={(e) => setBusquedaVacuna(e.target.value)}
+                  style={{ marginBottom: '12px' }}
+                  autoFocus
+                />
+              </div>
+              
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input
@@ -543,7 +558,14 @@ const OrdenCompraForm = ({ orden, onClose, onSuccess }) => {
                   Mostrar todas las vacunas (no solo con faltante)
                 </label>
                 <span style={{ color: '#718096' }}>
-                  {vacunasDisponibles.length} vacunas disponibles
+                  {vacunasDisponibles.filter(v => {
+                    if (!busquedaVacuna.trim()) return true;
+                    const busqueda = busquedaVacuna.toLowerCase();
+                    return (v.nombre || '').toLowerCase().includes(busqueda) ||
+                           (v.codigo || '').toLowerCase().includes(busqueda) ||
+                           (v.patologia || '').toLowerCase().includes(busqueda) ||
+                           (v.proveedor_nombre || '').toLowerCase().includes(busqueda);
+                  }).length} vacunas disponibles
                 </span>
               </div>
 
@@ -564,7 +586,16 @@ const OrdenCompraForm = ({ orden, onClose, onSuccess }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {vacunasDisponibles.map(vacuna => (
+                      {vacunasDisponibles
+                        .filter(v => {
+                          if (!busquedaVacuna.trim()) return true;
+                          const busqueda = busquedaVacuna.toLowerCase();
+                          return (v.nombre || '').toLowerCase().includes(busqueda) ||
+                                 (v.codigo || '').toLowerCase().includes(busqueda) ||
+                                 (v.patologia || '').toLowerCase().includes(busqueda) ||
+                                 (v.proveedor_nombre || '').toLowerCase().includes(busqueda);
+                        })
+                        .map(vacuna => (
                         <tr
                           key={vacuna.id_vacuna}
                           style={{
