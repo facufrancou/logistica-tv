@@ -38,7 +38,7 @@ const IngresoOrdenCompra = ({ ordenId, onClose, onSuccess }) => {
             vacuna: d.vacuna,
             proveedor: d.proveedor,
             pendiente_recibir: d.pendiente_recibir || (d.cantidad_solicitada - d.cantidad_recibida),
-            lotes: [{ lote: '', fecha_vencimiento: '', cantidad: '', ubicacion_fisica: '', precio_compra: '' }]
+            lotes: [{ lote: '', fecha_vencimiento: '', cantidad: '', ubicacion_fisica: '', precio_compra: '', observaciones: '' }]
           }));
         setIngresos(ingresosIniciales);
       }
@@ -71,7 +71,8 @@ const IngresoOrdenCompra = ({ ordenId, onClose, onSuccess }) => {
         fecha_vencimiento: '',
         cantidad: '',
         ubicacion_fisica: '',
-        precio_compra: ''
+        precio_compra: '',
+        observaciones: ''
       });
       return updated;
     });
@@ -182,7 +183,8 @@ const IngresoOrdenCompra = ({ ordenId, onClose, onSuccess }) => {
             lote: lote.lote,
             fecha_vencimiento: lote.fecha_vencimiento,
             ubicacion_fisica: lote.ubicacion_fisica || null,
-            precio_compra: lote.precio_compra ? parseFloat(lote.precio_compra) : null
+            precio_compra: lote.precio_compra ? parseFloat(lote.precio_compra) : null,
+            observaciones: lote.observaciones || null
           }));
 
         if (lotesValidos.length > 0) {
@@ -241,7 +243,7 @@ const IngresoOrdenCompra = ({ ordenId, onClose, onSuccess }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '1100px' }}>
+      <div className="modal-content" style={{ maxWidth: '1000px', width: '95%' }}>
         <div className="modal-header">
           <h2>Registrar Ingreso - {orden.numero_orden}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -330,100 +332,123 @@ const IngresoOrdenCompra = ({ ordenId, onClose, onSuccess }) => {
                   <div style={{ padding: '16px' }}>
                     {ingreso.lotes.map((lote, loteIndex) => (
                       <div key={loteIndex} style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr auto',
-                        gap: '12px',
-                        marginBottom: '12px',
+                        marginBottom: '16px',
                         padding: '12px',
                         background: '#f7fafc',
-                        borderRadius: '6px'
+                        borderRadius: '6px',
+                        border: '1px solid #e2e8f0'
                       }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>
-                            Lote *
-                            <button
-                              type="button"
-                              className="btn-link"
-                              style={{ marginLeft: '8px', fontSize: '0.75rem' }}
-                              onClick={() => generarCodigoLote(ingresoIndex, loteIndex)}
-                              title="Generar código de lote aleatorio"
-                            >
-                              (generar)
-                            </button>
-                          </label>
-                          <input
-                            type="text"
-                            value={lote.lote}
-                            onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'lote', e.target.value)}
-                            placeholder="Ej: ABC123"
-                          />
+                        {/* Primera fila: Lote, Vencimiento, Cantidad, Eliminar */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1.5fr 1fr 1fr auto',
+                          gap: '12px',
+                          marginBottom: '10px'
+                        }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>
+                              Lote *
+                              <button
+                                type="button"
+                                className="btn-link"
+                                style={{ marginLeft: '8px', fontSize: '0.75rem' }}
+                                onClick={() => generarCodigoLote(ingresoIndex, loteIndex)}
+                                title="Generar código de lote aleatorio"
+                              >
+                                (generar)
+                              </button>
+                            </label>
+                            <input
+                              type="text"
+                              value={lote.lote}
+                              onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'lote', e.target.value)}
+                              placeholder="Ej: ABC123"
+                            />
+                          </div>
+
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Vencimiento *</label>
+                            <input
+                              type="date"
+                              value={lote.fecha_vencimiento}
+                              onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'fecha_vencimiento', e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>
+                              Cantidad * 
+                              <button
+                                type="button"
+                                className="btn-link"
+                                style={{ marginLeft: '4px', fontSize: '0.75rem' }}
+                                onClick={() => autoCompletarLote(ingresoIndex, loteIndex)}
+                              >
+                                (auto)
+                              </button>
+                            </label>
+                            <input
+                              type="number"
+                              value={lote.cantidad}
+                              onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'cantidad', e.target.value)}
+                              placeholder="Dosis"
+                              min="0"
+                              max={ingreso.pendiente_recibir}
+                            />
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                            {ingreso.lotes.length > 1 && (
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm"
+                                onClick={() => eliminarLote(ingresoIndex, loteIndex)}
+                                style={{ padding: '8px 12px' }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Vencimiento *</label>
-                          <input
-                            type="date"
-                            value={lote.fecha_vencimiento}
-                            onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'fecha_vencimiento', e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
+                        {/* Segunda fila: Ubicación, Precio, Observaciones */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr 2fr',
+                          gap: '12px'
+                        }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Ubicación</label>
+                            <input
+                              type="text"
+                              value={lote.ubicacion_fisica}
+                              onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'ubicacion_fisica', e.target.value)}
+                              placeholder="Ej: Cámara 1, Estante A"
+                            />
+                          </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>
-                            Cantidad * 
-                            <button
-                              type="button"
-                              className="btn-link"
-                              style={{ marginLeft: '8px', fontSize: '0.75rem' }}
-                              onClick={() => autoCompletarLote(ingresoIndex, loteIndex)}
-                            >
-                              (auto)
-                            </button>
-                          </label>
-                          <input
-                            type="number"
-                            value={lote.cantidad}
-                            onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'cantidad', e.target.value)}
-                            placeholder="Dosis"
-                            min="0"
-                            max={ingreso.pendiente_recibir}
-                          />
-                        </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Precio Unitario</label>
+                            <input
+                              type="number"
+                              value={lote.precio_compra}
+                              onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'precio_compra', e.target.value)}
+                              placeholder="$"
+                              step="0.01"
+                              min="0"
+                            />
+                          </div>
 
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Ubicación</label>
-                          <input
-                            type="text"
-                            value={lote.ubicacion_fisica}
-                            onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'ubicacion_fisica', e.target.value)}
-                            placeholder="Ej: Cámara 1, Estante A"
-                          />
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label>Precio Unit.</label>
-                          <input
-                            type="number"
-                            value={lote.precio_compra}
-                            onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'precio_compra', e.target.value)}
-                            placeholder="$"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                          {ingreso.lotes.length > 1 && (
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              onClick={() => eliminarLote(ingresoIndex, loteIndex)}
-                              style={{ padding: '8px 12px' }}
-                            >
-                              ×
-                            </button>
-                          )}
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Observaciones (Nro. Remito, etc.)</label>
+                            <input
+                              type="text"
+                              value={lote.observaciones}
+                              onChange={(e) => handleLoteChange(ingresoIndex, loteIndex, 'observaciones', e.target.value)}
+                              placeholder="Ej: Remito N° 0001-00012345"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}

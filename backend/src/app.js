@@ -99,4 +99,7 @@ app.use('/ventas-directas-vacunas', require('./routes/ventasDirectasVacunas'));
 // Sistema de Órdenes de Compra
 app.use('/ordenes-compra', require('./routes/ordenesCompra.routes'));
 
+// Sistema de Documentos Impresos (numeración correlativa)
+app.use('/documentos', require('./routes/documentos.routes'));
+
 module.exports = app;

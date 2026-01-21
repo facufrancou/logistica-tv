@@ -4,51 +4,55 @@ const fs = require('fs').promises;
 const path = require('path');
 const Handlebars = require('handlebars');
 
+// Registrar helpers de Handlebars inmediatamente al cargar el módulo
+// Helper para formatear fechas
+Handlebars.registerHelper('formatDate', (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+});
+
+// Helper para formatear tiempo
+Handlebars.registerHelper('formatTime', (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+});
+
+// Helper para badges de estado
+Handlebars.registerHelper('estadoBadge', (estado) => {
+  switch (estado?.toLowerCase()) {
+    case 'entregada':
+    case 'completada':
+    case 'confirmada':
+      return 'success';
+    case 'parcial':
+    case 'pendiente':
+      return 'warning';
+    case 'en_proceso':
+    case 'programada':
+      return 'info';
+    default:
+      return 'secondary';
+  }
+});
+
+// Helper para formatear números con separador de miles
+Handlebars.registerHelper('formatNumber', (number) => {
+  if (number === null || number === undefined) return '0';
+  return Number(number).toLocaleString('es-AR');
+});
+
 class PDFService {
   constructor() {
     this.templatePath = path.join(__dirname, '../templates');
-    this.registerHandlebarsHelpers();
-  }
-
-  registerHandlebarsHelpers() {
-    // Helper para formatear fechas
-    Handlebars.registerHelper('formatDate', (date) => {
-      if (!date) return '';
-      const d = new Date(date);
-      return d.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    });
-
-    // Helper para formatear tiempo
-    Handlebars.registerHelper('formatTime', (date) => {
-      if (!date) return '';
-      const d = new Date(date);
-      return d.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    });
-
-    // Helper para badges de estado
-    Handlebars.registerHelper('estadoBadge', (estado) => {
-      switch (estado?.toLowerCase()) {
-        case 'entregada':
-        case 'completada':
-        case 'confirmada':
-          return 'success';
-        case 'parcial':
-        case 'pendiente':
-          return 'warning';
-        case 'en_proceso':
-        case 'programada':
-          return 'info';
-        default:
-          return 'secondary';
-      }
-    });
   }
 
   async generateRemitoPDF(data) {
@@ -62,13 +66,17 @@ class PDFService {
       const template = Handlebars.compile(htmlTemplate);
 
       // Preparar datos con valores adicionales
+      // IMPORTANTE: Usar el número de remito que viene en los datos, NO generar uno nuevo
       const templateData = {
         ...data,
-        numeroRemito: this.generateRemitoNumber(),
-        fechaEmision: new Date(),
-        horaEmision: new Date(),
+        // Usar número del remito si existe, sino generar uno (para compatibilidad)
+        numeroRemito: data.remito?.numero || this.generateRemitoNumber(),
+        // Usar fecha de emisión del remito si existe (para reimpresiones)
+        fechaEmision: data.remito?.fecha_emision || new Date(),
+        horaEmision: data.remito?.fecha_emision || new Date(),
         fechaGeneracion: new Date(),
-        horaGeneracion: new Date()
+        horaGeneracion: new Date(),
+        esReimpresion: data.remito?.es_reimpresion || false
       };
 
       // Renderizar template
@@ -270,7 +278,7 @@ class PDFService {
       }, 0);
 
       const templateData = {
-        numero_orden: data.orden.numero_orden,
+        numero_orden: data.orden.numero_documento_oficial || data.orden.numero_orden,
         proveedor_nombre: data.proveedor?.nombre || 'Sin nombre',
         fecha_creacion: this.formatDate(data.orden.fecha_creacion),
         fecha_esperada: data.orden.fecha_esperada ? this.formatDate(data.orden.fecha_esperada) : 'No especificada',

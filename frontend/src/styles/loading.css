@@ -1,4 +1,5 @@
-.loading-spinner {
+/* Loading spinner de página completa (ej: carga inicial de app) */
+.loading-spinner:not(.loading-overlay .loading-spinner) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17,7 +18,7 @@
   margin-bottom: var(--espaciado-md);
 }
 
-.loading-spinner p {
+.loading-spinner:not(.loading-overlay .loading-spinner) p {
   color: var(--color-principal);
   font-size: var(--tamano-texto-lg);
   font-weight: 500;

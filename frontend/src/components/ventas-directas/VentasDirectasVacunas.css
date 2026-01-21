@@ -657,6 +657,8 @@
   opacity: 0.3;
 }
 
+/* Loading overlay para ventas directas - debe sobreescribir loading.css */
+.ventas-directas-vacunas-container .loading-overlay,
 .loading-overlay {
   position: fixed;
   top: 0;
@@ -670,18 +672,39 @@
   z-index: 1001;
 }
 
-.loading-spinner {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
+.ventas-directas-vacunas-container .loading-overlay .loading-spinner,
+.loading-overlay .loading-spinner {
+  background: white !important;
+  padding: 20px 32px !important;
+  border-radius: 12px !important;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  min-width: auto !important;
+  max-width: 180px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: 120px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.loading-spinner svg {
-  font-size: 2rem;
+.ventas-directas-vacunas-container .loading-overlay .loading-spinner svg,
+.loading-overlay .loading-spinner svg {
+  font-size: 1.8rem;
   color: #17a2b8;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+.ventas-directas-vacunas-container .loading-overlay .loading-spinner p,
+.loading-overlay .loading-spinner p {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0.9rem !important;
+  color: #555 !important;
+  line-height: 1.2;
 }
 
 .spin {

@@ -24,15 +24,18 @@ import {
 import * as planesApi from '../../services/planesVacunalesApi';
 import './PlanesVacunales.css';
 
+const ITEMS_POR_PAGINA = 10;
+
 const CalendariosVacunalesList = () => {
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [calendarios, setCalendarios] = useState([]);
-  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroEstado, setFiltroEstado] = useState('activos'); // Por defecto excluye completados
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroVacuna, setFiltroVacuna] = useState('');
   const [ordenamiento, setOrdenamiento] = useState('fecha_desc');
+  const [paginaActual, setPaginaActual] = useState(1);
   
   // Estados para estadísticas
   const [estadisticas, setEstadisticas] = useState({
@@ -51,68 +54,9 @@ const CalendariosVacunalesList = () => {
     try {
       setLoading(true);
       
-      // Obtener todas las cotizaciones aceptadas con sus calendarios
-      const response = await planesApi.getCotizaciones({ estado: 'aceptada' });
-      const cotizacionesAceptadas = response.data || response;
-      
-      // Procesar calendarios con información adicional
-      const calendariosConDatos = [];
-      
-      for (const cotizacion of cotizacionesAceptadas) {
-        try {
-          const calendarioResponse = await planesApi.getCalendarioVacunacion(cotizacion.id_cotizacion);
-          const calendario = calendarioResponse.data || calendarioResponse;
-          
-          if (calendario && calendario.length > 0) {
-            // Agrupar por cotización con estadísticas
-            const totalDosis = calendario.reduce((sum, item) => sum + item.cantidad_dosis, 0);
-            const dosisEntregadas = calendario.reduce((sum, item) => sum + (item.dosis_entregadas || 0), 0);
-            const progreso = totalDosis > 0 ? Math.round((dosisEntregadas / totalDosis) * 100) : 0;
-            
-            // Determinar estado del plan
-            let estadoPlan = 'activo';
-            if (progreso === 100) {
-              estadoPlan = 'completado';
-            } else if (progreso === 0) {
-              estadoPlan = 'pendiente';
-            }
-            
-            // Verificar si hay retrasos
-            const fechaActual = new Date();
-            const hayRetrasos = calendario.some(item => {
-              const fechaProgramada = new Date(item.fecha_programada);
-              return fechaProgramada < fechaActual && item.estado_entrega !== 'entregada';
-            });
-            
-            if (hayRetrasos && estadoPlan !== 'completado') {
-              estadoPlan = 'retrasado';
-            }
-            
-            // Próxima entrega
-            const proximaEntrega = calendario
-              .filter(item => item.estado_entrega !== 'entregada')
-              .sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada))[0];
-            
-            calendariosConDatos.push({
-              id_cotizacion: cotizacion.id_cotizacion,
-              numero_cotizacion: cotizacion.numero_cotizacion,
-              cliente: cotizacion.cliente,
-              plan: cotizacion.plan,
-              calendario: calendario,
-              estadoPlan,
-              totalDosis,
-              dosisEntregadas,
-              progreso,
-              proximaEntrega,
-              fecha_inicio: cotizacion.fecha_inicio_plan,
-              fecha_aceptacion: cotizacion.fecha_aceptacion,
-              hayRetrasos
-            });
-          }
-        } catch (err) {
-          console.warn(`Error al cargar calendario para cotización ${cotizacion.id_cotizacion}:`, err);
-        }
-      }
+      // Usar endpoint optimizado que devuelve todo en una sola llamada
+      const response = await planesApi.getResumenCalendarios();
+      const calendariosConDatos = response.data || response;
       
       setCalendarios(calendariosConDatos);
       
@@ -136,7 +80,10 @@ const CalendariosVacunalesList = () => {
   const calendariosFiltrados = calendarios
     .filter(calendario => {
       // Filtro por estado
-      if (filtroEstado !== 'todos' && calendario.estadoPlan !== filtroEstado) {
+      if (filtroEstado === 'activos') {
+        // Mostrar todos excepto completados
+        if (calendario.estadoPlan === 'completado') return false;
+      } else if (filtroEstado !== 'todos' && calendario.estadoPlan !== filtroEstado) {
         return false;
       }
       
@@ -241,11 +188,12 @@ const CalendariosVacunalesList = () => {
               <select 
                 className="form-select"
                 value={filtroEstado}
-                onChange={(e) => setFiltroEstado(e.target.value)}
+                onChange={(e) => { setFiltroEstado(e.target.value); setPaginaActual(1); }}
               >
+                <option value="activos">En curso (sin completados)</option>
                 <option value="todos">Todos los estados</option>
                 <option value="pendiente">Pendientes</option>
-                <option value="activo">Activos</option>
+                <option value="activo">Solo activos</option>
                 <option value="retrasado">Con retrasos</option>
                 <option value="completado">Completados</option>
               </select>
@@ -257,7 +205,7 @@ const CalendariosVacunalesList = () => {
                 className="form-control"
                 placeholder="Buscar por cliente..."
                 value={filtroCliente}
-                onChange={(e) => setFiltroCliente(e.target.value)}
+                onChange={(e) => { setFiltroCliente(e.target.value); setPaginaActual(1); }}
               />
             </div>
             <div className="col-md-3">
@@ -267,7 +215,7 @@ const CalendariosVacunalesList = () => {
                 className="form-control"
                 placeholder="Buscar por vacuna..."
                 value={filtroVacuna}
-                onChange={(e) => setFiltroVacuna(e.target.value)}
+                onChange={(e) => { setFiltroVacuna(e.target.value); setPaginaActual(1); }}
               />
             </div>
             <div className="col-md-3">
@@ -275,7 +223,7 @@ const CalendariosVacunalesList = () => {
               <select 
                 className="form-select"
                 value={ordenamiento}
-                onChange={(e) => setOrdenamiento(e.target.value)}
+                onChange={(e) => { setOrdenamiento(e.target.value); setPaginaActual(1); }}
               >
                 <option value="fecha_desc">Fecha (más recientes)</option>
                 <option value="fecha_asc">Fecha (más antiguos)</option>
@@ -303,6 +251,7 @@ const CalendariosVacunalesList = () => {
               </p>
             </div>
           ) : (
+            <>
             <div className="table-responsive">
               <table className="table table-hover">
                 <thead className="table-light">
@@ -313,13 +262,14 @@ const CalendariosVacunalesList = () => {
                     <th>Estado</th>
                     <th>Progreso</th>
                     <th>Dosis Total</th>
-                    <th>Próxima Entrega</th>
                     <th>Fecha Inicio</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {calendariosFiltrados.map((calendario) => (
+                  {calendariosFiltrados
+                    .slice((paginaActual - 1) * ITEMS_POR_PAGINA, paginaActual * ITEMS_POR_PAGINA)
+                    .map((calendario) => (
                     <tr key={calendario.id_cotizacion}>
                       <td>
                         <div className="d-flex align-items-center">
@@ -359,14 +309,6 @@ const CalendariosVacunalesList = () => {
                       </td>
                       <td>
                         {getEstadoBadge(calendario.estadoPlan)}
-                        {calendario.hayRetrasos && (
-                          <div className="mt-1">
-                            <small className="text-danger">
-                              <FaExclamationTriangle className="me-1" />
-                              Con retrasos
-                            </small>
-                          </div>
-                        )}
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
@@ -390,26 +332,6 @@ const CalendariosVacunalesList = () => {
                         <strong>{formatearNumero(calendario.totalDosis)}</strong>
                         <br />
                         <small className="text-muted">dosis totales</small>
-                      </td>
-                      <td>
-                        {calendario.proximaEntrega ? (
-                          <div>
-                            <strong>{formatFecha(calendario.proximaEntrega.fecha_programada)}</strong>
-                            <br />
-                            <small className="text-muted">
-                              Semana {calendario.proximaEntrega.numero_semana}
-                            </small>
-                            <br />
-                            <small className="text-info">
-                              {formatearNumero(calendario.proximaEntrega.cantidad_dosis)} dosis
-                            </small>
-                          </div>
-                        ) : (
-                          <span className="text-success">
-                            <FaCheckCircle className="me-1" />
-                            Completado
-                          </span>
-                        )}
                       </td>
                       <td>
                         <strong>{formatFecha(calendario.fecha_inicio)}</strong>
@@ -441,7 +363,83 @@ const CalendariosVacunalesList = () => {
                 </tbody>
               </table>
             </div>
-          )}
+
+            {/* Paginación */}
+            {calendariosFiltrados.length > ITEMS_POR_PAGINA && (
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <div className="text-muted">
+                  Mostrando {((paginaActual - 1) * ITEMS_POR_PAGINA) + 1} - {Math.min(paginaActual * ITEMS_POR_PAGINA, calendariosFiltrados.length)} de {calendariosFiltrados.length} calendarios
+                </div>
+                <nav>
+                  <ul className="pagination mb-0">
+                    <li className={`page-item ${paginaActual === 1 ? 'disabled' : ''}`}>
+                      <button 
+                        className="page-link" 
+                        onClick={() => setPaginaActual(1)}
+                        disabled={paginaActual === 1}
+                      >
+                        «
+                      </button>
+                    </li>
+                    <li className={`page-item ${paginaActual === 1 ? 'disabled' : ''}`}>
+                      <button 
+                        className="page-link" 
+                        onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                        disabled={paginaActual === 1}
+                      >
+                        ‹
+                      </button>
+                    </li>
+                    {Array.from({ length: Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA) }, (_, i) => i + 1)
+                      .filter(page => {
+                        const totalPages = Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA);
+                        if (totalPages <= 5) return true;
+                        if (page === 1 || page === totalPages) return true;
+                        if (Math.abs(page - paginaActual) <= 1) return true;
+                        return false;
+                      })
+                      .map((page, index, arr) => (
+                        <React.Fragment key={page}>
+                          {index > 0 && arr[index - 1] !== page - 1 && (
+                            <li className="page-item disabled">
+                              <span className="page-link">...</span>
+                            </li>
+                          )}
+                          <li className={`page-item ${paginaActual === page ? 'active' : ''}`}>
+                            <button 
+                              className="page-link" 
+                              onClick={() => setPaginaActual(page)}
+                            >
+                              {page}
+                            </button>
+                          </li>
+                        </React.Fragment>
+                      ))
+                    }
+                    <li className={`page-item ${paginaActual >= Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA) ? 'disabled' : ''}`}>
+                      <button 
+                        className="page-link" 
+                        onClick={() => setPaginaActual(prev => Math.min(Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA), prev + 1))}
+                        disabled={paginaActual >= Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA)}
+                      >
+                        ›
+                      </button>
+                    </li>
+                    <li className={`page-item ${paginaActual >= Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA) ? 'disabled' : ''}`}>
+                      <button 
+                        className="page-link" 
+                        onClick={() => setPaginaActual(Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA))}
+                        disabled={paginaActual >= Math.ceil(calendariosFiltrados.length / ITEMS_POR_PAGINA)}
+                      >
+                        »
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            )}
+          </>
+        )}
         </div>
       </div>
 

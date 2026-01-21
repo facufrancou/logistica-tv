@@ -849,7 +849,16 @@ export const descargarOrdenCompraPDF = async (id) => {
     }
     
     const blob = await response.blob();
-    const fileName = `Orden_Compra_${id}.pdf`;
+    
+    // Extraer nombre del archivo del header Content-Disposition (contiene número oficial)
+    const contentDisposition = response.headers.get('content-disposition');
+    let fileName = `Orden_Compra_${id}.pdf`;
+    if (contentDisposition) {
+      const matches = contentDisposition.match(/filename="(.+)"/);
+      if (matches && matches[1]) {
+        fileName = matches[1];
+      }
+    }
     
     // Crear enlace de descarga
     const downloadUrl = window.URL.createObjectURL(blob);
@@ -861,7 +870,7 @@ export const descargarOrdenCompraPDF = async (id) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
     
-    return { success: true };
+    return { success: true, fileName };
   } catch (err) {
     throw new Error("Error al descargar PDF: " + err.message);
   }

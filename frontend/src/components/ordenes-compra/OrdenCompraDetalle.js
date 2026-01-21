@@ -434,16 +434,17 @@ const OrdenCompraDetalle = ({ ordenId, onClose, onRegistrarIngreso }) => {
       doc.setFont('courier', 'bold');
       doc.setFontSize(22);
       doc.setTextColor(255, 255, 255);
-      doc.text('ORDEN DE COMPRA', pageWidth / 2, 18, { align: 'center' });
+      doc.text('ORDEN DE COMPRA', pageWidth / 2, 15, { align: 'center' });
 
       // Subtítulo con nombre del proveedor
       doc.setFontSize(10);
       doc.setFont('courier', 'normal');
-      doc.text(proveedorData.nombre.toUpperCase(), pageWidth / 2, 25, { align: 'center' });
+      doc.text(proveedorData.nombre.toUpperCase(), pageWidth / 2, 22, { align: 'center' });
 
-      // Solo fecha
+      // Número de orden y fecha
       doc.setFontSize(9);
-      doc.text(`Fecha: ${formatearFecha(new Date().toISOString().split('T')[0])}`, pageWidth / 2, 32, { align: 'center' });
+      doc.text(`Orden N°: ${orden.numero_orden}`, pageWidth / 2, 28, { align: 'center' });
+      doc.text(`Fecha: ${formatearFecha(new Date().toISOString().split('T')[0])}`, pageWidth / 2, 33, { align: 'center' });
 
       yPos = 45;
 
@@ -983,6 +984,7 @@ const OrdenCompraDetalle = ({ ordenId, onClose, onRegistrarIngreso }) => {
                               <th style={{ textAlign: 'right' }}>Cantidad</th>
                               <th>Ubicación</th>
                               <th style={{ textAlign: 'right' }}>Precio</th>
+                              <th>Remito/Observaciones</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -997,6 +999,9 @@ const OrdenCompraDetalle = ({ ordenId, onClose, onRegistrarIngreso }) => {
                                 <td>{ingreso.ubicacion_fisica || '-'}</td>
                                 <td style={{ textAlign: 'right' }}>
                                   {formatMoney(ingreso.precio_compra)}
+                                </td>
+                                <td style={{ color: ingreso.observaciones ? '#2d3748' : '#a0aec0' }}>
+                                  {ingreso.observaciones || '-'}
                                 </td>
                               </tr>
                             ))}

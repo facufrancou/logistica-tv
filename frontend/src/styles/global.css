@@ -572,6 +572,103 @@ thead.table-light > tr > th {
   cursor: pointer;
 }
 
+/* ===== SUBMENÚS DROPDOWN ===== */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu > a::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: auto;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid currentColor;
+  opacity: 0.6;
+}
+
+.dropdown-submenu:hover > a::after {
+  opacity: 1;
+  border-left-color: var(--color-primario);
+}
+
+.dropdown-submenu > .dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -5px;
+  margin-left: 0;
+  min-width: 200px;
+  border-radius: var(--borde-radio);
+  box-shadow: var(--sombra-media);
+}
+
+/* Área invisible para facilitar el paso del mouse al submenú */
+.dropdown-submenu > .dropdown-menu::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 0;
+  width: 20px;
+  height: 100%;
+}
+
+.dropdown-submenu:hover > .dropdown-menu {
+  display: block;
+}
+
+.dropdown-submenu > a.dropdown-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 12px;
+}
+
+/* Hover en submenú padre */
+.dropdown-submenu:hover > a {
+  background-color: var(--color-primario-light, #e7f3ff);
+  color: var(--color-primario);
+}
+
+/* ===== MENÚS PRINCIPALES CON HOVER ===== */
+.navbar .nav-item.dropdown:hover > .dropdown-menu {
+  display: block;
+  margin-top: 0;
+}
+
+.navbar .nav-item.dropdown > .dropdown-menu {
+  margin-top: 0;
+}
+
+/* Para pantallas pequeñas, submenú hacia abajo */
+@media (max-width: 992px) {
+  .dropdown-submenu > a::after {
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid currentColor;
+    border-bottom: none;
+  }
+  
+  .dropdown-submenu > .dropdown-menu {
+    position: static;
+    left: 0;
+    margin-left: 15px;
+    box-shadow: none;
+    border-left: 2px solid var(--color-primario-light, #e7f3ff);
+  }
+  
+  /* En móvil desactivar hover para menús principales */
+  .navbar .nav-item.dropdown:hover > .dropdown-menu {
+    display: none;
+  }
+  
+  .navbar .nav-item.dropdown.show > .dropdown-menu {
+    display: block;
+  }
+}
+
 /* Sistema de Notificaciones */
 .notification-container {
   position: fixed;

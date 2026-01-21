@@ -44,32 +44,50 @@ const LotesAsignadosCell = ({ item, formatearFecha, onOpenGestionLotes }) => {
   const handleExpand = async (e) => {
     e.stopPropagation();
     
+    // Si ya está expandido, solo cerrar
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    
     // Si tenemos asignaciones directas, usarlas
-    if (!expanded && tieneAsignacionesDirectas) {
+    if (tieneAsignacionesDirectas) {
       setLotes(asignacionesDirectas);
       setExpanded(true);
       return;
     }
     
     // Fallback: llamar al endpoint si no tenemos datos
-    if (!expanded && lotes.length === 0 && tieneMultiplesLotes) {
+    if (lotes.length === 0) {
       setLoading(true);
       setError(null);
       try {
         const resultado = await planesApi.getLotesAsignadosCalendario(item.id_calendario);
-        if (resultado.success && resultado.data.lotes) {
-          setLotes(resultado.data.lotes);
+        console.log('Resultado getLotesAsignadosCalendario:', resultado);
+        
+        // Manejar diferentes formatos de respuesta
+        let lotesData = [];
+        if (resultado.data && resultado.data.lotes) {
+          lotesData = resultado.data.lotes;
+        } else if (resultado.lotes) {
+          lotesData = resultado.lotes;
+        } else if (Array.isArray(resultado)) {
+          lotesData = resultado;
+        }
+        
+        if (lotesData.length > 0) {
+          setLotes(lotesData);
         } else {
-          setError('Error al cargar');
+          setError('No se encontraron lotes');
         }
       } catch (err) {
         console.error('Error al cargar lotes:', err);
-        setError('Error al cargar');
+        setError('Error al cargar lotes');
       } finally {
         setLoading(false);
       }
     }
-    setExpanded(!expanded);
+    setExpanded(true);
   };
 
   // Si no hay lote asignado (verificar ambos campos)
@@ -133,7 +151,7 @@ const LotesAsignadosCell = ({ item, formatearFecha, onOpenGestionLotes }) => {
           {error ? (
             <small className="text-danger">{error}</small>
           ) : lotes.length === 0 && !loading ? (
-            <small className="text-muted">No hay datos de lotes</small>
+            <small className="text-muted">Cargando lotes...</small>
           ) : (
             <>
               {lotes.map((lote, index) => (
@@ -141,7 +159,7 @@ const LotesAsignadosCell = ({ item, formatearFecha, onOpenGestionLotes }) => {
                   <div className="d-flex justify-content-between align-items-center">
                     <span className="fw-bold text-dark">{lote.lote}</span>
                     <span className="badge bg-info text-white" style={{ fontSize: '0.7rem' }}>
-                      {lote.cantidad_asignada?.toLocaleString()} dosis
+                      {(lote.cantidad_asignada || 0).toLocaleString()} dosis
                     </span>
                   </div>
                   <div className="d-flex flex-wrap gap-2 mt-1">
@@ -162,12 +180,14 @@ const LotesAsignadosCell = ({ item, formatearFecha, onOpenGestionLotes }) => {
               ))}
               
               {/* Total */}
-              <div className="d-flex justify-content-between align-items-center pt-1 fw-bold">
-                <span className="text-muted">Total:</span>
-                <span className="badge bg-success">
-                  {lotes.reduce((sum, l) => sum + (l.cantidad_asignada || 0), 0).toLocaleString()} dosis
-                </span>
-              </div>
+              {lotes.length > 0 && (
+                <div className="d-flex justify-content-between align-items-center pt-1 fw-bold">
+                  <span className="text-muted">Total:</span>
+                  <span className="badge bg-success">
+                    {lotes.reduce((sum, l) => sum + (l.cantidad_asignada || 0), 0).toLocaleString()} dosis
+                  </span>
+                </div>
+              )}
             </>
           )}
         </div>

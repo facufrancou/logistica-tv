@@ -66,7 +66,9 @@ exports.getOrdenesCompra = async (req, res) => {
     if (search) {
       where.OR = [
         { numero_orden: { contains: search } },
-        { observaciones: { contains: search } }
+        { observaciones: { contains: search } },
+        { cotizacion: { numero_cotizacion: { contains: search } } },
+        { cotizacion: { cliente: { nombre: { contains: search } } } }
       ];
     }
 
@@ -678,7 +680,8 @@ exports.registrarIngreso = async (req, res) => {
                 motivo: `Ingreso por Orden de Compra ${orden.numero_orden}`,
                 observaciones: loteData.observaciones || null,
                 precio_unitario: loteData.precio_compra ? parseFloat(loteData.precio_compra) : null,
-                id_usuario: req.user?.id_usuario || null
+                id_usuario: req.user?.id_usuario || null,
+                id_cotizacion: orden.id_cotizacion || null
               }
             });
 
@@ -708,9 +711,10 @@ exports.registrarIngreso = async (req, res) => {
                 stock_anterior: 0,
                 stock_posterior: parseInt(loteData.cantidad),
                 motivo: `Ingreso inicial por Orden de Compra ${orden.numero_orden}`,
-                observaciones: `Lote: ${loteData.lote}`,
+                observaciones: loteData.observaciones || null,
                 precio_unitario: loteData.precio_compra ? parseFloat(loteData.precio_compra) : null,
-                id_usuario: req.user?.id_usuario || null
+                id_usuario: req.user?.id_usuario || null,
+                id_cotizacion: orden.id_cotizacion || null
               }
             });
 
@@ -1136,20 +1140,23 @@ exports.getOrdenParaPDF = async (req, res) => {
 
 /**
  * Descargar PDF de Orden de Compra Completa (uso interno)
+ * Integrado con sistema de documentos impresos
  */
 exports.descargarOrdenCompraPDF = async (req, res) => {
   try {
     const { id } = req.params;
     const pdfService = require('../services/pdfService');
+    const documentosService = require('../services/documentosService');
 
     const orden = await prisma.ordenCompra.findUnique({
       where: { id_orden_compra: parseInt(id) },
       include: {
         cotizacion: {
           select: {
+            id_cotizacion: true,
             numero_cotizacion: true,
             cliente: {
-              select: { nombre: true, cuit: true, direccion: true, telefono: true }
+              select: { id_cliente: true, nombre: true, cuit: true, direccion: true, telefono: true }
             }
           }
         },
@@ -1192,9 +1199,42 @@ exports.descargarOrdenCompraPDF = async (req, res) => {
 
     const totalGeneral = Object.values(porProveedor).reduce((sum, p) => sum + p.subtotal, 0);
 
+    // === INTEGRACIÓN CON SISTEMA DE DOCUMENTOS ===
+    // Obtener o generar número de documento oficial
+    let numeroOficial = orden.numero_documento_oficial;
+    
+    if (!numeroOficial) {
+      const docResult = await documentosService.obtenerOGenerarNumero(
+        'orden_compra',
+        { 
+          idOrdenCompra: parseInt(id),
+          idCotizacion: orden.cotizacion?.id_cotizacion,
+          idCliente: orden.cotizacion?.cliente?.id_cliente
+        },
+        { orden, cotizacion: orden.cotizacion, detalle: orden.detalle_orden },
+        req.user?.id_usuario,
+        req.ip
+      );
+      
+      numeroOficial = docResult.numero_documento;
+      
+      // Actualizar orden con número oficial
+      await documentosService.actualizarNumeroOficialOrden(parseInt(id), numeroOficial);
+    } else {
+      // Es reimpresión - buscar documento existente y registrar
+      const docExistente = await documentosService.buscarDocumentoExistente(
+        'orden_compra',
+        { idOrdenCompra: parseInt(id) }
+      );
+      if (docExistente) {
+        await documentosService.registrarReimpresion(docExistente.id_documento, req.user?.id_usuario, req.ip);
+      }
+    }
+
     const pdfData = {
       orden: {
         numero_orden: orden.numero_orden,
+        numero_documento_oficial: numeroOficial, // Número correlativo oficial
         estado: orden.estado,
         fecha_creacion: orden.fecha_creacion,
         fecha_esperada: orden.fecha_esperada,
@@ -1214,7 +1254,7 @@ exports.descargarOrdenCompraPDF = async (req, res) => {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Content-Disposition', `attachment; filename="Orden_Compra_${orden.numero_orden}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="Orden_Compra_${numeroOficial}.pdf"`);
     res.end(pdfBuffer);
 
   } catch (error) {
@@ -1225,20 +1265,23 @@ exports.descargarOrdenCompraPDF = async (req, res) => {
 
 /**
  * Descargar PDF de Orden de Compra por Proveedor (para enviar al laboratorio)
+ * Integrado con sistema de documentos impresos
  */
 exports.descargarOrdenCompraProveedorPDF = async (req, res) => {
   try {
     const { id, id_proveedor } = req.params;
     const pdfService = require('../services/pdfService');
+    const documentosService = require('../services/documentosService');
 
     const orden = await prisma.ordenCompra.findUnique({
       where: { id_orden_compra: parseInt(id) },
       include: {
         cotizacion: {
           select: {
+            id_cotizacion: true,
             numero_cotizacion: true,
             cliente: {
-              select: { nombre: true }
+              select: { id_cliente: true, nombre: true }
             }
           }
         },
@@ -1269,9 +1312,25 @@ exports.descargarOrdenCompraProveedorPDF = async (req, res) => {
     const subtotal = orden.detalle_orden.reduce((sum, d) => 
       sum + ((d.precio_estimado || 0) * d.cantidad_solicitada), 0);
 
+    // === INTEGRACIÓN CON SISTEMA DE DOCUMENTOS ===
+    // Para órdenes por proveedor, usamos una clave compuesta orden+proveedor
+    const docResult = await documentosService.obtenerOGenerarNumero(
+      'orden_compra',
+      { 
+        idOrdenCompra: parseInt(id),
+        idProveedor: parseInt(id_proveedor),
+        idCotizacion: orden.cotizacion?.id_cotizacion,
+        idCliente: orden.cotizacion?.cliente?.id_cliente
+      },
+      { orden, proveedor, items: orden.detalle_orden },
+      req.user?.id_usuario,
+      req.ip
+    );
+
     const pdfData = {
       orden: {
         numero_orden: orden.numero_orden,
+        numero_documento_oficial: docResult.numero_documento, // Número correlativo oficial
         estado: orden.estado,
         fecha_creacion: orden.fecha_creacion,
         fecha_esperada: orden.fecha_esperada,
@@ -1293,7 +1352,7 @@ exports.descargarOrdenCompraProveedorPDF = async (req, res) => {
     const nombreProveedor = proveedor.nombre.replace(/[^a-zA-Z0-9]/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Content-Disposition', `attachment; filename="Orden_${orden.numero_orden}_${nombreProveedor}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="Orden_${docResult.numero_documento}_${nombreProveedor}.pdf"`);
     res.end(pdfBuffer);
 
   } catch (error) {

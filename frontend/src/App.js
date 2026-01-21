@@ -97,7 +97,7 @@ const CobrosFacturacion = FacturasList; // Temporal - mismo componente
 const ReportesFacturacion = ReportesView; // Temporal - usar reportes existente
 
 // Nuevos componentes desarrollados
-import RemitosGenerator from "./components/remitos/RemitosGenerator";
+import DocumentosImpresos from "./components/documentos/DocumentosImpresos";
 import VentasDirectasView from "./components/ventas-directas/VentasDirectasView";
 import VentasDirectasVacunasView from "./components/ventas-directas/VentasDirectasVacunasView";
 import IndicadoresStockPlan from "./components/indicadores-stock/IndicadoresStockPlan";
@@ -193,23 +193,49 @@ function Navbar() {
                 aria-expanded="false"
               >
                 <FaSyringe className="me-1" />
-                <span>Planes Vacunales</span>
+                <span>Vacunas</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="planesDropdown">
-                {/* <li><hr className="dropdown-divider" /></li> */}
-                <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> <strong>Administrar Vacunas</strong></Link></li>
-                <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaStethoscope className="me-2" /> Gestión de Planes</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/calendarios-vacunales"><FaCalendarAlt className="me-2" /> Calendarios Vacunales</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaClipboardList className="me-2" /> Listas de Precios</Link></li>
+                {/* Vacunas - Submenú */}
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaCog className="me-2" /> Configuración
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> Administración de Vacunas</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/listas-precios"><FaMoneyBill className="me-2" /> Listas de Precios</Link></li>
+                  </ul>
+                </li>
                 
-                <li><Link className="dropdown-item d-flex align-items-center" to="/remitos/generar"><FaFileInvoice className="me-2" /> Generar Remitos</Link></li>
-                {/* <li><Link className="dropdown-item d-flex align-items-center" to="/ventas-directas"><FaShoppingCart className="me-2" /> Ventas Directas</Link></li> */}
-                <li><Link className="dropdown-item d-flex align-items-center" to="/entregas-fuera-de-plan"><FaSyringe className="me-2" /> Entregas Fuera de Plan</Link></li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/ordenes-compra"><FaShoppingCart className="me-2" /> <strong>Órdenes de Compra</strong></Link></li>
-                {/* <li><Link className="dropdown-item d-flex align-items-center" to="/indicadores-stock"><FaChartBar className="me-2" /> Indicadores Stock</Link></li> */}
+                
+                {/* Comercial - Submenú */}
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaFileInvoice className="me-2" /> Ventas
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/planes-vacunales"><FaStethoscope className="me-2" /> Planes</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoiceDollar className="me-2" /> Cotizaciones</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/ordenes-compra"><FaShoppingCart className="me-2" /> Órdenes de Compra</Link></li>
+                  </ul>
+                </li>
+                
+                <li><hr className="dropdown-divider" /></li>
+                
+                {/* Operaciones - Submenú */}
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaTruck className="me-2" /> Entregas
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/calendarios-vacunales"><FaCalendarAlt className="me-2" /> Calendario</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/entregas-fuera-de-plan"><FaBoxOpen className="me-2" /> Fuera de Plan</Link></li>
+                  </ul>
+                </li>
+                
+                <li><hr className="dropdown-divider" /></li>
+                <li><Link className="dropdown-item d-flex align-items-center" to="/documentos"><FaFileAlt className="me-2" /> Documentos</Link></li>
               </ul>
             </li>
 
@@ -314,11 +340,17 @@ function Navbar() {
                 <span>Liquidaciones</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="liquidacionesDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/pendientes"><FaExclamationTriangle className="me-2" /> Pendientes de Liquidar</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones"><FaChartBar className="me-2" /> Detalle de Liquidaciones</Link></li>
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaChartBar className="me-2" /> Gestión
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/pendientes"><FaExclamationTriangle className="me-2" /> Pendientes</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones"><FaChartBar className="me-2" /> Detalle</Link></li>
+                  </ul>
+                </li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Todas las Cotizaciones</Link></li>
-                {/* <li><Link className="dropdown-item d-flex align-items-center" to="/liquidaciones/reportes"><FaFileAlt className="me-2" /> Reportes Fiscales</Link></li> */}
+                <li><Link className="dropdown-item d-flex align-items-center" to="/cotizaciones"><FaFileInvoice className="me-2" /> Cotizaciones</Link></li>
               </ul>
             </li>
 
@@ -336,19 +368,33 @@ function Navbar() {
                 <span>Logística</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="logisticaDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/logistica/nuevo-pedido"><FaShoppingCart className="me-2" /> Nuevo Pedido</Link></li>
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaShoppingCart className="me-2" /> Pedidos
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/logistica/nuevo-pedido"><FaShoppingCart className="me-2" /> Nuevo Pedido</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/pedidos"><FaClipboardList className="me-2" /> Ver Pedidos</Link></li>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/recordatorios"><FaBell className="me-2" /> Próximos</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/semanal"><FaCalendarAlt className="me-2" /> Vista Semanal</Link></li>
+                  </ul>
+                </li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/pedidos"><FaShoppingCart className="me-2" /> Gestión Pedidos</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/clientes"><FaBuilding className="me-2" /> Clientes</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/proveedores"><FaTruck className="me-2" /> Proveedores</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/productos"><FaFlask className="me-2" /> Productos</Link></li>
-                <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/recordatorios"><FaBell className="me-2" /> Próximos Pedidos</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/semanal"><FaCalendarAlt className="me-2" /> Vista Semanal</Link></li>
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaBuilding className="me-2" /> Maestros
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/clientes"><FaUsers className="me-2" /> Clientes</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/proveedores"><FaTruck className="me-2" /> Proveedores</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/productos"><FaFlask className="me-2" /> Productos</Link></li>
+                  </ul>
+                </li>
               </ul>
             </li>
 
-            {/* ⚙️ Sistema & Reportes (Sprint 6) */}
+            {/* ⚙️ Sistema & Reportes */}
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle d-flex align-items-center"
@@ -362,11 +408,25 @@ function Navbar() {
                 <span>Sistema</span>
               </a>
               <ul className="dropdown-menu" aria-labelledby="sistemaDropdown">
-                <li><Link className="dropdown-item d-flex align-items-center" to="/reportes"><FaChartBar className="me-2" /> Reportes Avanzados</Link></li>
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaChartBar className="me-2" /> Reportes
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/reportes"><FaChartLine className="me-2" /> Avanzados</Link></li>
+                  </ul>
+                </li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema"><FaCog className="me-2" /> Panel Sistema</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/usuarios"><FaUserCog className="me-2" /> Usuarios</Link></li>
-                <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/ctacte"><FaFileInvoice className="me-2" /> Cuentas Corrientes</Link></li>
+                <li className="dropdown-submenu">
+                  <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
+                    <FaCog className="me-2" /> Administración
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/sistema"><FaCog className="me-2" /> Panel</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/usuarios"><FaUserCog className="me-2" /> Usuarios</Link></li>
+                    <li><Link className="dropdown-item d-flex align-items-center" to="/sistema/ctacte"><FaFileInvoice className="me-2" /> Ctas. Corrientes</Link></li>
+                  </ul>
+                </li>
               </ul>
             </li>
           </ul>
@@ -526,12 +586,12 @@ function MainRoutes() {
         />
         */}
 
-        {/* 📋 REMITOS Y VENTAS DIRECTAS */}
+        {/* 📋 DOCUMENTOS IMPRESOS */}
         <Route
-          path="/remitos/generar"
+          path="/documentos"
           element={
             <RutaPrivada>
-              <RemitosGenerator />
+              <DocumentosImpresos />
             </RutaPrivada>
           }
         />

@@ -19,6 +19,59 @@ function generarNumeroVenta() {
 }
 
 /**
+ * Función auxiliar para generar datos de remito (usada como fallback en reimpresiones sin snapshot)
+ */
+async function generarDatosRemitoVentaDirecta(venta, numeroRemito, esReimpresion) {
+  return {
+    numeroRemito: numeroRemito,
+    numeroVentaOriginal: venta.numero_venta,
+    esReimpresion: esReimpresion,
+    fechaEmision: new Date().toLocaleDateString('es-AR'),
+    horaEmision: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+    cliente: {
+      nombre: venta.cliente.nombre,
+      cuit: venta.cliente.cuit || 'No informado',
+      email: venta.cliente.email || 'No informado',
+      telefono: venta.cliente.telefono || 'No informado',
+      direccion: venta.cliente.direccion || 'No informada',
+      localidad: venta.cliente.localidad || 'No informada'
+    },
+    venta: {
+      numeroVenta: venta.numero_venta,
+      fechaVenta: venta.fecha_venta,
+      estado: venta.estado_venta,
+      observaciones: venta.observaciones,
+      listaPrecio: venta.listaPrecio ? venta.listaPrecio.tipo : ''
+    },
+    entrega: {
+      responsableEntrega: venta.responsable_entrega || 'Por definir',
+      responsableRecibe: venta.responsable_recibe || venta.cliente.nombre
+    },
+    vacunas: await Promise.all(venta.detalle_venta.map(async (detalle) => {
+      const vacuna = await prisma.vacuna.findUnique({
+        where: { id_vacuna: detalle.id_producto },
+        include: { proveedor: true, patologia: true }
+      });
+      return {
+        nombre: vacuna?.nombre || 'Vacuna no encontrada',
+        descripcion: vacuna?.detalle || 'Sin descripción',
+        codigo: vacuna?.codigo || 'SIN-CODIGO',
+        proveedor: vacuna?.proveedor?.nombre || 'Sin proveedor',
+        lote: detalle.lote || 'N/A',
+        fechaVencimiento: detalle.fecha_vencimiento || null,
+        cantidad: detalle.cantidad,
+        precioUnitario: parseFloat(detalle.precio_unitario)
+      };
+    })),
+    totales: {
+      subtotal: parseFloat(venta.precio_total),
+      total: parseFloat(venta.precio_total),
+      mostrarIva: false
+    }
+  };
+}
+
+/**
  * Obtener stocks disponibles para selección
  */
 exports.getStocksDisponibles = async (req, res) => {
@@ -303,10 +356,13 @@ exports.crearVentaDirecta = async (req, res) => {
         detallesData.push({
           id_venta_directa: null, // Se asignará después de crear la venta
           id_producto: stock.id_vacuna, // Usar id_vacuna como id_producto para compatibilidad
+          id_stock_vacuna: parseInt(item.id_stock_vacuna), // Referencia al stock específico
           cantidad: cantidadFrascos, // Guardar cantidad en frascos
           precio_unitario: precioConRecargo, // Guardar el precio con recargo aplicado (por frasco)
           subtotal: subtotal,
-          observaciones: item.observaciones || `Lote: ${stock.lote}`
+          lote: stock.lote, // Snapshot del lote
+          fecha_vencimiento: stock.fecha_vencimiento, // Snapshot de la fecha de vencimiento
+          observaciones: item.observaciones || null
         });
       }
 
@@ -649,6 +705,7 @@ exports.actualizarEstadoVenta = async (req, res) => {
 exports.generarRemitoPdf = async (req, res) => {
   try {
     const { ventaId } = req.params;
+    const documentosService = require('../services/documentosService');
 
     console.log('Generando remito PDF para venta directa:', ventaId);
 
@@ -683,76 +740,127 @@ exports.generarRemitoPdf = async (req, res) => {
       });
     }
 
-    // Preparar datos para el PDF
-    const datosRemito = {
-      numeroRemito: `${venta.numero_venta}`,
-      fechaEmision: new Date().toLocaleDateString('es-AR'),
-      horaEmision: new Date().toLocaleTimeString('es-AR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-
-      // Datos del cliente
-      cliente: {
-        nombre: venta.cliente.nombre,
-        cuit: venta.cliente.cuit || 'No informado',
-        email: venta.cliente.email || 'No informado',
-        telefono: venta.cliente.telefono || 'No informado',
-        direccion: venta.cliente.direccion || 'No informada',
-        localidad: venta.cliente.localidad || 'No informada'
-      },
-
-      // Datos de la venta
-      venta: {
-        numeroVenta: venta.numero_venta,
-        fechaVenta: venta.fecha_venta,
-        estado: venta.estado_venta,
-        observaciones: venta.observaciones,
-        listaPrecio: venta.listaPrecio ? venta.listaPrecio.tipo : '' // Solo el código (L15, L30, etc.) o string vacío
-      },
-
-      // Datos de entrega
-      entrega: {
-        responsableEntrega: venta.responsable_entrega || 'Por definir',
-        responsableRecibe: venta.responsable_recibe || venta.cliente.nombre
-      },
-
-      // Vacunas del detalle - obtener datos de vacuna manualmente
-      vacunas: await Promise.all(venta.detalle_venta.map(async (detalle) => {
-        // Como guardamos id_vacuna en id_producto, obtenemos la vacuna directamente
-        const vacuna = await prisma.vacuna.findUnique({
-          where: { id_vacuna: detalle.id_producto },
-          include: {
-            proveedor: true,
-            patologia: true
-          }
-        });
+    // === INTEGRACIÓN CON SISTEMA DE DOCUMENTOS ===
+    // Verificar si ya tiene número de remito asignado
+    let numeroRemitoOficial = venta.numero_remito_oficial;
+    let esReimpresion = false;
+    let datosRemitoFinal = null;
+    
+    if (!numeroRemitoOficial) {
+      // Primera impresión - generar número correlativo y preparar datos
+      
+      // Preparar datos para el PDF (primera vez)
+      const datosRemito = {
+        numeroVentaOriginal: venta.numero_venta,
+        fechaEmision: new Date().toLocaleDateString('es-AR'),
+        horaEmision: new Date().toLocaleTimeString('es-AR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        cliente: {
+          nombre: venta.cliente.nombre,
+          cuit: venta.cliente.cuit || 'No informado',
+          email: venta.cliente.email || 'No informado',
+          telefono: venta.cliente.telefono || 'No informado',
+          direccion: venta.cliente.direccion || 'No informada',
+          localidad: venta.cliente.localidad || 'No informada'
+        },
+        venta: {
+          numeroVenta: venta.numero_venta,
+          fechaVenta: venta.fecha_venta,
+          estado: venta.estado_venta,
+          observaciones: venta.observaciones,
+          listaPrecio: venta.listaPrecio ? venta.listaPrecio.tipo : ''
+        },
+        entrega: {
+          responsableEntrega: venta.responsable_entrega || 'Por definir',
+          responsableRecibe: venta.responsable_recibe || venta.cliente.nombre
+        },
+        vacunas: await Promise.all(venta.detalle_venta.map(async (detalle) => {
+          const vacuna = await prisma.vacuna.findUnique({
+            where: { id_vacuna: detalle.id_producto },
+            include: { proveedor: true, patologia: true }
+          });
+          return {
+            nombre: vacuna?.nombre || 'Vacuna no encontrada',
+            descripcion: vacuna?.detalle || 'Sin descripción',
+            codigo: vacuna?.codigo || 'SIN-CODIGO',
+            proveedor: vacuna?.proveedor?.nombre || 'Sin proveedor',
+            lote: detalle.lote || 'N/A',
+            fechaVencimiento: detalle.fecha_vencimiento || null,
+            cantidad: detalle.cantidad,
+            precioUnitario: parseFloat(detalle.precio_unitario)
+          };
+        })),
+        totales: {
+          subtotal: parseFloat(venta.precio_total),
+          total: parseFloat(venta.precio_total),
+          mostrarIva: false
+        }
+      };
+      
+      // Generar número y guardar snapshot
+      const docResult = await documentosService.obtenerOGenerarNumero(
+        'remito_venta_directa',
+        { 
+          idVentaDirecta: parseInt(ventaId),
+          idCliente: venta.id_cliente
+        },
+        datosRemito, // Guardar snapshot inicial
+        req.user?.id_usuario,
+        req.ip
+      );
+      
+      numeroRemitoOficial = docResult.numero_documento;
+      datosRemito.numeroRemito = numeroRemitoOficial;
+      datosRemito.esReimpresion = false;
+      datosRemitoFinal = datosRemito;
+      
+      // Actualizar el snapshot con el número de remito oficial para futuras reimpresiones
+      await documentosService.actualizarSnapshot(docResult.id_documento, datosRemito);
+      
+      // Actualizar venta directa con el número de remito asignado
+      await documentosService.actualizarNumeroRemitoVentaDirecta(parseInt(ventaId), numeroRemitoOficial);
+      
+    } else {
+      // Es reimpresión - usar datos del snapshot original
+      esReimpresion = true;
+      const docExistente = await documentosService.buscarDocumentoExistente(
+        'remito_venta_directa',
+        { idVentaDirecta: parseInt(ventaId) }
+      );
+      
+      if (docExistente) {
+        // Registrar reimpresión en historial
+        await documentosService.registrarReimpresion(docExistente.id_documento, req.user?.id_usuario, req.ip);
         
-        return {
-          nombre: vacuna?.nombre || 'Vacuna no encontrada',
-          descripcion: vacuna?.detalle || 'Sin descripción',
-          codigo: vacuna?.codigo || 'SIN-CODIGO',
-          proveedor: vacuna?.proveedor?.nombre || 'Sin proveedor',
-          lote: 'N/A', // El lote específico no se guarda en detalle_venta
-          fechaVencimiento: null, // La fecha vencimiento no se guarda en detalle_venta
-          cantidad: detalle.cantidad,
-          precioUnitario: parseFloat(detalle.precio_unitario)
-        };
-      })),
-
-      // Totales (sin IVA como solicita el usuario)
-      totales: {
-        subtotal: parseFloat(venta.precio_total),
-        total: parseFloat(venta.precio_total),
-        mostrarIva: false // No mostrar IVA en el remito
+        // Usar datos del snapshot si existen
+        if (docExistente.datos_snapshot) {
+          try {
+            const snapshotData = typeof docExistente.datos_snapshot === 'string' 
+              ? JSON.parse(docExistente.datos_snapshot) 
+              : docExistente.datos_snapshot;
+            datosRemitoFinal = snapshotData;
+            datosRemitoFinal.numeroRemito = numeroRemitoOficial;
+            datosRemitoFinal.esReimpresion = true;
+            console.log('📋 Usando datos del snapshot original para reimpresión de venta directa');
+          } catch (parseError) {
+            console.warn('⚠️ Error al parsear snapshot, regenerando datos:', parseError.message);
+            // Fallback: regenerar datos si no se puede parsear el snapshot
+            datosRemitoFinal = await generarDatosRemitoVentaDirecta(venta, numeroRemitoOficial, true);
+          }
+        } else {
+          // No hay snapshot, regenerar datos
+          datosRemitoFinal = await generarDatosRemitoVentaDirecta(venta, numeroRemitoOficial, true);
+        }
       }
-    };
+    }
 
     // Generar el PDF
-    const pdfBuffer = await ventaDirectaPdfService.generarRemitoPdf(datosRemito);
+    const pdfBuffer = await ventaDirectaPdfService.generarRemitoPdf(datosRemitoFinal);
 
-    // Configurar headers para descargar el PDF
-    const nombreArchivo = `remito-venta-directa-${venta.numeroVenta}-${new Date().getTime()}.pdf`;
+    // Configurar headers para descargar el PDF con número oficial
+    const nombreArchivo = `remito-${numeroRemitoOficial}-venta-${venta.numero_venta}${esReimpresion ? '-COPIA' : ''}.pdf`;
     
     res.set({
       'Content-Type': 'application/pdf',
@@ -763,7 +871,7 @@ exports.generarRemitoPdf = async (req, res) => {
     // Enviar el PDF
     res.send(pdfBuffer);
 
-    console.log('Remito PDF generado exitosamente para venta:', venta.numeroVenta);
+    console.log(`Remito PDF generado exitosamente: ${numeroRemitoOficial} (${esReimpresion ? 'reimpresión' : 'primera impresión'})`);
 
   } catch (error) {
     console.error('Error generando remito PDF venta directa:', error);

@@ -61,6 +61,7 @@ model Cliente {
   productos_habilitados     ProductoHabilitado[]
   remitos                   Remito[]
   ventas_directas           VentaDirecta[]
+  documentos_impresos       DocumentoImpreso[]
 
   @@index([cuit], map: "idx_clientes_cuit")
   @@index([nombre], map: "idx_clientes_nombre")
@@ -78,6 +79,7 @@ model Proveedor {
   productos              Producto[]
   vacunas                Vacuna[]
   detalle_ordenes_compra DetalleOrdenCompra[]
+  documentos_impresos    DocumentoImpreso[]
 
   @@map("proveedores")
 }
@@ -435,6 +437,7 @@ model Cotizacion {
   resumen_liquidacion        ResumenLiquidacion?
   remitos                    Remito[]
   ordenes_compra             OrdenCompra[]
+  documentos_impresos        DocumentoImpreso[]
 
   @@index([id_cliente], map: "idx_cotizaciones_cliente")
   @@index([id_plan], map: "idx_cotizaciones_plan")
@@ -497,6 +500,9 @@ model CalendarioVacunacion {
   numero_desdoblamiento      Int                      @default(1)
   lote_asignado              String?                  @db.VarChar(100) // Campo para mostrar el lote sin JOIN (legacy)
   fecha_vencimiento_lote     DateTime?                @db.Date // Campo para mostrar vencimiento sin JOIN (legacy)
+  // Campos para numeración oficial de remitos de entrega
+  numero_remito_entrega      String?                  @db.VarChar(50)
+  fecha_impresion_remito     DateTime?                @db.DateTime(0)
   created_at                 DateTime?                @default(now()) @db.DateTime(0)
   updated_at                 DateTime?                @default(now()) @db.DateTime(0)
   aplicaciones_dosis         AplicacionDosis[]
@@ -508,6 +514,7 @@ model CalendarioVacunacion {
   desdoblamientos            CalendarioVacunacion[]   @relation("DesdoblamientoDosis")
   movimientos_stock_vacunas  MovimientoStockVacuna[]
   notificaciones_automaticas NotificacionAutomatica[]
+  documentos_impresos        DocumentoImpreso[]
 
   @@unique([id_cotizacion, id_producto, numero_semana], map: "unique_calendario_cotizacion_producto_semana")
   @@index([id_cotizacion], map: "idx_calendario_cotizacion")
@@ -517,6 +524,7 @@ model CalendarioVacunacion {
   @@index([id_producto], map: "calendario_vacunacion_id_producto_fkey")
   @@index([id_stock_vacuna], map: "idx_calendario_stock_vacuna")
   @@index([lote_asignado], map: "idx_calendario_lote")
+  @@index([numero_remito_entrega], map: "idx_cal_num_remito")
   @@map("calendario_vacunacion")
 }
 
@@ -925,30 +933,35 @@ model ResumenLiquidacion {
 // NUEVOS MODELOS PARA REMITOS Y VENTAS DIRECTAS
 
 model Remito {
-  id_remito        Int          @id @default(autoincrement())
-  numero_remito    String       @unique @db.VarChar(50)
-  id_cotizacion    Int?
-  id_cliente       Int
-  id_venta_directa Int?
-  fecha_emision    DateTime     @db.DateTime(0)
-  fecha_entrega    DateTime?    @db.DateTime(0)
-  tipo_remito      TipoRemito   @default(plan_vacunal)
-  estado_remito    EstadoRemito @default(pendiente)
-  precio_total     Decimal?     @db.Decimal(15, 2)
-  observaciones    String?      @db.Text
-  created_by       Int?
-  created_at       DateTime     @default(now()) @db.DateTime(0)
-  updated_at       DateTime     @updatedAt @db.DateTime(0)
+  id_remito                 Int          @id @default(autoincrement())
+  numero_remito             String       @unique @db.VarChar(50)
+  id_cotizacion             Int?
+  id_cliente                Int
+  id_venta_directa          Int?
+  fecha_emision             DateTime     @db.DateTime(0)
+  fecha_entrega             DateTime?    @db.DateTime(0)
+  tipo_remito               TipoRemito   @default(plan_vacunal)
+  estado_remito             EstadoRemito @default(pendiente)
+  precio_total              Decimal?     @db.Decimal(15, 2)
+  observaciones             String?      @db.Text
+  created_by                Int?
+  created_at                DateTime     @default(now()) @db.DateTime(0)
+  updated_at                DateTime     @updatedAt @db.DateTime(0)
+  // Campos para numeración oficial de documentos
+  numero_documento_oficial  String?      @db.VarChar(50)
+  fecha_primera_impresion   DateTime?    @db.DateTime(0)
 
-  cliente        Cliente         @relation(fields: [id_cliente], references: [id_cliente])
-  cotizacion     Cotizacion?     @relation(fields: [id_cotizacion], references: [id_cotizacion])
-  venta_directa  VentaDirecta?   @relation(fields: [id_venta_directa], references: [id_venta_directa])
-  detalle_remito DetalleRemito[]
+  cliente             Cliente            @relation(fields: [id_cliente], references: [id_cliente])
+  cotizacion          Cotizacion?        @relation(fields: [id_cotizacion], references: [id_cotizacion])
+  venta_directa       VentaDirecta?      @relation(fields: [id_venta_directa], references: [id_venta_directa])
+  detalle_remito      DetalleRemito[]
+  documentos_impresos DocumentoImpreso[]
 
   @@index([numero_remito], map: "idx_remito_numero")
   @@index([fecha_emision], map: "idx_remito_fecha_emision")
   @@index([estado_remito], map: "idx_remito_estado")
   @@index([tipo_remito], map: "idx_remito_tipo")
+  @@index([numero_documento_oficial], map: "idx_rem_num_oficial")
   @@map("remitos")
 }
 
@@ -973,41 +986,49 @@ model DetalleRemito {
 }
 
 model VentaDirecta {
-  id_venta_directa    Int         @id @default(autoincrement())
-  numero_venta        String      @unique @db.VarChar(50)
-  id_cliente          Int
-  id_lista_precio     Int?
-  fecha_venta         DateTime    @db.DateTime(0)
-  precio_total        Decimal     @db.Decimal(15, 2)
-  estado_venta        EstadoVenta @default(pendiente)
-  responsable_entrega String?     @db.VarChar(255)
-  responsable_recibe  String?     @db.VarChar(255)
-  observaciones       String?     @db.Text
-  created_by          Int?
-  created_at          DateTime    @default(now()) @db.DateTime(0)
-  updated_at          DateTime    @updatedAt @db.DateTime(0)
+  id_venta_directa       Int         @id @default(autoincrement())
+  numero_venta           String      @unique @db.VarChar(50)
+  id_cliente             Int
+  id_lista_precio        Int?
+  fecha_venta            DateTime    @db.DateTime(0)
+  precio_total           Decimal     @db.Decimal(15, 2)
+  estado_venta           EstadoVenta @default(pendiente)
+  responsable_entrega    String?     @db.VarChar(255)
+  responsable_recibe     String?     @db.VarChar(255)
+  observaciones          String?     @db.Text
+  // Campos para numeración oficial de documentos
+  numero_remito_oficial  String?     @db.VarChar(50)
+  fecha_primera_impresion DateTime?  @db.DateTime(0)
+  created_by             Int?
+  created_at             DateTime    @default(now()) @db.DateTime(0)
+  updated_at             DateTime    @updatedAt @db.DateTime(0)
 
-  cliente       Cliente               @relation(fields: [id_cliente], references: [id_cliente])
-  listaPrecio   ListaPrecio?          @relation(fields: [id_lista_precio], references: [id_lista])
-  detalle_venta DetalleVentaDirecta[]
-  remitos       Remito[]
+  cliente             Cliente               @relation(fields: [id_cliente], references: [id_cliente])
+  listaPrecio         ListaPrecio?          @relation(fields: [id_lista_precio], references: [id_lista])
+  detalle_venta       DetalleVentaDirecta[]
+  remitos             Remito[]
+  documentos_impresos DocumentoImpreso[]
 
   @@index([numero_venta], map: "idx_venta_directa_numero")
   @@index([fecha_venta], map: "idx_venta_directa_fecha")
   @@index([estado_venta], map: "idx_venta_directa_estado")
   @@index([id_lista_precio], map: "idx_venta_directa_lista_precio")
+  @@index([numero_remito_oficial], map: "idx_vd_num_remito_oficial")
   @@map("ventas_directas")
 }
 
 model DetalleVentaDirecta {
-  id_detalle_venta Int      @id @default(autoincrement())
-  id_venta_directa Int
-  id_producto      Int
-  cantidad         Int
-  precio_unitario  Decimal  @db.Decimal(15, 2)
-  subtotal         Decimal  @db.Decimal(15, 2)
-  observaciones    String?  @db.Text
-  created_at       DateTime @default(now()) @db.DateTime(0)
+  id_detalle_venta  Int       @id @default(autoincrement())
+  id_venta_directa  Int
+  id_producto       Int
+  id_stock_vacuna   Int?      // Referencia al stock específico vendido
+  cantidad          Int
+  precio_unitario   Decimal   @db.Decimal(15, 2)
+  subtotal          Decimal   @db.Decimal(15, 2)
+  lote              String?   @db.VarChar(100) // Lote del stock vendido (snapshot)
+  fecha_vencimiento DateTime? @db.Date // Fecha de vencimiento del stock vendido (snapshot)
+  observaciones     String?   @db.Text
+  created_at        DateTime  @default(now()) @db.DateTime(0)
 
   venta_directa VentaDirecta @relation(fields: [id_venta_directa], references: [id_venta_directa], onDelete: Cascade)
   producto      Producto     @relation(fields: [id_producto], references: [id_producto])
@@ -1267,27 +1288,32 @@ enum TipoMovimientoStock {
 // =====================================================
 
 model OrdenCompra {
-  id_orden_compra        Int               @id @default(autoincrement())
-  numero_orden           String            @unique @db.VarChar(50)
-  estado                 EstadoOrdenCompra @default(borrador)
-  fecha_creacion         DateTime          @default(now()) @db.DateTime(0)
-  fecha_esperada         DateTime?         @db.Date
-  fecha_ingreso_completo DateTime?         @db.DateTime(0)
-  id_cotizacion          Int?
-  observaciones          String?           @db.Text
-  total_estimado         Decimal?          @db.Decimal(15, 2)
-  created_by             Int?
-  updated_by             Int?
-  created_at             DateTime          @default(now()) @db.DateTime(0)
-  updated_at             DateTime          @updatedAt @db.DateTime(0)
+  id_orden_compra           Int               @id @default(autoincrement())
+  numero_orden              String            @unique @db.VarChar(50)
+  estado                    EstadoOrdenCompra @default(borrador)
+  fecha_creacion            DateTime          @default(now()) @db.DateTime(0)
+  fecha_esperada            DateTime?         @db.Date
+  fecha_ingreso_completo    DateTime?         @db.DateTime(0)
+  id_cotizacion             Int?
+  observaciones             String?           @db.Text
+  total_estimado            Decimal?          @db.Decimal(15, 2)
+  created_by                Int?
+  updated_by                Int?
+  created_at                DateTime          @default(now()) @db.DateTime(0)
+  updated_at                DateTime          @updatedAt @db.DateTime(0)
+  // Campos para numeración oficial de documentos
+  numero_documento_oficial  String?           @db.VarChar(50)
+  fecha_primera_impresion   DateTime?         @db.DateTime(0)
 
-  cotizacion    Cotizacion?          @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: SetNull)
-  detalle_orden DetalleOrdenCompra[]
+  cotizacion          Cotizacion?          @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: SetNull)
+  detalle_orden       DetalleOrdenCompra[]
+  documentos_impresos DocumentoImpreso[]
 
   @@index([numero_orden], map: "idx_orden_numero")
   @@index([estado], map: "idx_orden_estado")
   @@index([fecha_creacion], map: "idx_orden_fecha_creacion")
   @@index([id_cotizacion], map: "idx_orden_cotizacion")
+  @@index([numero_documento_oficial], map: "idx_oc_num_oficial")
   @@map("ordenes_compra")
 }
 
@@ -1355,4 +1381,120 @@ enum EstadoItemOrden {
   parcial
   completo
   cancelado
+}
+
+// =====================================================
+// SISTEMA DE PERSISTENCIA DE DOCUMENTOS IMPRESOS
+// =====================================================
+
+model SecuenciaDocumento {
+  id_secuencia     Int                @id @default(autoincrement())
+  tipo_documento   TipoDocumentoEnum
+  prefijo          String             @default("") @db.VarChar(20)
+  ultimo_numero    Int                @default(0)
+  formato          String             @default("{PREFIJO}{ANIO}{MES}{NUMERO}") @db.VarChar(50)
+  digitos_numero   Int                @default(5)
+  reinicio_anual   Boolean            @default(false)
+  anio_actual      Int?
+  activo           Boolean            @default(true)
+  created_at       DateTime           @default(now()) @db.DateTime(0)
+  updated_at       DateTime           @updatedAt @db.DateTime(0)
+
+  @@unique([tipo_documento, prefijo], map: "uk_tipo_prefijo")
+  @@index([tipo_documento], map: "idx_secuencia_tipo")
+  @@map("secuencias_documentos")
+}
+
+model DocumentoImpreso {
+  id_documento       Int                  @id @default(autoincrement())
+  tipo_documento     TipoDocumentoEnum
+  numero_documento   String               @db.VarChar(50)
+  id_orden_compra    Int?
+  id_remito          Int?
+  id_calendario      Int?
+  id_cotizacion      Int?
+  id_proveedor       Int?
+  id_cliente         Int?
+  id_venta_directa   Int?
+  fecha_emision      DateTime             @default(now()) @db.DateTime(0)
+  datos_snapshot     Json?
+  version_impresion  Int                  @default(1)
+  motivo_reimpresion String?              @db.VarChar(255)
+  es_copia           Boolean              @default(false)
+  impreso_por        Int?
+  created_at         DateTime             @default(now()) @db.DateTime(0)
+
+  // Relaciones
+  orden_compra       OrdenCompra?         @relation(fields: [id_orden_compra], references: [id_orden_compra], onDelete: SetNull)
+  remito             Remito?              @relation(fields: [id_remito], references: [id_remito], onDelete: SetNull)
+  calendario         CalendarioVacunacion? @relation(fields: [id_calendario], references: [id_calendario], onDelete: SetNull)
+  cotizacion         Cotizacion?          @relation(fields: [id_cotizacion], references: [id_cotizacion], onDelete: SetNull)
+  proveedor          Proveedor?           @relation(fields: [id_proveedor], references: [id_proveedor], onDelete: SetNull)
+  cliente            Cliente?             @relation(fields: [id_cliente], references: [id_cliente], onDelete: SetNull)
+  venta_directa      VentaDirecta?        @relation(fields: [id_venta_directa], references: [id_venta_directa], onDelete: SetNull)
+  
+  archivos           ArchivoDocumento[]
+  historial          HistorialImpresion[]
+
+  @@unique([tipo_documento, numero_documento], map: "uk_tipo_numero")
+  @@index([tipo_documento], map: "idx_doc_tipo")
+  @@index([fecha_emision], map: "idx_doc_fecha")
+  @@index([id_orden_compra], map: "idx_doc_orden")
+  @@index([id_remito], map: "idx_doc_remito")
+  @@index([id_calendario], map: "idx_doc_calendario")
+  @@index([id_cotizacion], map: "idx_doc_cotizacion")
+  @@index([id_proveedor], map: "idx_doc_proveedor")
+  @@index([id_cliente], map: "idx_doc_cliente")
+  @@index([id_venta_directa], map: "idx_doc_venta_directa")
+  @@map("documentos_impresos")
+}
+
+model ArchivoDocumento {
+  id_archivo     Int      @id @default(autoincrement())
+  id_documento   Int
+  nombre_archivo String   @db.VarChar(255)
+  ruta_archivo   String?  @db.VarChar(500)
+  contenido_pdf  Bytes?   @db.LongBlob
+  tamano_bytes   Int?
+  hash_archivo   String?  @db.VarChar(64)
+  created_at     DateTime @default(now()) @db.DateTime(0)
+
+  documento DocumentoImpreso @relation(fields: [id_documento], references: [id_documento], onDelete: Cascade)
+
+  @@index([id_documento], map: "idx_archivo_documento")
+  @@map("archivos_documentos")
+}
+
+model HistorialImpresion {
+  id_historial  Int               @id @default(autoincrement())
+  id_documento  Int
+  tipo_accion   TipoAccionImpresion
+  fecha_accion  DateTime          @default(now()) @db.DateTime(0)
+  usuario_id    Int?
+  ip_origen     String?           @db.VarChar(45)
+  user_agent    String?           @db.VarChar(500)
+  observaciones String?           @db.VarChar(255)
+
+  documento DocumentoImpreso @relation(fields: [id_documento], references: [id_documento], onDelete: Cascade)
+
+  @@index([id_documento], map: "idx_hist_documento")
+  @@index([fecha_accion], map: "idx_hist_fecha")
+  @@index([usuario_id], map: "idx_hist_usuario")
+  @@map("historial_impresiones")
+}
+
+enum TipoDocumentoEnum {
+  orden_compra
+  remito_entrega
+  remito_venta
+  remito_venta_directa
+  factura
+}
+
+enum TipoAccionImpresion {
+  primera_impresion
+  reimpresion
+  descarga
+  visualizacion
+  envio_email
 }

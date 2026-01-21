@@ -117,6 +117,17 @@ const CalendarioVacunacion = () => {
   const [showModalOrdenCompra, setShowModalOrdenCompra] = useState(false);
   const [datosOrdenCompra, setDatosOrdenCompra] = useState(null);
 
+  // Estados para entrega múltiple
+  const [itemsSeleccionados, setItemsSeleccionados] = useState(new Set());
+  const [showEntregaMultipleModal, setShowEntregaMultipleModal] = useState(false);
+  const [entregaMultipleItems, setEntregaMultipleItems] = useState([]);
+  const [entregaMultipleForm, setEntregaMultipleForm] = useState({
+    responsable_entrega: '',
+    responsable_recibe: '',
+    observaciones: '',
+    imprimir_remito: true
+  });
+
   useEffect(() => {
     cargarDatosIniciales();
   }, [cotizacionId]);
@@ -192,7 +203,7 @@ const CalendarioVacunacion = () => {
           // Delay mínimo para mostrar la animación
           const startTime = Date.now();
           
-          const pdfBlob = await planesApi.generarRemitoEntrega(calendarioSeleccionado.id_calendario, {
+          const result = await planesApi.generarRemitoEntrega(calendarioSeleccionado.id_calendario, {
             cantidad_entregada: entregaForm.cantidad_entregada,
             responsable_entrega: entregaForm.responsable_entrega,
             responsable_recibe: entregaForm.responsable_recibe,
@@ -207,10 +218,14 @@ const CalendarioVacunacion = () => {
             await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
           }
           
+          // Usar el nombre de archivo del servidor si está disponible
+          const pdfBlob = result.blob || result;
+          const fileName = result.fileName || `remito-entrega-semana-${calendarioSeleccionado.semana_aplicacion}-${new Date().toISOString().split('T')[0]}.pdf`;
+          
           const url = window.URL.createObjectURL(pdfBlob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `remito-entrega-semana-${calendarioSeleccionado.semana_aplicacion}-${new Date().toISOString().split('T')[0]}.pdf`;
+          link.download = fileName;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -276,6 +291,136 @@ const CalendarioVacunacion = () => {
     setShowEntregaModal(true);
   };
 
+  // ===== FUNCIONES PARA ENTREGA MÚLTIPLE =====
+  
+  // Verificar si un item puede ser seleccionado para entrega
+  const puedeSeleccionarParaEntrega = (item) => {
+    const dosisPendientes = item.cantidad_dosis - (item.dosis_entregadas || 0);
+    return dosisPendientes > 0 && item.estado_entrega !== 'suspendida';
+  };
+
+  // Toggle selección de un item
+  const toggleSeleccionItem = (idCalendario) => {
+    setItemsSeleccionados(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(idCalendario)) {
+        newSet.delete(idCalendario);
+      } else {
+        newSet.add(idCalendario);
+      }
+      return newSet;
+    });
+  };
+
+  // Seleccionar/Deseleccionar todos los items elegibles
+  const toggleSeleccionarTodos = () => {
+    const itemsElegibles = calendario.filter(puedeSeleccionarParaEntrega);
+    const todosSeleccionados = itemsElegibles.every(item => itemsSeleccionados.has(item.id_calendario));
+    
+    if (todosSeleccionados) {
+      setItemsSeleccionados(new Set());
+    } else {
+      setItemsSeleccionados(new Set(itemsElegibles.map(item => item.id_calendario)));
+    }
+  };
+
+  // Abrir modal de entrega múltiple
+  const abrirModalEntregaMultiple = () => {
+    const itemsParaEntregar = calendario
+      .filter(item => itemsSeleccionados.has(item.id_calendario))
+      .map(item => ({
+        ...item,
+        cantidad_a_entregar: item.cantidad_dosis - (item.dosis_entregadas || 0)
+      }));
+    
+    setEntregaMultipleItems(itemsParaEntregar);
+    setEntregaMultipleForm({
+      responsable_entrega: '',
+      responsable_recibe: '',
+      observaciones: '',
+      imprimir_remito: true
+    });
+    setShowEntregaMultipleModal(true);
+  };
+
+  // Actualizar cantidad a entregar de un item específico
+  const actualizarCantidadEntrega = (idCalendario, cantidad) => {
+    setEntregaMultipleItems(prev => 
+      prev.map(item => 
+        item.id_calendario === idCalendario 
+          ? { ...item, cantidad_a_entregar: Math.max(0, Math.min(cantidad, item.cantidad_dosis - (item.dosis_entregadas || 0))) }
+          : item
+      )
+    );
+  };
+
+  // Procesar entrega múltiple
+  const handleEntregaMultiple = async () => {
+    try {
+      if (!entregaMultipleForm.responsable_recibe) {
+        showError('Error', 'Debe ingresar el responsable que recibe');
+        return;
+      }
+
+      const itemsConCantidad = entregaMultipleItems.filter(item => item.cantidad_a_entregar > 0);
+      if (itemsConCantidad.length === 0) {
+        showError('Error', 'No hay items con cantidad a entregar');
+        return;
+      }
+
+      setGenerandoRemito(true);
+
+      const payload = {
+        entregas: itemsConCantidad.map(item => ({
+          id_calendario: item.id_calendario,
+          cantidad_entregada: item.cantidad_a_entregar
+        })),
+        responsable_entrega: entregaMultipleForm.responsable_entrega,
+        responsable_recibe: entregaMultipleForm.responsable_recibe,
+        observaciones: entregaMultipleForm.observaciones,
+        imprimir_remito: entregaMultipleForm.imprimir_remito
+      };
+
+      const response = await planesApi.registrarEntregaMultiple(cotizacionId, payload);
+
+      // Si hay remito para descargar
+      if (response.remito && entregaMultipleForm.imprimir_remito) {
+        const pdfBlob = response.remito;
+        const fileName = response.fileName || `remito-multiple-${new Date().toISOString().split('T')[0]}.pdf`;
+        
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+
+      showSuccess('Éxito', `Se registraron ${itemsConCantidad.length} entregas correctamente`);
+      
+      // Limpiar y cerrar
+      setShowEntregaMultipleModal(false);
+      setItemsSeleccionados(new Set());
+      setEntregaMultipleItems([]);
+      
+      // Recargar datos
+      await cargarDatosIniciales();
+
+    } catch (error) {
+      console.error('Error en entrega múltiple:', error);
+      showError('Error', error.message || 'Error al procesar las entregas');
+    } finally {
+      setGenerandoRemito(false);
+    }
+  };
+
+  // Calcular totales de entrega múltiple
+  const calcularTotalesEntregaMultiple = () => {
+    return entregaMultipleItems.reduce((total, item) => total + (item.cantidad_a_entregar || 0), 0);
+  };
+
   const reimprimirRemito = async (calendarioItem) => {
     setGenerandoRemito(true);
     try {
@@ -297,7 +442,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
+      const response = await fetch(`http://localhost:3000/cotizaciones/calendario/${calendarioItem.id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -309,6 +454,16 @@ const CalendarioVacunacion = () => {
         const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
         console.error('Error del servidor:', error);
         throw new Error(error.message || 'Error al generar el remito PDF');
+      }
+      
+      // Extraer nombre del archivo del header Content-Disposition (contiene número oficial)
+      const contentDisposition = response.headers.get('content-disposition');
+      let fileName = `remito-entrega-semana-${calendarioItem.semana_aplicacion}-${new Date().toISOString().split('T')[0]}.pdf`;
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="(.+)"/);
+        if (matches && matches[1]) {
+          fileName = matches[1];
+        }
       }
       
       const pdfBlob = await response.blob();
@@ -323,7 +478,7 @@ const CalendarioVacunacion = () => {
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `remito-entrega-semana-${calendarioItem.semana_aplicacion}-${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -358,7 +513,7 @@ const CalendarioVacunacion = () => {
       const startTime = Date.now();
       
       // Usar método GET para reimprimir con datos existentes
-      const response = await fetch(`https://api.tierravolga.com.ar/cotizaciones/calendario/${id_calendario}/remito`, {
+      const response = await fetch(`http://localhost:3001/cotizaciones/calendario/${id_calendario}/remito`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -370,6 +525,16 @@ const CalendarioVacunacion = () => {
         const error = await response.json().catch(() => ({ message: 'Error al generar el remito PDF' }));
         console.error('Error del servidor:', error);
         throw new Error(error.message || 'Error al generar el remito PDF');
+      }
+      
+      // Extraer nombre del archivo del header Content-Disposition (contiene número oficial)
+      const contentDisposition = response.headers.get('content-disposition');
+      let fileName = `remito-entrega-semana-${numeroSemana}-${new Date().toISOString().split('T')[0]}.pdf`;
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="(.+)"/);
+        if (matches && matches[1]) {
+          fileName = matches[1];
+        }
       }
       
       const pdfBlob = await response.blob();
@@ -384,7 +549,7 @@ const CalendarioVacunacion = () => {
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `remito-entrega-semana-${numeroSemana}-${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1499,16 +1664,18 @@ const CalendarioVacunacion = () => {
       doc.setFont('courier', 'bold');
       doc.setFontSize(22);
       doc.setTextColor(255, 255, 255);
-      doc.text('ORDEN DE COMPRA', pageWidth / 2, 18, { align: 'center' });
+      doc.text('ORDEN DE COMPRA', pageWidth / 2, 15, { align: 'center' });
 
       // Subtítulo con nombre del proveedor
       doc.setFontSize(10);
       doc.setFont('courier', 'normal');
-      doc.text(proveedor.nombre_proveedor.toUpperCase(), pageWidth / 2, 25, { align: 'center' });
+      doc.text(proveedor.nombre_proveedor.toUpperCase(), pageWidth / 2, 22, { align: 'center' });
 
-      // Solo fecha
+      // Número de orden y fecha
+      const numeroOrden = `OC-${cotizacionData.numero_cotizacion}-${new Date().toISOString().split('T')[0]}`;
       doc.setFontSize(9);
-      doc.text(`Fecha: ${formatearFecha(new Date().toISOString().split('T')[0])}`, pageWidth / 2, 32, { align: 'center' });
+      doc.text(`Orden N°: ${numeroOrden}`, pageWidth / 2, 28, { align: 'center' });
+      doc.text(`Fecha: ${formatearFecha(new Date().toISOString().split('T')[0])}`, pageWidth / 2, 33, { align: 'center' });
 
       yPos = 45;
 
@@ -1807,14 +1974,6 @@ const CalendarioVacunacion = () => {
             >
               {generandoPDF ? 'Generando...' : 'Exportar PDF'}
             </button>
-            <button 
-              className="btn btn-outline-secondary btn-sm"
-              onClick={handleGenerarOrdenCompra}
-              disabled={generandoPDF}
-              title="Generar orden de compra"
-            >
-              {generandoPDF ? 'Generando...' : 'Orden de Compra'}
-            </button>
           </div>
           
           <div className="d-flex align-items-center gap-2">
@@ -1912,43 +2071,105 @@ const CalendarioVacunacion = () => {
           
           {/* Vista Calendario */}
           {vistaActual === 'calendario' && (
-            <div className="table-responsive">
-              <table className="table table-hover">
-                <thead>
-                  <tr>
-                    <th>Semana</th>
-                    <th>Día Plan</th>
-                    <th>Fecha Programada</th>
-                    <th>Producto</th>
-                    <th>Lote Asignado</th>
-                    <th>Programadas</th>
-                    <th>Entregadas</th>
-                    <th>Estado</th>
-                    <th>Datos</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {calendario.map((item) => {
-                    const badge = getEstadoBadge(item.estado_entrega);
-                    const IconComponent = badge.icon;
-                    const dosisPendientes = item.cantidad_dosis - (item.dosis_entregadas || 0);
-                    
-                    return (
-                      <tr key={item.id_calendario}>
-                        <td>
-                          <strong>Semana {item.semana_aplicacion}</strong>
-                        </td>
-                        <td>
-                          <span className="badge bg-info">
-                            Día {item.dia_plan || 'N/A'}
-                          </span>
-                        </td>
-                        <td>
-                          {formatearFecha(item.fecha_aplicacion_programada)}
-                        </td>
-                        <td>
-                          <div>
+            <>
+              {/* Botón flotante de entrega múltiple */}
+              {itemsSeleccionados.size > 0 && (
+                <div className="alert alert-info d-flex justify-content-between align-items-center mb-3">
+                  <div>
+                    <FaCheckSquare className="me-2" />
+                    <strong>{itemsSeleccionados.size}</strong> semana(s) seleccionada(s) para entrega
+                  </div>
+                  <div>
+                    <button 
+                      className="btn btn-outline-secondary btn-sm me-2"
+                      onClick={() => setItemsSeleccionados(new Set())}
+                    >
+                      <FaTimes className="me-1" />
+                      Cancelar
+                    </button>
+                    <button 
+                      className="btn btn-success"
+                      onClick={abrirModalEntregaMultiple}
+                    >
+                      <FaCheck className="me-1" />
+                      Registrar Entrega ({itemsSeleccionados.size})
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          style={{ 
+                            width: '20px', 
+                            height: '20px', 
+                            cursor: 'pointer',
+                            accentColor: 'var(--color-principal)'
+                          }}
+                          checked={calendario.filter(puedeSeleccionarParaEntrega).length > 0 && 
+                                   calendario.filter(puedeSeleccionarParaEntrega).every(item => itemsSeleccionados.has(item.id_calendario))}
+                          onChange={toggleSeleccionarTodos}
+                          title="Seleccionar todas las semanas pendientes"
+                        />
+                      </th>
+                      <th>Semana</th>
+                      <th>Día Plan</th>
+                      <th>Fecha Programada</th>
+                      <th>Producto</th>
+                      <th>Lote Asignado</th>
+                      <th>Programadas</th>
+                      <th>Entregadas</th>
+                      <th>Estado</th>
+                      <th>Datos</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calendario.map((item) => {
+                      const badge = getEstadoBadge(item.estado_entrega);
+                      const IconComponent = badge.icon;
+                      const dosisPendientes = item.cantidad_dosis - (item.dosis_entregadas || 0);
+                      const puedeSeleccionar = puedeSeleccionarParaEntrega(item);
+                      const estaSeleccionado = itemsSeleccionados.has(item.id_calendario);
+                      
+                      return (
+                        <tr key={item.id_calendario} className={estaSeleccionado ? 'table-info' : ''}>
+                          <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              style={{ 
+                                width: '20px', 
+                                height: '20px', 
+                                cursor: puedeSeleccionar ? 'pointer' : 'not-allowed',
+                                accentColor: 'var(--color-principal)',
+                                opacity: puedeSeleccionar ? 1 : 0.4
+                              }}
+                              checked={estaSeleccionado}
+                              onChange={() => toggleSeleccionItem(item.id_calendario)}
+                              disabled={!puedeSeleccionar}
+                              title={puedeSeleccionar ? 'Seleccionar para entrega múltiple' : 'Sin dosis pendientes'}
+                            />
+                          </td>
+                          <td>
+                            <strong>Semana {item.semana_aplicacion}</strong>
+                          </td>
+                          <td>
+                            <span className="badge bg-info">
+                              Día {item.dia_plan || 'N/A'}
+                            </span>
+                          </td>
+                          <td>
+                            {formatearFecha(item.fecha_aplicacion_programada)}
+                          </td>
+                          <td>
+                            <div>
                             <strong>{item.vacuna_nombre}</strong>
                             {item.vacuna_descripcion && (
                               <small className="d-block text-muted">
@@ -2043,6 +2264,7 @@ const CalendarioVacunacion = () => {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {/* Vista Edición del Calendario */}
@@ -2339,6 +2561,178 @@ const CalendarioVacunacion = () => {
           )}
         </div>
       </div>
+
+      {/* Modal para Entrega Múltiple */}
+      {showEntregaMultipleModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">
+                  <FaBoxOpen className="me-2" />
+                  Entrega Múltiple - {entregaMultipleItems.length} semana(s)
+                </h5>
+                <button 
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowEntregaMultipleModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {/* Tabla de items a entregar */}
+                <div className="table-responsive mb-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <table className="table table-sm table-bordered table-striped mb-0">
+                    <thead className="table-dark" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                      <tr>
+                        <th style={{ width: '70px' }}>Semana</th>
+                        <th>Vacuna</th>
+                        <th style={{ width: '120px' }}>Lote</th>
+                        <th className="text-center" style={{ width: '100px' }}>Programadas</th>
+                        <th className="text-center" style={{ width: '100px' }}>Entregadas</th>
+                        <th className="text-center" style={{ width: '120px' }}>A Entregar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entregaMultipleItems.map((item) => (
+                        <tr key={item.id_calendario}>
+                          <td>
+                            <span className="badge bg-secondary">S{item.semana_aplicacion}</span>
+                          </td>
+                          <td>
+                            <strong>{item.vacuna_nombre}</strong>
+                          </td>
+                          <td>
+                            <small className="text-primary">{item.lote_asignado || 'Sin lote'}</small>
+                          </td>
+                          <td className="text-center">
+                            <span className="badge bg-light text-dark">{item.cantidad_dosis}</span>
+                          </td>
+                          <td className="text-center">
+                            <span className="badge bg-info">{item.dosis_entregadas || 0}</span>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="form-control form-control-sm text-center"
+                              min="0"
+                              max={item.cantidad_dosis - (item.dosis_entregadas || 0)}
+                              value={item.cantidad_a_entregar}
+                              onChange={(e) => actualizarCantidadEntrega(item.id_calendario, parseInt(e.target.value) || 0)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="table-success">
+                      <tr>
+                        <td colSpan="5" className="text-end fw-bold">Total a entregar:</td>
+                        <td className="text-center fw-bold">
+                          <span className="badge bg-success fs-6">{calcularTotalesEntregaMultiple().toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                <hr />
+
+                {/* Datos comunes de la entrega */}
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label">Responsable de Entrega</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={entregaMultipleForm.responsable_entrega}
+                        onChange={(e) => setEntregaMultipleForm({
+                          ...entregaMultipleForm,
+                          responsable_entrega: e.target.value
+                        })}
+                        placeholder="Quien entrega las dosis"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label">Responsable que Recibe *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={entregaMultipleForm.responsable_recibe}
+                        onChange={(e) => setEntregaMultipleForm({
+                          ...entregaMultipleForm,
+                          responsable_recibe: e.target.value
+                        })}
+                        placeholder="Quien recibe las dosis"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Observaciones</label>
+                  <textarea
+                    className="form-control"
+                    rows="2"
+                    value={entregaMultipleForm.observaciones}
+                    onChange={(e) => setEntregaMultipleForm({
+                      ...entregaMultipleForm,
+                      observaciones: e.target.value
+                    })}
+                    placeholder="Observaciones adicionales..."
+                  />
+                </div>
+
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="imprimirRemitoMultiple"
+                    checked={entregaMultipleForm.imprimir_remito}
+                    onChange={(e) => setEntregaMultipleForm({
+                      ...entregaMultipleForm,
+                      imprimir_remito: e.target.checked
+                    })}
+                  />
+                  <label className="form-check-label" htmlFor="imprimirRemitoMultiple">
+                    <strong>Imprimir remito consolidado</strong>
+                    <small className="d-block text-muted">
+                      Se generará un único PDF con todas las entregas
+                    </small>
+                  </label>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setShowEntregaMultipleModal(false)}
+                  disabled={generandoRemito}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn btn-success"
+                  onClick={handleEntregaMultiple}
+                  disabled={generandoRemito || calcularTotalesEntregaMultiple() === 0}
+                >
+                  {generandoRemito ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheck className="me-2" />
+                      Registrar {entregaMultipleItems.length} Entregas
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para Marcar Entrega */}
       {showEntregaModal && (

@@ -236,6 +236,11 @@ export const getCotizaciones = async (filters = {}) => {
   return await fetchConSesion(url);
 };
 
+// Obtener resumen de todos los calendarios (optimizado - una sola llamada)
+export const getResumenCalendarios = async () => {
+  return await fetchConSesion(`${API_BASE_URL}/cotizaciones/calendarios/resumen`);
+};
+
 export const getCotizacionById = async (id) => {
   return await fetchConSesion(`${API_BASE_URL}/cotizaciones/${id}`);
 };
@@ -342,6 +347,41 @@ export const marcarEntregaDosis = async (id_calendario, entregaData) => {
   });
 };
 
+// Registrar entrega múltiple (varias semanas a la vez)
+export const registrarEntregaMultiple = async (id_cotizacion, payload) => {
+  const response = await fetch(`${API_BASE_URL}/cotizaciones/${id_cotizacion}/entregas-multiples`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error al procesar entregas' }));
+    throw new Error(error.message || 'Error al procesar las entregas múltiples');
+  }
+  
+  // Si pidió remito, el response es un PDF blob
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/pdf')) {
+    const contentDisposition = response.headers.get('content-disposition');
+    let fileName = `remito-multiple-${new Date().toISOString().split('T')[0]}.pdf`;
+    if (contentDisposition) {
+      const matches = contentDisposition.match(/filename="(.+)"/);
+      if (matches && matches[1]) {
+        fileName = matches[1];
+      }
+    }
+    const blob = await response.blob();
+    return { success: true, remito: blob, fileName };
+  }
+  
+  return await response.json();
+};
+
 export const getControlEntregas = async (id_cotizacion, filters = {}) => {
   const params = new URLSearchParams();
   if (filters.fecha_desde) params.append('fecha_desde', filters.fecha_desde);
@@ -368,7 +408,20 @@ export const generarRemitoEntrega = async (id_calendario, entregaData = {}) => {
     throw new Error(error.message || 'Error al generar el remito PDF');
   }
   
-  return await response.blob();
+  // Extraer nombre del archivo del header Content-Disposition (contiene número oficial)
+  const contentDisposition = response.headers.get('content-disposition');
+  let fileName = null;
+  if (contentDisposition) {
+    const matches = contentDisposition.match(/filename="(.+)"/);
+    if (matches && matches[1]) {
+      fileName = matches[1];
+    }
+  }
+  
+  const blob = await response.blob();
+  
+  // Retornar blob y nombre de archivo sugerido
+  return { blob, fileName };
 };
 
 export const ajustarStockCalendario = async (id_cotizacion, id_calendario, ajusteData) => {

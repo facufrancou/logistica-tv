@@ -429,7 +429,32 @@
               </tr>
             </thead>
             <tbody>
-              {{#if producto.tiene_multiples_lotes}}
+              {{#if producto.es_entrega_multiple}}
+                {{!-- Entrega múltiple: mostrar cada vacuna con su lote --}}
+                {{#each producto.lotes_entregados}}
+                <tr>
+                  <td>
+                    <strong>{{this.vacuna}}</strong>
+                    <br><small>Semana {{this.semana}}</small>
+                  </td>
+                  <td>{{this.ubicacion}}</td>
+                  <td style="text-align: center"><strong>{{this.lote}}</strong></td>
+                  <td style="text-align: center">{{formatDate this.fecha_vencimiento}}</td>
+                  <td class="cantidad">{{formatNumber this.cantidad}} dosis</td>
+                  <td style="text-align: center">
+                    <span class="badge badge-success">ENTREGADO</span>
+                  </td>
+                </tr>
+                {{/each}}
+                <tr style="background-color: #e8f5e9; font-weight: bold;">
+                  <td colspan="4" style="text-align: right;">TOTAL ENTREGADO:</td>
+                  <td class="cantidad">{{formatNumber entrega.cantidadEntregada}} dosis</td>
+                  <td style="text-align: center">
+                    <span class="badge">{{entrega.tipoEntregaDisplay}}</span>
+                  </td>
+                </tr>
+              {{else if producto.tiene_multiples_lotes}}
+                {{!-- Una vacuna con múltiples lotes --}}
                 {{#each producto.lotes_entregados}}
                 <tr>
                   {{#if @first}}
@@ -441,7 +466,7 @@
                   <td>{{this.ubicacion}}</td>
                   <td style="text-align: center"><strong>{{this.lote}}</strong></td>
                   <td style="text-align: center">{{formatDate this.fecha_vencimiento}}</td>
-                  <td class="cantidad">{{this.cantidad}} dosis</td>
+                  <td class="cantidad">{{formatNumber this.cantidad}} dosis</td>
                   {{#if @first}}
                   <td style="text-align: center" rowspan="{{../producto.lotes_entregados.length}}">
                     <span class="badge">{{../entrega.tipoEntregaDisplay}}</span>
@@ -450,6 +475,7 @@
                 </tr>
                 {{/each}}
               {{else}}
+                {{!-- Una vacuna, un lote --}}
                 <tr>
                   <td>
                     <strong>{{producto.nombre}}</strong>
@@ -458,7 +484,7 @@
                   <td>{{producto.ubicacion}}</td>
                   <td style="text-align: center">{{producto.lote}}</td>
                   <td style="text-align: center">{{formatDate producto.fecha_vencimiento}}</td>
-                  <td class="cantidad">{{entrega.cantidadEntregada}} dosis</td>
+                  <td class="cantidad">{{formatNumber entrega.cantidadEntregada}} dosis</td>
                   <td style="text-align: center">
                     <span class="badge">{{entrega.tipoEntregaDisplay}}</span>
                   </td>

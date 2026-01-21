@@ -263,7 +263,7 @@ const OrdenesCompra = () => {
             <input
               type="text"
               name="search"
-              placeholder="Nº orden..."
+              placeholder="Nº orden, cotización, cliente..."
               value={filtros.search}
               onChange={handleFiltroChange}
             />

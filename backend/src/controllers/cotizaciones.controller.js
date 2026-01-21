@@ -2544,6 +2544,404 @@ exports.marcarEntregaDosis = async (req, res) => {
   }
 };
 
+// ===== ENTREGA MÚLTIPLE =====
+exports.registrarEntregasMultiples = async (req, res) => {
+  try {
+    const { id } = req.params; // id_cotizacion
+    const { 
+      entregas, // Array de { id_calendario, cantidad_entregada }
+      responsable_entrega,
+      responsable_recibe,
+      observaciones,
+      imprimir_remito = true
+    } = req.body;
+
+    if (!entregas || !Array.isArray(entregas) || entregas.length === 0) {
+      return res.status(400).json({ error: 'Debe incluir al menos una entrega' });
+    }
+
+    if (!responsable_recibe) {
+      return res.status(400).json({ error: 'Debe indicar quién recibe' });
+    }
+
+    // Verificar que la cotización existe y está aceptada
+    const cotizacion = await prisma.cotizacion.findUnique({
+      where: { id_cotizacion: parseInt(id) },
+      include: {
+        cliente: true,
+        plan: true
+      }
+    });
+
+    if (!cotizacion) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+
+    if (cotizacion.estado !== 'aceptada') {
+      return res.status(400).json({ error: 'Solo se pueden entregar dosis de cotizaciones aceptadas' });
+    }
+
+    // Obtener todos los calendarios involucrados
+    const idsCalendario = entregas.map(e => parseInt(e.id_calendario));
+    const calendarios = await prisma.calendarioVacunacion.findMany({
+      where: { 
+        id_calendario: { in: idsCalendario },
+        id_cotizacion: parseInt(id)
+      },
+      include: {
+        producto: true,
+        stock_vacuna: {
+          include: {
+            vacuna: true // Incluir información de la vacuna
+          }
+        },
+        // Incluir asignaciones de lotes para obtener info de vacunas
+        asignaciones_lote: {
+          include: {
+            stock_vacuna: {
+              include: {
+                vacuna: true
+              }
+            }
+          },
+          orderBy: { created_at: 'asc' }
+        }
+      }
+    });
+
+    if (calendarios.length !== entregas.length) {
+      return res.status(400).json({ error: 'Algunos calendarios no fueron encontrados o no pertenecen a esta cotización' });
+    }
+
+    // Crear mapa para acceso rápido
+    const calendarioMap = new Map(calendarios.map(c => [c.id_calendario, c]));
+
+    // Función helper para obtener nombre de vacuna de un calendario
+    const obtenerNombreVacuna = (cal) => {
+      // Prioridad: asignaciones_lote > stock_vacuna > producto
+      if (cal.asignaciones_lote?.length > 0) {
+        return cal.asignaciones_lote[0].stock_vacuna?.vacuna?.nombre || cal.producto?.nombre || 'Vacuna';
+      }
+      if (cal.stock_vacuna?.vacuna?.nombre) {
+        return cal.stock_vacuna.vacuna.nombre;
+      }
+      return cal.producto?.nombre || 'Vacuna';
+    };
+
+    // Validar cada entrega
+    for (const entrega of entregas) {
+      const cal = calendarioMap.get(parseInt(entrega.id_calendario));
+      const dosisPendientes = cal.cantidad_dosis - (cal.dosis_entregadas || 0);
+      const nombreVacuna = obtenerNombreVacuna(cal);
+      
+      if (entrega.cantidad_entregada > dosisPendientes) {
+        return res.status(400).json({ 
+          error: `Semana ${cal.semana_aplicacion} (${nombreVacuna}): No se puede entregar más de lo pendiente`,
+          semana: cal.semana_aplicacion,
+          producto: nombreVacuna,
+          pendientes: dosisPendientes,
+          solicitado: entrega.cantidad_entregada
+        });
+      }
+    }
+
+    const responsableCompleto = `Entrega: ${responsable_entrega || 'Sistema'} | Recibe: ${responsable_recibe}`;
+    const resultados = [];
+
+    // Procesar todas las entregas en una transacción
+    await prisma.$transaction(async (tx) => {
+      for (const entrega of entregas) {
+        const cal = calendarioMap.get(parseInt(entrega.id_calendario));
+        const cantidad = entrega.cantidad_entregada;
+
+        if (cantidad <= 0) continue;
+
+        const nuevasEntregadas = (cal.dosis_entregadas || 0) + cantidad;
+        const nuevoEstado = nuevasEntregadas >= cal.cantidad_dosis ? 'entregada' : 'parcial';
+
+        // Actualizar calendario
+        await tx.calendarioVacunacion.update({
+          where: { id_calendario: cal.id_calendario },
+          data: {
+            dosis_entregadas: nuevasEntregadas,
+            fecha_entrega: new Date(),
+            responsable_entrega: responsableCompleto,
+            observaciones_entrega: observaciones || `Entrega múltiple - ${entregas.length} semanas`,
+            estado_entrega: nuevoEstado,
+            updated_at: new Date()
+          }
+        });
+
+        // Buscar lotes asignados
+        const asignaciones = await tx.asignacionLote.findMany({
+          where: { id_calendario: cal.id_calendario },
+          include: { stock_vacuna: true },
+          orderBy: { created_at: 'asc' }
+        });
+
+        let lotesParaDescontar = [];
+        if (asignaciones.length > 0) {
+          lotesParaDescontar = asignaciones.map(a => ({
+            id_stock_vacuna: a.id_stock_vacuna,
+            id_asignacion: a.id_asignacion,
+            lote: a.stock_vacuna.lote,
+            cantidad_asignada: a.cantidad_asignada
+          }));
+        } else if (cal.stock_vacuna) {
+          lotesParaDescontar = [{
+            id_stock_vacuna: cal.id_stock_vacuna,
+            lote: cal.stock_vacuna.lote,
+            cantidad_asignada: cal.cantidad_dosis
+          }];
+        }
+
+        // Descontar stock de los lotes
+        let dosisRestantes = cantidad;
+        for (const loteInfo of lotesParaDescontar) {
+          if (dosisRestantes <= 0) break;
+
+          const stockLote = await tx.stockVacuna.findUnique({
+            where: { id_stock_vacuna: loteInfo.id_stock_vacuna }
+          });
+
+          if (!stockLote) continue;
+
+          const cantidadADescontar = Math.min(dosisRestantes, stockLote.stock_reservado, stockLote.stock_actual);
+          if (cantidadADescontar <= 0) continue;
+
+          const stockAnterior = stockLote.stock_actual;
+          const stockPosterior = Math.max(0, stockAnterior - cantidadADescontar);
+          const stockReservadoPosterior = Math.max(0, stockLote.stock_reservado - cantidadADescontar);
+
+          await tx.stockVacuna.update({
+            where: { id_stock_vacuna: loteInfo.id_stock_vacuna },
+            data: {
+              stock_reservado: stockReservadoPosterior,
+              stock_actual: stockPosterior,
+              updated_at: new Date()
+            }
+          });
+
+          await tx.movimientoStockVacuna.create({
+            data: {
+              id_stock_vacuna: loteInfo.id_stock_vacuna,
+              tipo_movimiento: 'egreso',
+              cantidad: cantidadADescontar,
+              stock_anterior: stockAnterior,
+              stock_posterior: stockPosterior,
+              motivo: 'Entrega múltiple de dosis',
+              observaciones: `Entrega múltiple: S${cal.semana_aplicacion} - ${cantidadADescontar} dosis - ${responsableCompleto}`,
+              id_calendario: cal.id_calendario,
+              id_cotizacion: parseInt(id),
+              id_usuario: req.user?.id_usuario || null
+            }
+          });
+
+          dosisRestantes -= cantidadADescontar;
+        }
+
+        // Eliminar asignaciones si entrega completa
+        if (nuevoEstado === 'entregada') {
+          await tx.asignacionLote.deleteMany({
+            where: { id_calendario: cal.id_calendario }
+          });
+        }
+
+        resultados.push({
+          id_calendario: cal.id_calendario,
+          semana: cal.semana_aplicacion,
+          vacuna: obtenerNombreVacuna(cal),
+          lote: cal.lote_asignado,
+          cantidad_entregada: cantidad,
+          estado: nuevoEstado
+        });
+      }
+    });
+
+    // Si se pidió remito, generar PDF usando el mismo sistema de documentos
+    if (imprimir_remito) {
+      const documentosService = require('../services/documentosService');
+      
+      // Para entrega múltiple, SIEMPRE generar nuevo número de remito
+      // porque cada entrega múltiple es una entrega diferente
+      const docResult = await documentosService.obtenerOGenerarNumero(
+        'remito_entrega',
+        { 
+          idCotizacion: parseInt(id),
+          idCliente: cotizacion.id_cliente
+          // No incluimos idCalendario porque son múltiples
+        },
+        null,
+        req.user?.id_usuario,
+        req.ip,
+        { forzarNuevo: true } // Siempre nuevo número para entregas múltiples
+      );
+      
+      const numeroRemito = docResult.numero_documento;
+      
+      // Obtener lotes desde los movimientos de stock para cada calendario
+      let totalDosis = 0;
+      const lotesEntregados = [];
+      
+      for (const resultado of resultados) {
+        const cal = calendarioMap.get(resultado.id_calendario);
+        totalDosis += resultado.cantidad_entregada;
+        
+        // Buscar movimientos de esta entrega para obtener los lotes exactos
+        const movimientos = await prisma.movimientoStockVacuna.findMany({
+          where: {
+            id_calendario: resultado.id_calendario,
+            tipo_movimiento: 'egreso'
+          },
+          include: {
+            stock_vacuna: {
+              include: {
+                vacuna: {
+                  select: {
+                    nombre: true,
+                    codigo: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { created_at: 'desc' },
+          take: 10
+        });
+
+        if (movimientos.length > 0) {
+          // Hay movimientos de múltiples lotes para esta vacuna
+          for (const mov of movimientos) {
+            // Obtener nombre de vacuna: movimiento.stock_vacuna.vacuna o resultado
+            const nombreVacunaLote = mov.stock_vacuna?.vacuna?.nombre || resultado.vacuna;
+            
+            lotesEntregados.push({
+              vacuna: nombreVacunaLote,
+              semana: resultado.semana,
+              lote: mov.stock_vacuna?.lote || 'N/A',
+              fecha_vencimiento: mov.stock_vacuna?.fecha_vencimiento,
+              cantidad: mov.cantidad,
+              ubicacion: mov.stock_vacuna?.ubicacion_fisica || ''
+            });
+          }
+        } else {
+          // Fallback: usar datos del calendario - ya tiene nombre de vacuna real
+          lotesEntregados.push({
+            vacuna: resultado.vacuna,
+            semana: resultado.semana,
+            lote: cal?.lote_asignado || 'Sin lote',
+            fecha_vencimiento: cal?.fecha_vencimiento_lote,
+            cantidad: resultado.cantidad_entregada,
+            ubicacion: ''
+          });
+        }
+      }
+
+      // Preparar datos para el PDF usando el mismo formato que entrega individual
+      const pdfData = {
+        cliente: {
+          nombre: cotizacion.cliente?.nombre || 'Cliente sin nombre',
+          email: cotizacion.cliente?.email || '',
+          telefono: cotizacion.cliente?.telefono || '',
+          direccion: cotizacion.cliente?.direccion || '',
+          localidad: cotizacion.cliente?.localidad || '',
+          cuit: cotizacion.cliente?.cuit || ''
+        },
+        cotizacion: {
+          numero: cotizacion.numero_cotizacion,
+          fecha_inicio: cotizacion.fecha_inicio_plan
+        },
+        plan: {
+          numeroCotizacion: cotizacion.numero_cotizacion || 'SIN-NUMERO',
+          numeroSemana: `Múltiple (${resultados.length})`,
+          fechaProgramada: new Date(),
+          cantidadAnimales: cotizacion.cantidad_animales || 0,
+          estado: 'entregada',
+          fechaInicio: cotizacion.fecha_inicio_plan || new Date()
+        },
+        entrega: {
+          fecha: new Date(),
+          fechaEntrega: new Date(),
+          responsable_entrega: responsable_entrega || 'Sistema',
+          responsable_recibe: responsable_recibe || 'Sin especificar',
+          observaciones: observaciones || '',
+          observaciones_entrega: observaciones || `Entrega múltiple: ${resultados.length} semanas`,
+          tipo: 'multiple',
+          tipoEntrega: 'multiple',
+          estado: 'entregada',
+          cantidadEntregada: totalDosis,
+          dosisRestantes: 0,
+          tipoEntregaDisplay: `ENTREGA MÚLTIPLE (${resultados.length} semanas)`
+        },
+        producto: {
+          nombre: 'ENTREGA MÚLTIPLE',
+          descripcion: `${resultados.length} vacunas entregadas`,
+          codigo: 'MULTIPLE',
+          lote: 'Varios',
+          fecha_vencimiento: null,
+          ubicacion: '',
+          cantidad_programada: totalDosis,
+          cantidad_entregada: totalDosis,
+          cantidad_restante: 0,
+          semana: 'Múltiple',
+          fecha_programada: new Date(),
+          proveedor: '',
+          tipo_producto: 'vacuna',
+          lotes_entregados: lotesEntregados,
+          tiene_multiples_lotes: true,
+          es_entrega_multiple: true,
+          detalle_semanas: resultados
+        },
+        remito: {
+          numero: numeroRemito,
+          fecha_emision: new Date(),
+          es_reimpresion: false
+        }
+      };
+
+      // Guardar snapshot
+      await documentosService.actualizarSnapshotDocumento(docResult.id_documento, pdfData);
+
+      // Actualizar cada calendario con el número de remito para poder reimprimir después
+      const idsCalendariosEntregados = resultados.map(r => r.id_calendario);
+      await prisma.calendarioVacunacion.updateMany({
+        where: { 
+          id_calendario: { in: idsCalendariosEntregados }
+        },
+        data: {
+          numero_remito_entrega: numeroRemito,
+          fecha_impresion_remito: new Date()
+        }
+      });
+      
+      console.log(`📋 Número de remito ${numeroRemito} asignado a ${idsCalendariosEntregados.length} calendarios`);
+
+      // Generar PDF usando el mismo servicio
+      const pdfBuffer = await pdfService.generateRemitoPDF(pdfData);
+
+      // Configurar headers
+      const nombreArchivo = `remito-${numeroRemito}-multiple-${cotizacion.numero_cotizacion}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      return res.send(pdfBuffer);
+    }
+
+    res.json({
+      success: true,
+      message: `Se registraron ${resultados.length} entregas correctamente`,
+      entregas: resultados,
+      total_dosis: resultados.reduce((sum, r) => sum + r.cantidad_entregada, 0)
+    });
+
+  } catch (error) {
+    console.error('Error en entrega múltiple:', error);
+    res.status(500).json({ error: error.message || 'Error interno del servidor' });
+  }
+};
+
 exports.getControlEntregas = async (req, res) => {
   try {
     const { id } = req.params; // id de cotización
@@ -3577,7 +3975,13 @@ exports.generarRemitoPDF = async (req, res) => {
         motivo: 'Entrega de dosis programada'
       },
       include: {
-        stock_vacuna: true
+        stock_vacuna: {
+          select: {
+            lote: true,
+            fecha_vencimiento: true,
+            ubicacion_fisica: true
+          }
+        }
       },
       orderBy: {
         created_at: 'desc'
@@ -3590,10 +3994,12 @@ exports.generarRemitoPDF = async (req, res) => {
       console.log(`📋 Encontrados ${movimientosEntrega.length} movimientos de entrega`);
       
       for (const mov of movimientosEntrega) {
+        console.log(`   - Lote: ${mov.stock_vacuna?.lote}, Ubicación: ${mov.stock_vacuna?.ubicacion_fisica}`);
         lotesEntregados.push({
-          lote: mov.stock_vacuna.lote,
-          fecha_vencimiento: mov.stock_vacuna.fecha_vencimiento,
-          cantidad: mov.cantidad
+          lote: mov.stock_vacuna?.lote || 'N/A',
+          fecha_vencimiento: mov.stock_vacuna?.fecha_vencimiento,
+          cantidad: mov.cantidad,
+          ubicacion: mov.stock_vacuna?.ubicacion_fisica || ''
         });
       }
     } else {
@@ -3625,7 +4031,8 @@ exports.generarRemitoPDF = async (req, res) => {
               lotesEntregados.push({
                 lote: stock.lote,
                 fecha_vencimiento: stock.fecha_vencimiento,
-                cantidad: cantidad
+                cantidad: cantidad,
+                ubicacion: stock.ubicacion_fisica || ''
               });
               
               cantidadRestante -= cantidad;
@@ -3637,7 +4044,8 @@ exports.generarRemitoPDF = async (req, res) => {
         lotesEntregados = [{
           lote: calendario.stock_vacuna.lote,
           fecha_vencimiento: calendario.stock_vacuna.fecha_vencimiento,
-          cantidad: datosEntrega.cantidad_entregada
+          cantidad: datosEntrega.cantidad_entregada,
+          ubicacion: calendario.stock_vacuna.ubicacion_fisica || ''
         }];
       }
     }
@@ -3684,6 +4092,7 @@ exports.generarRemitoPDF = async (req, res) => {
         codigo: calendario.stock_vacuna?.vacuna?.codigo || vacunaInfo?.codigo || 'SIN-CODIGO',
         lote: calendario.stock_vacuna?.lote || calendario.lote_asignado || 'N/A',
         fecha_vencimiento: calendario.stock_vacuna?.fecha_vencimiento || calendario.fecha_vencimiento_lote || null,
+        ubicacion: calendario.stock_vacuna?.ubicacion_fisica || '',
         cantidad_programada: calendario.cantidad_dosis || 0,
         cantidad_entregada: datosEntrega.cantidad_entregada || 0,
         cantidad_restante: dosisRestantes || 0,
@@ -3698,19 +4107,156 @@ exports.generarRemitoPDF = async (req, res) => {
       }
     };
 
+    // === INTEGRACIÓN CON SISTEMA DE DOCUMENTOS ===
+    const documentosService = require('../services/documentosService');
+    
+    let numeroRemito = null;
+    let pdfDataFinal = pdfData;
+    let esReimpresion = false;
+    
+    // SIEMPRE buscar primero en documentos_impresos por id_calendario
+    let docExistente = await documentosService.buscarDocumentoExistente(
+      'remito_entrega',
+      { idCalendario: parseInt(id_calendario) }
+    );
+    
+    // Si no encuentra por calendario, buscar por número de remito del calendario
+    // (para entregas múltiples que comparten el mismo número de remito)
+    if (!docExistente && calendario.numero_remito_entrega) {
+      console.log('📋 Buscando documento de entrega múltiple por número:', calendario.numero_remito_entrega);
+      docExistente = await prisma.documentoImpreso.findFirst({
+        where: {
+          tipo_documento: 'remito_entrega',
+          numero_documento: calendario.numero_remito_entrega
+        }
+      });
+      if (docExistente) {
+        console.log('📋 Encontrado documento de entrega múltiple');
+      }
+    }
+    
+    if (docExistente) {
+      // Ya existe documento en el nuevo sistema - ES REIMPRESIÓN
+      esReimpresion = true;
+      numeroRemito = docExistente.numero_documento;
+      
+      console.log('📋 Documento existente encontrado:', numeroRemito);
+      
+      // Registrar reimpresión en historial
+      await documentosService.registrarReimpresion(docExistente.id_documento, req.user?.id_usuario, req.ip);
+      
+      // Usar datos del snapshot si existen
+      if (docExistente.datos_snapshot) {
+        try {
+          const snapshotData = typeof docExistente.datos_snapshot === 'string' 
+            ? JSON.parse(docExistente.datos_snapshot) 
+            : docExistente.datos_snapshot;
+          pdfDataFinal = snapshotData;
+          console.log('📋 Usando datos del snapshot original para reimpresión');
+        } catch (parseError) {
+          console.warn('⚠️ Error al parsear snapshot, usando datos actuales:', parseError.message);
+          pdfDataFinal.remito = {
+            numero: numeroRemito,
+            fecha_emision: new Date(),
+            es_reimpresion: true
+          };
+        }
+      } else {
+        console.log('📋 Documento sin snapshot, usando datos actuales con número existente');
+        pdfDataFinal.remito = {
+          numero: numeroRemito,
+          fecha_emision: new Date(),
+          es_reimpresion: true
+        };
+      }
+      
+      // Marcar como reimpresión
+      if (pdfDataFinal.remito) {
+        pdfDataFinal.remito.es_reimpresion = true;
+      }
+      
+    } else if (calendario.numero_remito_entrega) {
+      // NO existe en nuevo sistema PERO tiene número del sistema viejo
+      // Migrar al nuevo sistema conservando el número original
+      esReimpresion = true;
+      numeroRemito = calendario.numero_remito_entrega;
+      
+      console.log('📋 Migrando documento existente al nuevo sistema:', numeroRemito);
+      
+      // Crear snapshot con los datos actuales y el número existente
+      const fechaEmision = new Date();
+      pdfDataFinal.remito = {
+        numero: numeroRemito,
+        fecha_emision: fechaEmision,
+        es_reimpresion: false // Primera vez que se guarda el snapshot
+      };
+      
+      // Registrar en el nuevo sistema con el número existente
+      try {
+        await documentosService.registrarDocumentoExistente(
+          'remito_entrega',
+          numeroRemito,
+          { 
+            idCalendario: parseInt(id_calendario),
+            idCotizacion: calendario.id_cotizacion,
+            idCliente: calendario.cotizacion?.cliente?.id_cliente
+          },
+          pdfDataFinal,
+          req.user?.id_usuario
+        );
+        console.log('📋 Documento migrado exitosamente');
+      } catch (migError) {
+        console.warn('⚠️ Error al migrar documento:', migError.message);
+      }
+      
+    } else {
+      // NO existe documento y NO tiene número - PRIMERA IMPRESIÓN
+      console.log('📋 Primera impresión - generando nuevo número');
+      
+      const docResult = await documentosService.obtenerOGenerarNumero(
+        'remito_entrega',
+        { 
+          idCalendario: parseInt(id_calendario),
+          idCotizacion: calendario.id_cotizacion,
+          idCliente: calendario.cotizacion?.cliente?.id_cliente
+        },
+        null, // No guardar snapshot aún
+        req.user?.id_usuario,
+        req.ip
+      );
+      
+      numeroRemito = docResult.numero_documento;
+      
+      // Agregar datos del remito al pdfData
+      const fechaEmision = new Date();
+      pdfDataFinal.remito = {
+        numero: numeroRemito,
+        fecha_emision: fechaEmision,
+        es_reimpresion: false
+      };
+      
+      // Guardar snapshot completo
+      await documentosService.actualizarSnapshotDocumento(docResult.id_documento, pdfDataFinal);
+      
+      // Actualizar calendario con el número de remito asignado
+      await documentosService.actualizarNumeroRemitoCalendario(parseInt(id_calendario), numeroRemito);
+    }
+
     // Debug: Log de los datos que se enviarán al PDF
     console.log('Datos para PDF:', {
-      cliente: pdfData.cliente?.nombre || 'Sin cliente',
-      producto: pdfData.producto?.nombre || 'Sin producto',
-      codigo: pdfData.producto?.codigo || 'Sin código',
-      cantidadEntregada: pdfData.entrega?.cantidadEntregada || 'Sin cantidad'
+      cliente: pdfDataFinal.cliente?.nombre || 'Sin cliente',
+      producto: pdfDataFinal.producto?.nombre || 'Sin producto',
+      codigo: pdfDataFinal.producto?.codigo || 'Sin código',
+      cantidadEntregada: pdfDataFinal.entrega?.cantidadEntregada || 'Sin cantidad',
+      numeroRemito: numeroRemito,
+      esReimpresion: esReimpresion
     });
 
     // Generar PDF
-    const pdfBuffer = await pdfService.generateRemitoPDF(pdfData);
+    const pdfBuffer = await pdfService.generateRemitoPDF(pdfDataFinal);
 
     // Configurar headers de respuesta
-    const nombreArchivo = `remito-entrega-${calendario.cotizacion?.numero_cotizacion || 'SIN-NUM'}-semana-${calendario.numero_semana || calendario.semana_aplicacion || 'X'}.pdf`;
+    const nombreArchivo = `remito-${numeroRemito}-${calendario.cotizacion?.numero_cotizacion || 'SIN-NUM'}${esReimpresion ? '-COPIA' : ''}.pdf`;
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
@@ -3748,16 +4294,12 @@ const getCalendarioVacunacion = async (req, res) => {
     const formatearFechaLocal = (fecha) => {
       if (!fecha) return null;
       
-      console.log('Fecha original de BD:', fecha);
-      console.log('Fecha como ISO:', fecha.toISOString());
-      
       // Usar getUTCFullYear, getUTCMonth, getUTCDate para extraer la fecha sin conversión de zona horaria
       const year = fecha.getUTCFullYear();
       const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
       const day = String(fecha.getUTCDate()).padStart(2, '0');
       const fechaFormateada = `${year}-${month}-${day}`;
       
-      console.log('Fecha formateada para frontend:', fechaFormateada);
       return fechaFormateada;
     };
 
@@ -5549,64 +6091,108 @@ exports.getLotesAsignadosCalendario = async (req, res) => {
       orderBy: { created_at: 'asc' }
     });
 
-    // Si no hay asignaciones, verificar campo legacy
-    if (asignaciones.length === 0) {
-      if (!calendario.id_stock_vacuna || !calendario.lote_asignado) {
-        return res.json({
-          success: true,
-          data: {
-            id_calendario: parseInt(id_calendario),
-            cantidad_requerida: calendario.cantidad_dosis,
-            lotes: [],
-            total_asignado: 0,
-            cobertura_completa: false
-          }
-        });
-      }
+    // Si hay asignaciones en la tabla, devolverlas
+    if (asignaciones.length > 0) {
+      const lotes = asignaciones.map(a => ({
+        id_stock_vacuna: a.id_stock_vacuna,
+        lote: a.stock_vacuna.lote,
+        fecha_vencimiento: a.stock_vacuna.fecha_vencimiento,
+        ubicacion_fisica: a.stock_vacuna.ubicacion_fisica,
+        cantidad_asignada: a.cantidad_asignada,
+        stock_disponible: a.stock_vacuna.stock_actual - a.stock_vacuna.stock_reservado
+      }));
 
-      // Usar campo legacy si existe
-      const stockLegacy = await prisma.stockVacuna.findUnique({
-        where: { id_stock_vacuna: calendario.id_stock_vacuna }
-      });
+      const totalAsignado = lotes.reduce((sum, l) => sum + l.cantidad_asignada, 0);
 
       return res.json({
         success: true,
         data: {
           id_calendario: parseInt(id_calendario),
           cantidad_requerida: calendario.cantidad_dosis,
-          lotes: [{
-            id_stock_vacuna: calendario.id_stock_vacuna,
-            lote: calendario.lote_asignado,
-            fecha_vencimiento: calendario.fecha_vencimiento_lote,
-            ubicacion_fisica: stockLegacy?.ubicacion_fisica,
-            cantidad_asignada: calendario.cantidad_dosis
-          }],
-          total_asignado: calendario.cantidad_dosis,
-          cobertura_completa: true
+          lotes: lotes,
+          total_asignado: totalAsignado,
+          cobertura_completa: totalAsignado >= calendario.cantidad_dosis
         }
       });
     }
 
-    // Formatear asignaciones de la nueva tabla
-    const lotes = asignaciones.map(a => ({
-      id_stock_vacuna: a.id_stock_vacuna,
-      lote: a.stock_vacuna.lote,
-      fecha_vencimiento: a.stock_vacuna.fecha_vencimiento,
-      ubicacion_fisica: a.stock_vacuna.ubicacion_fisica,
-      cantidad_asignada: a.cantidad_asignada,
-      stock_disponible: a.stock_vacuna.stock_actual - a.stock_vacuna.stock_reservado
-    }));
+    // Si no hay asignaciones, buscar en movimientos de stock (entregas ya realizadas)
+    const movimientosEntrega = await prisma.movimientoStockVacuna.findMany({
+      where: {
+        id_calendario: parseInt(id_calendario),
+        tipo_movimiento: 'egreso'
+      },
+      include: {
+        stock_vacuna: {
+          select: {
+            id_stock_vacuna: true,
+            lote: true,
+            fecha_vencimiento: true,
+            ubicacion_fisica: true
+          }
+        }
+      },
+      orderBy: { created_at: 'asc' }
+    });
 
-    const totalAsignado = lotes.reduce((sum, l) => sum + l.cantidad_asignada, 0);
+    if (movimientosEntrega.length > 0) {
+      const lotes = movimientosEntrega.map(m => ({
+        id_stock_vacuna: m.id_stock_vacuna,
+        lote: m.stock_vacuna?.lote || 'N/A',
+        fecha_vencimiento: m.stock_vacuna?.fecha_vencimiento,
+        ubicacion_fisica: m.stock_vacuna?.ubicacion_fisica,
+        cantidad_asignada: m.cantidad
+      }));
 
-    res.json({
+      const totalAsignado = lotes.reduce((sum, l) => sum + l.cantidad_asignada, 0);
+
+      return res.json({
+        success: true,
+        data: {
+          id_calendario: parseInt(id_calendario),
+          cantidad_requerida: calendario.cantidad_dosis,
+          lotes: lotes,
+          total_asignado: totalAsignado,
+          cobertura_completa: totalAsignado >= calendario.cantidad_dosis,
+          fuente: 'movimientos' // Indica que vino de movimientos, no de asignaciones
+        }
+      });
+    }
+
+    // Si no hay asignaciones ni movimientos, verificar campo legacy
+    if (!calendario.id_stock_vacuna || !calendario.lote_asignado) {
+      return res.json({
+        success: true,
+        data: {
+          id_calendario: parseInt(id_calendario),
+          cantidad_requerida: calendario.cantidad_dosis,
+          lotes: [],
+          total_asignado: 0,
+          cobertura_completa: false
+        }
+      });
+    }
+
+    // Usar campo legacy si existe
+    const stockLegacy = await prisma.stockVacuna.findUnique({
+      where: { id_stock_vacuna: calendario.id_stock_vacuna }
+    });
+
+    return res.json({
       success: true,
       data: {
         id_calendario: parseInt(id_calendario),
         cantidad_requerida: calendario.cantidad_dosis,
-        lotes: lotes,
-        total_asignado: totalAsignado,
-        cobertura_completa: totalAsignado >= calendario.cantidad_dosis
+        lotes: [{
+          id_stock_vacuna: calendario.id_stock_vacuna,
+          lote: calendario.lote_asignado,
+          fecha_vencimiento: calendario.fecha_vencimiento_lote,
+          ubicacion_fisica: stockLegacy?.ubicacion_fisica,
+          cantidad_asignada: calendario.cantidad_dosis
+        }],
+        total_asignado: calendario.cantidad_dosis,
+        cobertura_completa: true,
+        fuente: 'legacy'
       }
     });
 
@@ -5619,7 +6205,114 @@ exports.getLotesAsignadosCalendario = async (req, res) => {
   }
 };
 
+// ===== ENDPOINT OPTIMIZADO: Resumen de todos los calendarios =====
+const getResumenCalendarios = async (req, res) => {
+  try {
+    // 1. Obtener todas las cotizaciones aceptadas con datos básicos
+    const cotizacionesAceptadas = await prisma.cotizacion.findMany({
+      where: { 
+        estado: 'aceptada'
+      },
+      select: {
+        id_cotizacion: true,
+        numero_cotizacion: true,
+        fecha_aceptacion: true,
+        fecha_inicio_plan: true,
+        cliente: {
+          select: {
+            id_cliente: true,
+            nombre: true,
+            cuit: true
+          }
+        },
+        plan: {
+          select: {
+            id_plan: true,
+            nombre: true,
+            duracion_semanas: true
+          }
+        }
+      },
+      orderBy: { fecha_aceptacion: 'desc' }
+    });
+
+    if (cotizacionesAceptadas.length === 0) {
+      return res.json([]);
+    }
+
+    // 2. Obtener TODOS los calendarios de todas las cotizaciones en UNA sola query
+    const idsCotizaciones = cotizacionesAceptadas.map(c => c.id_cotizacion);
+    
+    const todosLosCalendarios = await prisma.calendarioVacunacion.findMany({
+      where: { id_cotizacion: { in: idsCotizaciones } },
+      select: {
+        id_calendario: true,
+        id_cotizacion: true,
+        cantidad_dosis: true,
+        dosis_entregadas: true,
+        estado_entrega: true,
+        fecha_programada: true,
+        numero_semana: true
+      }
+    });
+
+    // 3. Agrupar calendarios por cotización y calcular estadísticas
+    const calendariosPorCotizacion = new Map();
+    
+    todosLosCalendarios.forEach(item => {
+      if (!calendariosPorCotizacion.has(item.id_cotizacion)) {
+        calendariosPorCotizacion.set(item.id_cotizacion, []);
+      }
+      calendariosPorCotizacion.get(item.id_cotizacion).push(item);
+    });
+
+    // 4. Construir respuesta con estadísticas calculadas
+    const resultado = cotizacionesAceptadas
+      .filter(cotizacion => calendariosPorCotizacion.has(cotizacion.id_cotizacion))
+      .map(cotizacion => {
+        const calendario = calendariosPorCotizacion.get(cotizacion.id_cotizacion) || [];
+        
+        // Calcular totales
+        const totalDosis = calendario.reduce((sum, item) => sum + item.cantidad_dosis, 0);
+        const dosisEntregadas = calendario.reduce((sum, item) => sum + (item.dosis_entregadas || 0), 0);
+        const progreso = totalDosis > 0 ? Math.round((dosisEntregadas / totalDosis) * 100) : 0;
+        
+        // Determinar estado basado solo en progreso
+        let estadoPlan = 'activo';
+        if (progreso === 100) {
+          estadoPlan = 'completado';
+        } else if (progreso === 0) {
+          estadoPlan = 'pendiente';
+        }
+        
+        return {
+          id_cotizacion: cotizacion.id_cotizacion,
+          numero_cotizacion: cotizacion.numero_cotizacion,
+          cliente: cotizacion.cliente,
+          plan: cotizacion.plan,
+          estadoPlan,
+          totalDosis,
+          dosisEntregadas,
+          progreso,
+          fecha_inicio: cotizacion.fecha_inicio_plan,
+          fecha_aceptacion: cotizacion.fecha_aceptacion,
+          cantidadItems: calendario.length
+        };
+      });
+
+    res.json(resultado);
+
+  } catch (error) {
+    console.error('Error al obtener resumen de calendarios:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al obtener resumen de calendarios'
+    });
+  }
+};
+
 // Exportar las nuevas funciones del calendario
 exports.getCalendarioVacunacion = getCalendarioVacunacion;
 exports.editarFechaCalendario = editarFechaCalendario;
 exports.desdoblarDosis = desdoblarDosis;
+exports.getResumenCalendarios = getResumenCalendarios;

@@ -9,6 +9,9 @@ const { validarSesion } = require('../middlewares/auth');
 // Obtener stocks disponibles para una vacuna específica (DEBE IR ANTES DE /:id)
 router.get('/stocks-disponibles', validarSesion, cotizacionesController.getStocksDisponibles);
 
+// Obtener resumen de todos los calendarios (optimizado para lista)
+router.get('/calendarios/resumen', validarSesion, cotizacionesController.getResumenCalendarios);
+
 // Obtener todas las cotizaciones
 router.get('/', validarSesion, cotizacionesController.getCotizaciones);
 
@@ -45,6 +48,9 @@ router.post('/:id/regenerar-calendario', validarSesion, cotizacionesController.r
 
 // Marcar entrega de dosis
 router.post('/calendario/:id_calendario/entregar', validarSesion, cotizacionesController.marcarEntregaDosis);
+
+// Registrar entregas múltiples (varias semanas a la vez)
+router.post('/:id/entregas-multiples', validarSesion, cotizacionesController.registrarEntregasMultiples);
 
 // Obtener control de entregas de una cotización
 router.get('/:id/control-entregas', validarSesion, cotizacionesController.getControlEntregas);

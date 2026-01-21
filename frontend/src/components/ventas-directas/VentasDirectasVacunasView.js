@@ -314,7 +314,13 @@ const VentasDirectasVacunasView = () => {
 
       const data = await response.json();
       
-      showSuccess('¡Venta directa creada exitosamente!');
+      showSuccess('¡Venta directa creada exitosamente! Generando remito...');
+      
+      // Guardar datos de responsables antes de limpiar el formulario
+      const datosResponsables = {
+        responsableEntrega: responsableEntrega,
+        responsableRecibe: responsableRecibe
+      };
       
       // Limpiar formulario
       setCarrito([]);
@@ -325,6 +331,11 @@ const VentasDirectasVacunasView = () => {
       setListaPrecioSeleccionada(null);
       setShowConfirmarVenta(false);
       
+      // Generar e imprimir remito automáticamente
+      if (data.data && data.data.id_venta_directa) {
+        await generarRemitoPdfAutomatico(data.data.id_venta_directa, datosResponsables);
+      }
+      
       // Recargar datos
       await cargarDatosIniciales();
 
@@ -333,6 +344,54 @@ const VentasDirectasVacunasView = () => {
       showError('Error al crear la venta directa: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Función separada para generar remito automáticamente (sin mostrar loading adicional)
+  const generarRemitoPdfAutomatico = async (ventaId, datosResponsables = {}) => {
+    try {
+      const response = await fetch(`${API}/ventas-directas-vacunas/${ventaId}/remito-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          responsableEntrega: datosResponsables.responsableEntrega || '',
+          responsableRecibe: datosResponsables.responsableRecibe || ''
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al generar el remito PDF');
+      }
+
+      // Extraer nombre del archivo del header Content-Disposition si está disponible
+      const contentDisposition = response.headers.get('content-disposition');
+      let fileName = `remito-venta-directa-${ventaId}-${Date.now()}.pdf`;
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="(.+)"/);
+        if (matches && matches[1]) {
+          fileName = matches[1];
+        }
+      }
+
+      // Descargar el PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      showSuccess('Remito generado y descargado correctamente');
+
+    } catch (error) {
+      console.error('Error generando PDF automático:', error);
+      showError('Venta creada pero hubo un error al generar el remito. Puede descargarlo desde el historial.');
     }
   };
 
@@ -356,13 +415,23 @@ const VentasDirectasVacunasView = () => {
         throw new Error('Error al generar el remito PDF');
       }
 
+      // Extraer nombre del archivo del header Content-Disposition si está disponible
+      const contentDisposition = response.headers.get('content-disposition');
+      let fileName = `remito-venta-directa-${ventaId}-${Date.now()}.pdf`;
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="(.+)"/);
+        if (matches && matches[1]) {
+          fileName = matches[1];
+        }
+      }
+
       // Descargar el PDF
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `remito-venta-directa-${ventaId}-${Date.now()}.pdf`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
