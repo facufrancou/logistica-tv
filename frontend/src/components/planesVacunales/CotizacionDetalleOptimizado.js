@@ -6,22 +6,18 @@ import * as planesApi from '../../services/planesVacunalesApi';
 import { 
   FaFileInvoice, 
   FaEdit, 
-  FaCalendarAlt, 
-  FaUser, 
-  FaClock, 
-  FaMoneyBillWave,
   FaFileExport,
   FaCheck,
   FaTimes,
   FaExclamationTriangle,
-  FaEye,
   FaArrowLeft,
-  FaInfoCircle,
-  FaCalculator,
+  FaPrint,
+  FaDownload,
+  FaChevronDown,
+  FaChevronUp,
+  FaCalendarAlt,
   FaBalanceScale,
-  FaPaw,
-  FaClipboardList,
-  FaPrint
+  FaEye
 } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -49,6 +45,20 @@ const CotizacionDetalleOptimizado = () => {
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [mostrarResumen, setMostrarResumen] = useState(false);
   
+  // Estados para el panel de remitos
+  const [remitos, setRemitos] = useState([]);
+  const [loadingRemitos, setLoadingRemitos] = useState(false);
+  const [generandoRemitoPDF, setGenerandoRemitoPDF] = useState(null);
+  const [panelRemitosExpandido, setPanelRemitosExpandido] = useState(false);
+  const [modalDetalleRemito, setModalDetalleRemito] = useState({ show: false, remito: null });
+  
+  // Estados para UI colapsables - solo cliente desplegado al inicio
+  const [seccionExpandida, setSeccionExpandida] = useState({
+    cliente: true,
+    plan: false,
+    vacunas: false
+  });
+  
   // Refs para mantener la posición en la página
   const clasificacionRef = useRef(null);
   const resumenRef = useRef(null);
@@ -56,6 +66,83 @@ const CotizacionDetalleOptimizado = () => {
   useEffect(() => {
     cargarDatos();
   }, [id]);
+
+  useEffect(() => {
+    if (cotizacion && cotizacion.estado === 'aceptada') {
+      cargarRemitos();
+    }
+  }, [cotizacion]);
+
+  const cargarRemitos = async () => {
+    try {
+      setLoadingRemitos(true);
+      const response = await fetch(`/documentos?id_cotizacion=${id}&tipo_documento=remito_entrega&limit=50`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRemitos(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error cargando remitos:', error);
+    } finally {
+      setLoadingRemitos(false);
+    }
+  };
+
+  const handleReimprimirRemito = async (documento) => {
+    setGenerandoRemitoPDF(documento.id_documento);
+    try {
+      let url = '';
+      let filename = '';
+      
+      if (documento.datos_snapshot) {
+        url = `/documentos/${documento.id_documento}/reimprimir`;
+        filename = `${documento.numero_documento}.pdf`;
+      } else if (documento.id_calendario) {
+        url = `/cotizaciones/calendario/${documento.id_calendario}/remito`;
+        filename = `remito-${documento.numero_documento}.pdf`;
+      }
+
+      if (!url) {
+        throw new Error('No se puede reimprimir este documento');
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al generar PDF');
+      }
+
+      const blob = await response.blob();
+      const urlBlob = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = urlBlob;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(urlBlob);
+
+    } catch (error) {
+      console.error('Error reimprimiendo remito:', error);
+      showError('Error', 'No se pudo reimprimir el remito');
+    } finally {
+      setGenerandoRemitoPDF(null);
+    }
+  };
+
+  const handleVerDetalleRemito = (remito) => {
+    setModalDetalleRemito({ show: true, remito });
+  };
+
+  const cerrarModalDetalleRemito = () => {
+    setModalDetalleRemito({ show: false, remito: null });
+  };
 
   const cargarDatos = async () => {
     if (!id) return;
@@ -85,15 +172,16 @@ const CotizacionDetalleOptimizado = () => {
 
   const getEstadoBadge = (estado) => {
     const estados = {
-      'en_proceso': { class: 'bg-warning text-dark', text: 'En Proceso' },
-      'enviada': { class: 'bg-info', text: 'Enviada' },
-      'aceptada': { class: 'bg-success', text: 'Aceptada' },
-      'rechazada': { class: 'bg-danger', text: 'Rechazada' }
+      'en_proceso': { class: 'cotizacion-estado-badge cotizacion-estado-proceso', text: 'En Proceso' },
+      'enviada': { class: 'cotizacion-estado-badge cotizacion-estado-enviada', text: 'Enviada' },
+      'aceptada': { class: 'cotizacion-estado-badge cotizacion-estado-aceptada', text: 'Aceptada' },
+      'rechazada': { class: 'cotizacion-estado-badge cotizacion-estado-rechazada', text: 'Rechazada' }
     };
     
-    const estadoInfo = estados[estado] || { class: 'bg-secondary', text: estado };
+    const estadoInfo = estados[estado] || { class: 'cotizacion-estado-badge', text: estado };
+    
     return (
-      <span className={`badge ${estadoInfo.class}`}>
+      <span className={estadoInfo.class}>
         {estadoInfo.text}
       </span>
     );
@@ -196,6 +284,24 @@ const CotizacionDetalleOptimizado = () => {
     } catch (error) {
       console.error('Error formateando fecha:', error);
       return 'Error en fecha';
+    }
+  };
+
+  const formatearFechaHora = (fecha) => {
+    if (!fecha) return '-';
+    try {
+      const dateObj = new Date(fecha);
+      if (isNaN(dateObj.getTime())) return '-';
+      
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const year = dateObj.getUTCFullYear();
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    } catch {
+      return '-';
     }
   };
 
@@ -581,9 +687,9 @@ const CotizacionDetalleOptimizado = () => {
 
   if (localLoading || !cotizacion) {
     return (
-      <div className="planes-loading">
-        <div className="planes-spinner"></div>
-        <p>Cargando cotización...</p>
+      <div className="cotizacion-loading-container">
+        <div className="cotizacion-loading-spinner"></div>
+        <p className="cotizacion-loading-text">Cargando cotización...</p>
       </div>
     );
   }
@@ -594,236 +700,378 @@ const CotizacionDetalleOptimizado = () => {
   );
 
   return (
-    <div className="container-fluid py-1">
-      {/* Header Compacto */}
-      <div className="card mb-3 shadow-sm">
-        <div className="card-body py-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <button
-                className="btn btn-outline-secondary btn-sm me-3"
-                onClick={() => navigate('/cotizaciones')}
-              >
-                <FaArrowLeft />
-              </button>
-              <div>
-                <h4 className="mb-1">Cotización #{cotizacion.id_cotizacion}</h4>
-                <small className="text-muted">
-                  {cotizacion.numero_cotizacion} • {formatearFechaCorta(cotizacion.created_at)}
-                </small>
+    <div className="cotizacion-detalle-container">
+      {/* Header Principal Mejorado */}
+      <div className="cotizacion-header-card">
+        <div className="cotizacion-header-content">
+          <div className="cotizacion-header-left">
+            <button
+              className="cotizacion-back-btn"
+              onClick={() => navigate('/cotizaciones')}
+              title="Volver a cotizaciones"
+            >
+              <FaArrowLeft />
+            </button>
+            <div className="cotizacion-header-info">
+              <div className="cotizacion-header-title">
+                <h2>Cotización #{cotizacion.id_cotizacion}</h2>
+                {getEstadoBadge(cotizacion.estado)}
+              </div>
+              <div className="cotizacion-header-subtitle">
+                <span className="cotizacion-numero">{cotizacion.numero_cotizacion}</span>
+                <span className="cotizacion-separator">•</span>
+                <span className="cotizacion-fecha">{formatearFechaCorta(cotizacion.created_at)}</span>
               </div>
             </div>
-            <div className="d-flex align-items-center gap-2">
-              {getEstadoBadge(cotizacion.estado)}
-              
-              {/* Botón de Imprimir PDF */}
-              <button
-                className="btn btn-outline-success btn-sm"
-                onClick={handleExportarCotizacionPDF}
-                disabled={generandoPDF}
-                title="Exportar cotización a PDF"
-              >
-                {generandoPDF ? (
-                  <>
-                    <div className="spinner-border spinner-border-sm me-1" role="status">
-                      <span className="visually-hidden">Generando...</span>
-                    </div>
-                    PDF...
-                  </>
-                ) : (
-                  <>
-                    <FaPrint className="me-1" />
-                    PDF
-                  </>
-                )}
-              </button>
-              
-              {cotizacion.estado === 'en_proceso' && (
-                <button
-                  className="btn btn-outline-primary btn-sm"
-                  onClick={() => navigate(`/cotizaciones/editar/${id}`)}
-                >
-                  <FaEdit className="me-1" />
-                  Editar
-                </button>
+          </div>
+          <div className="cotizacion-header-right">
+            <div className="cotizacion-header-precio">
+              <span className="cotizacion-precio-label">Total</span>
+              <span className="cotizacion-precio-valor">${cotizacion.precio_total?.toLocaleString()}</span>
+              {cotizacion.lista_precio && (
+                <span className="cotizacion-lista-badge">Lista {cotizacion.lista_precio.tipo}</span>
               )}
             </div>
+            <button
+              className="cotizacion-pdf-btn"
+              onClick={handleExportarCotizacionPDF}
+              disabled={generandoPDF}
+              title="Exportar cotización a PDF"
+            >
+              {generandoPDF ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <FaPrint className="me-2" />
+                  Exportar PDF
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Layout Principal Optimizado */}
-      <div className="row g-3">
-        {/* Columna Principal - Información y Acciones */}
-        <div className="col-lg-8">
+      {/* Layout Principal */}
+      <div className="cotizacion-layout">
+        {/* Columna Principal - Información */}
+        <div className="cotizacion-main-column">
           
-          {/* Card Compacta: Información Esencial */}
-          <div className="card mb-3 shadow-sm">
-            <div className="card-body">
-              <div className="row g-3">
-                {/* Cliente */}
-                <div className="col-md-6">
-                  <div className="d-flex align-items-center">
-                    <FaUser className="text-primary me-2 fs-5" />
-                    <div>
-                      <small className="text-muted d-block">Cliente</small>
-                      <strong className="h6 mb-0">{cotizacion.cliente?.nombre}</strong>
-                      {cotizacion.cliente?.cuit && (
-                        <small className="text-muted d-block">CUIT: {cotizacion.cliente.cuit}</small>
-                      )}
+          {/* Card Cliente */}
+          <div className="cotizacion-info-card">
+            <div 
+              className="cotizacion-card-header"
+              onClick={() => setSeccionExpandida(prev => ({ ...prev, cliente: !prev.cliente }))}
+            >
+              <div className="cotizacion-card-header-left">
+                <h3>Información del Cliente</h3>
+              </div>
+              <button className="cotizacion-expand-btn">
+                {seccionExpandida.cliente ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+            </div>
+            {seccionExpandida.cliente && (
+              <div className="cotizacion-card-body">
+                <div className="cotizacion-cliente-grid">
+                  <div className="cotizacion-cliente-item principal">
+                    <div className="cotizacion-item-content">
+                      <span className="cotizacion-item-label">Nombre / Razón Social</span>
+                      <span className="cotizacion-item-value destacado">{cotizacion.cliente?.nombre || 'No especificado'}</span>
                     </div>
                   </div>
-                </div>
-
-                {/* Plan */}
-                <div className="col-md-6">
-                  <div className="d-flex align-items-center">
-                    <FaPaw className="text-success me-2 fs-5" />
-                    <div>
-                      <small className="text-muted d-block">Plan Vacunal</small>
-                      <strong className="h6 mb-0">{cotizacion.plan?.nombre}</strong>
-                      <small className="text-muted d-block">
-                        {cotizacion.cantidad_animales ? `${cotizacion.cantidad_animales} animales` : ''} • {cotizacion.plan?.duracion_semanas} semanas
-                      </small>
+                  <div className="cotizacion-cliente-item">
+                    <div className="cotizacion-item-content">
+                      <span className="cotizacion-item-label">CUIT</span>
+                      <span className="cotizacion-item-value">{cotizacion.cliente?.cuit || 'No especificado'}</span>
                     </div>
                   </div>
-                </div>
-
-                {/* Fechas */}
-                <div className="col-md-6">
-                  <div className="d-flex align-items-center">
-                    <FaCalendarAlt className="text-info me-2 fs-5" />
-                    <div>
-                      <small className="text-muted d-block">Período del Plan</small>
-                      <strong className="h6 mb-0">{formatearFechaCorta(cotizacion.fecha_inicio_plan)}</strong>
-                      <small className="text-muted d-block">hasta {formatearFechaCorta(fechaFinalizacion)}</small>
+                  <div className="cotizacion-cliente-item">
+                    <div className="cotizacion-item-content">
+                      <span className="cotizacion-item-label">Email</span>
+                      <span className="cotizacion-item-value">{cotizacion.cliente?.email || 'No especificado'}</span>
                     </div>
                   </div>
-                </div>
-
-                {/* Precio */}
-                <div className="col-md-6">
-                  <div className="d-flex align-items-center">
-                    <FaMoneyBillWave className="text-warning me-2 fs-5" />
-                    <div>
-                      <small className="text-muted d-block">Precio Total</small>
-                      <strong className="h5 mb-0 text-success">${cotizacion.precio_total?.toLocaleString()}</strong>
-                      {cotizacion.lista_precio && (
-                        <small className="text-muted d-block">Lista {cotizacion.lista_precio.tipo}</small>
-                      )}
+                  <div className="cotizacion-cliente-item">
+                    <div className="cotizacion-item-content">
+                      <span className="cotizacion-item-label">Teléfono</span>
+                      <span className="cotizacion-item-value">{cotizacion.cliente?.telefono || 'No especificado'}</span>
                     </div>
                   </div>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* Observaciones si existen */}
-              {cotizacion.observaciones && (
-                <div className="mt-3 pt-3 border-top">
-                  <div className="d-flex align-items-start">
-                    <FaInfoCircle className="text-muted me-2 mt-1" />
-                    <div className="flex-grow-1">
-                      <small className="text-muted d-block">Observaciones</small>
-                      <p className="mb-0 small">{cotizacion.observaciones}</p>
+          {/* Card Plan Vacunal */}
+          <div className="cotizacion-info-card">
+            <div 
+              className="cotizacion-card-header"
+              onClick={() => setSeccionExpandida(prev => ({ ...prev, plan: !prev.plan }))}
+            >
+              <div className="cotizacion-card-header-left">
+                <h3>Plan Vacunal</h3>
+              </div>
+              <button className="cotizacion-expand-btn">
+                {seccionExpandida.plan ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+            </div>
+            {seccionExpandida.plan && (
+              <div className="cotizacion-card-body">
+                <div className="cotizacion-plan-grid">
+                  <div className="cotizacion-plan-item destacado">
+                    <div className="cotizacion-plan-content">
+                      <span className="cotizacion-plan-label">Plan</span>
+                      <span className="cotizacion-plan-value">{cotizacion.plan?.nombre || 'No especificado'}</span>
                     </div>
+                  </div>
+                  <div className="cotizacion-plan-stats">
+                    <div className="cotizacion-stat-item">
+                      <div className="cotizacion-stat-content">
+                        <span className="cotizacion-stat-value">{cotizacion.cantidad_animales?.toLocaleString() || '0'}</span>
+                        <span className="cotizacion-stat-label">Animales</span>
+                      </div>
+                    </div>
+                    <div className="cotizacion-stat-item">
+                      <div className="cotizacion-stat-content">
+                        <span className="cotizacion-stat-value">{cotizacion.plan?.duracion_semanas || '0'}</span>
+                        <span className="cotizacion-stat-label">Semanas</span>
+                      </div>
+                    </div>
+                    <div className="cotizacion-stat-item">
+                      <div className="cotizacion-stat-content">
+                        <span className="cotizacion-stat-value">{cotizacion.detalle_productos?.length || '0'}</span>
+                        <span className="cotizacion-stat-label">Vacunas</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="cotizacion-fechas-row">
+                    <div className="cotizacion-fecha-item">
+                      <div className="cotizacion-fecha-content">
+                        <span className="cotizacion-fecha-label">Inicio</span>
+                        <span className="cotizacion-fecha-value">{formatearFechaCorta(cotizacion.fecha_inicio_plan)}</span>
+                      </div>
+                    </div>
+                    <div className="cotizacion-fecha-divider">
+                      <div className="cotizacion-fecha-line"></div>
+                      <span className="cotizacion-fecha-duracion">{cotizacion.plan?.duracion_semanas} sem</span>
+                      <div className="cotizacion-fecha-line"></div>
+                    </div>
+                    <div className="cotizacion-fecha-item">
+                      <div className="cotizacion-fecha-content">
+                        <span className="cotizacion-fecha-label">Finalización</span>
+                        <span className="cotizacion-fecha-value">{formatearFechaCorta(fechaFinalizacion)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card Vacunas del Plan */}
+          {cotizacion.detalle_productos && cotizacion.detalle_productos.length > 0 && (
+            <div className="cotizacion-info-card">
+              <div 
+                className="cotizacion-card-header"
+                onClick={() => setSeccionExpandida(prev => ({ ...prev, vacunas: !prev.vacunas }))}
+              >
+                <div className="cotizacion-card-header-left">
+                  <h3>Vacunas del Plan</h3>
+                  <span className="cotizacion-badge-count">{cotizacion.detalle_productos.length}</span>
+                </div>
+                <button className="cotizacion-expand-btn">
+                  {seccionExpandida.vacunas ? <FaChevronUp /> : <FaChevronDown />}
+                </button>
+              </div>
+              {seccionExpandida.vacunas && (
+                <div className="cotizacion-card-body p-0">
+                  <div className="cotizacion-vacunas-table-container">
+                    <table className="cotizacion-vacunas-table">
+                      <thead>
+                        <tr>
+                          <th>Vacuna</th>
+                          <th className="text-center">Semana</th>
+                          <th className="text-end">Precio Unit.</th>
+                          <th className="text-end">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cotizacion.detalle_productos.map((detalle, index) => {
+                          const subtotal = parseFloat(detalle.subtotal);
+                          
+                          return (
+                            <tr key={index}>
+                              <td>
+                                <div className="cotizacion-vacuna-info">
+                                  <span className="cotizacion-vacuna-nombre">{detalle.nombre_producto}</span>
+                                  <span className="cotizacion-vacuna-desc">{detalle.descripcion_producto}</span>
+                                  {detalle.tipo === 'vacuna' && (
+                                    <span className="cotizacion-tipo-badge">Vacuna</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="text-center">
+                                <span className="cotizacion-semana-badge">
+                                  {detalle.semana_inicio === detalle.semana_fin ? 
+                                    `S${detalle.semana_inicio}` : 
+                                    `S${detalle.semana_inicio}-${detalle.semana_fin}`}
+                                </span>
+                              </td>
+                              <td className="text-end cotizacion-precio">${parseFloat(detalle.precio_unitario).toLocaleString()}</td>
+                              <td className="text-end cotizacion-subtotal">${subtotal.toLocaleString()}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="cotizacion-total-row">
+                          <td colSpan="3" className="text-end">
+                            <strong>Total</strong>
+                          </td>
+                          <td className="text-end">
+                            <strong className="cotizacion-total-valor">${cotizacion.precio_total?.toLocaleString()}</strong>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
 
-          {/* Vacunas del Plan - Tabla Compacta */}
-          {cotizacion.detalle_productos && cotizacion.detalle_productos.length > 0 && (
-            <div className="card mb-3 shadow-sm">
-              <div className="card-header py-2">
-                <h6 className="mb-0">
-                  <FaClipboardList className="me-2" />
-                  Vacunas del Plan ({cotizacion.detalle_productos.length})
-                </h6>
-              </div>
-              <div className="card-body p-0">
-                <div className="table-responsive">
-                  <table className="table table-sm table-hover mb-0">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Vacuna</th>
-                        <th className="text-center">Semana</th>
-                        <th className="text-end">Precio</th>
-                        <th className="text-end">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cotizacion.detalle_productos.map((detalle, index) => {
-                        const subtotal = parseFloat(detalle.subtotal);
-                        
-                        return (
-                          <tr key={index}>
-                            <td>
-                              <div>
-                                <strong className="small">{detalle.nombre_producto}</strong>
-                                <small className="text-muted d-block">{detalle.descripcion_producto}</small>
-                                {detalle.tipo === 'vacuna' && (
-                                  <span className="badge bg-success bg-opacity-10 text-success small">Vacuna</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="text-center small">
-                              {detalle.semana_inicio === detalle.semana_fin ? 
-                                `Semana ${detalle.semana_inicio}` : 
-                                `Semana ${detalle.semana_inicio}-${detalle.semana_fin}`}
-                            </td>
-                            <td className="text-end small">${parseFloat(detalle.precio_unitario).toLocaleString()}</td>
-                            <td className="text-end fw-bold small">${subtotal.toLocaleString()}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+          {/* Observaciones si existen */}
+          {cotizacion.observaciones && (
+            <div className="cotizacion-info-card cotizacion-observaciones-card">
+              <div className="cotizacion-card-header">
+                <div className="cotizacion-card-header-left">
+                  <div className="cotizacion-card-icon observaciones">
+                    <FaInfoCircle />
+                  </div>
+                  <h3>Observaciones</h3>
                 </div>
+              </div>
+              <div className="cotizacion-card-body">
+                <p className="cotizacion-observaciones-text">{cotizacion.observaciones}</p>
               </div>
             </div>
           )}
-
         </div>
 
-        {/* Sidebar Derecho - Acciones y Estado */}
-        <div className="col-lg-4">
+        {/* Sidebar - Remitos, Acciones e Información */}
+        <div className="cotizacion-sidebar">
           
-          {/* Card de Acciones Principales */}
-          <div className="card mb-3 shadow-sm" style={{ position: 'sticky', top: '80px', zIndex: 999 }}>
-            <div className="card-header py-2">
-              <h6 className="mb-0">
-                <FaCalculator className="me-2" />
-                Acciones
-              </h6>
+          {/* Card de Remitos de Entregas - Arriba de Acciones */}
+          {cotizacion.estado === 'aceptada' && (
+            <div className="cotizacion-sidebar-card cotizacion-remitos-card">
+              <div 
+                className="cotizacion-sidebar-header clickable"
+                onClick={() => setPanelRemitosExpandido(!panelRemitosExpandido)}
+              >
+                <div className="cotizacion-sidebar-header-left">
+                  <h4>Remitos de Entregas</h4>
+                  {remitos.length > 0 && (
+                    <span className="cotizacion-remitos-count">{remitos.length}</span>
+                  )}
+                </div>
+                <button className="cotizacion-expand-btn">
+                  {panelRemitosExpandido ? <FaChevronUp /> : <FaChevronDown />}
+                </button>
+              </div>
+              {panelRemitosExpandido && (
+                <div className="cotizacion-sidebar-body">
+                  {loadingRemitos ? (
+                    <div className="cotizacion-remitos-loading">
+                      <div className="spinner-border spinner-border-sm" role="status"></div>
+                      <span>Cargando remitos...</span>
+                    </div>
+                  ) : remitos.length === 0 ? (
+                    <div className="cotizacion-remitos-empty">
+                      <p>No hay remitos generados</p>
+                      <small>Los remitos aparecerán aquí cuando se realicen entregas desde el calendario</small>
+                    </div>
+                  ) : (
+                    <div className="cotizacion-remitos-list">
+                      {remitos.map((remito) => (
+                        <div key={remito.id_documento} className="cotizacion-remito-item">
+                          <div className="cotizacion-remito-info">
+                            <div className="cotizacion-remito-header">
+                              <span className="cotizacion-remito-numero">{remito.numero_documento}</span>
+                            </div>
+                            <div className="cotizacion-remito-fecha">
+                              <span>{formatearFechaHora(remito.fecha_emision)}</span>
+                            </div>
+                            {remito.total_impresiones > 1 && (
+                              <div className="cotizacion-remito-impresiones">
+                                <span>{remito.total_impresiones} impresiones</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="cotizacion-remito-actions">
+                            <button
+                              className="cotizacion-remito-btn view"
+                              onClick={() => handleVerDetalleRemito(remito)}
+                              title="Ver detalle"
+                            >
+                              <FaEye />
+                            </button>
+                            <button
+                              className="cotizacion-remito-btn download"
+                              onClick={() => handleReimprimirRemito(remito)}
+                              disabled={generandoRemitoPDF === remito.id_documento}
+                              title="Descargar PDF"
+                            >
+                              {generandoRemitoPDF === remito.id_documento ? (
+                                <span className="spinner-border spinner-border-sm"></span>
+                              ) : (
+                                <FaDownload />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="card-body">
+          )}
+
+          {/* Card de Acciones */}
+          <div className="cotizacion-sidebar-card cotizacion-acciones-card">
+            <div className="cotizacion-sidebar-header">
+              <h4>Acciones</h4>
+            </div>
+            <div className="cotizacion-sidebar-body">
               
               {/* Estado y Precio Destacados */}
-              <div className="text-center mb-3 p-2 bg-light rounded">
-                <div className="mb-2">{getEstadoBadge(cotizacion.estado)}</div>
-                <div className="h4 text-success mb-0">${cotizacion.precio_total?.toLocaleString()}</div>
-                <small className="text-muted">
+              <div className="cotizacion-estado-resumen">
+                {getEstadoBadge(cotizacion.estado)}
+                <div className="cotizacion-precio-grande">${cotizacion.precio_total?.toLocaleString()}</div>
+                <span className="cotizacion-lista-info">
                   {cotizacion.lista_precio ? `Lista ${cotizacion.lista_precio.tipo}` : 'Sin lista aplicada'}
-                </small>
+                </span>
               </div>
               
               {/* Acciones por Estado */}
-              <div className="d-grid gap-2">
+              <div className="cotizacion-acciones-grid">
                 {cotizacion.estado === 'en_proceso' && (
                   <>
                     <button
-                      className="btn btn-success btn-sm"
+                      className="cotizacion-accion-btn primary"
                       onClick={() => handleCambiarEstado('enviada')}
                     >
-                      <FaFileExport className="me-1" />
-                      Enviar al Cliente
+                      <FaFileExport />
+                      <span>Enviar al Cliente</span>
                     </button>
                     <button
-                      className="btn btn-outline-primary btn-sm"
+                      className="cotizacion-accion-btn secondary"
                       onClick={() => navigate(`/cotizaciones/editar/${id}`)}
                     >
-                      <FaEdit className="me-1" />
-                      Editar
+                      <FaEdit />
+                      <span>Editar</span>
                     </button>
                   </>
                 )}
@@ -831,26 +1079,25 @@ const CotizacionDetalleOptimizado = () => {
                 {cotizacion.estado === 'enviada' && (
                   <>
                     <button
-                      className="btn btn-success btn-sm"
+                      className="cotizacion-accion-btn success"
                       onClick={() => handleCambiarEstado('aceptada')}
                     >
-                      <FaCheck className="me-1" />
-                      Marcar Aceptada
+                      <FaCheck />
+                      <span>Marcar Aceptada</span>
                     </button>
                     <button
-                      className="btn btn-danger btn-sm"
+                      className="cotizacion-accion-btn danger"
                       onClick={() => handleCambiarEstado('rechazada')}
                     >
-                      <FaTimes className="me-1" />
-                      Marcar Rechazada
+                      <FaTimes />
+                      <span>Marcar Rechazada</span>
                     </button>
-                    <hr className="my-2" />
                     <button
-                      className="btn btn-outline-secondary btn-sm"
+                      className="cotizacion-accion-btn secondary"
                       onClick={() => navigate(`/cotizaciones/editar/${id}`)}
                     >
-                      <FaEdit className="me-1" />
-                      Editar
+                      <FaEdit />
+                      <span>Editar</span>
                     </button>
                   </>
                 )}
@@ -858,108 +1105,101 @@ const CotizacionDetalleOptimizado = () => {
                 {cotizacion.estado === 'aceptada' && (
                   <>
                     <button
-                      className="btn btn-primary btn-sm"
+                      className="cotizacion-accion-btn primary"
                       onClick={() => navigate(`/planes-vacunales/calendario/${id}`)}
                     >
-                      <FaCalendarAlt className="me-1" />
-                      Ver Calendario
+                      <FaCalendarAlt />
+                      <span>Ver Calendario</span>
                     </button>
                     <button
-                      className="btn btn-warning btn-sm"
+                      className="cotizacion-accion-btn warning"
                       onClick={scrollToClasificacion}
                     >
-                      <FaBalanceScale className="me-1" />
-                      Clasificar para Facturación
+                      <FaBalanceScale />
+                      <span>Clasificar para Facturación</span>
                     </button>
                     <button
-                      className="btn btn-info btn-sm"
+                      className="cotizacion-accion-btn info"
                       onClick={() => setMostrarResumen(true)}
                     >
-                      <FaFileInvoice className="me-1" />
-                      Resumen de Liquidación
+                      <FaFileInvoice />
+                      <span>Resumen de Liquidación</span>
                     </button>
                   </>
                 )}
 
                 {cotizacion.estado === 'rechazada' && (
-                  <div className="alert alert-danger alert-sm mb-0 text-center">
-                    <FaTimes className="me-1" />
-                    Cotización Rechazada
+                  <div className="cotizacion-estado-rechazada">
+                    <FaTimes />
+                    <span>Cotización Rechazada</span>
                   </div>
                 )}
 
                 {/* Acción de Eliminar */}
-                <hr className="my-2" />
                 <button
-                  className="btn btn-outline-danger btn-sm"
+                  className="cotizacion-accion-btn delete"
                   onClick={() => setModalConfirmacion({
                     show: true,
                     accion: 'eliminar esta cotización'
                   })}
                 >
-                  <FaTimes className="me-1" />
-                  Eliminar
+                  <FaTimes />
+                  <span>Eliminar</span>
                 </button>
               </div>
-
             </div>
           </div>
 
-          {/* Card de Información Adicional */}
-          <div className="card shadow-sm">
-            <div className="card-header py-2">
-              <h6 className="mb-0">
-                <FaClock className="me-2" />
-                Información
-              </h6>
+          {/* Card de Información */}
+          <div className="cotizacion-sidebar-card cotizacion-info-sidebar-card">
+            <div className="cotizacion-sidebar-header">
+              <h4>Información</h4>
             </div>
-            <div className="card-body">
+            <div className="cotizacion-sidebar-body">
               
               {/* Validez */}
-              <div className="mb-3">
-                <small className="text-muted d-block">Validez</small>
-                <div className="fw-bold small">
+              <div className="cotizacion-info-item">
+                <span className="cotizacion-info-label">Validez</span>
+                <span className="cotizacion-info-value">
                   {cotizacion.fecha_validez ? 
                     formatearFechaCorta(cotizacion.fecha_validez) : 
                     '30 días desde creación'
                   }
-                </div>
+                </span>
               </div>
 
-              {/* Timeline Compacto */}
-              <div className="timeline-compact">
-                <div className="timeline-item">
-                  <div className="timeline-dot bg-primary"></div>
-                  <div className="timeline-content">
-                    <small className="text-muted">Creada</small>
-                    <div className="fw-bold small">{formatearFechaCorta(cotizacion.created_at)}</div>
+              {/* Timeline Mejorado */}
+              <div className="cotizacion-timeline">
+                <div className="cotizacion-timeline-item">
+                  <div className="cotizacion-timeline-dot creada"></div>
+                  <div className="cotizacion-timeline-content">
+                    <span className="cotizacion-timeline-label">Creada</span>
+                    <span className="cotizacion-timeline-date">{formatearFechaCorta(cotizacion.created_at)}</span>
                   </div>
                 </div>
 
                 {cotizacion.fecha_envio && (
-                  <div className="timeline-item">
-                    <div className="timeline-dot bg-info"></div>
-                    <div className="timeline-content">
-                      <small className="text-muted">Enviada</small>
-                      <div className="fw-bold small">{formatearFechaCorta(cotizacion.fecha_envio)}</div>
+                  <div className="cotizacion-timeline-item">
+                    <div className="cotizacion-timeline-dot enviada"></div>
+                    <div className="cotizacion-timeline-content">
+                      <span className="cotizacion-timeline-label">Enviada</span>
+                      <span className="cotizacion-timeline-date">{formatearFechaCorta(cotizacion.fecha_envio)}</span>
                     </div>
                   </div>
                 )}
 
                 {cotizacion.fecha_aceptacion && (
-                  <div className="timeline-item">
-                    <div className="timeline-dot bg-success"></div>
-                    <div className="timeline-content">
-                      <small className="text-muted">Aceptada</small>
-                      <div className="fw-bold small">{formatearFechaCorta(cotizacion.fecha_aceptacion)}</div>
+                  <div className="cotizacion-timeline-item">
+                    <div className="cotizacion-timeline-dot aceptada"></div>
+                    <div className="cotizacion-timeline-content">
+                      <span className="cotizacion-timeline-label">Aceptada</span>
+                      <span className="cotizacion-timeline-date">{formatearFechaCorta(cotizacion.fecha_aceptacion)}</span>
                     </div>
                   </div>
                 )}
               </div>
-
             </div>
           </div>
-
         </div>
       </div>
 
@@ -993,10 +1233,7 @@ const CotizacionDetalleOptimizado = () => {
         <div className="liquidacion-modal-overlay">
           <div className="liquidacion-modal-container">
             <div className="liquidacion-modal-header">
-              <h5 className="liquidacion-modal-title">
-                {/* <FaBalanceScale className="me-2" /> */}
-                
-              </h5>
+              <h5 className="liquidacion-modal-title"></h5>
               <button
                 type="button"
                 className="liquidacion-modal-close"
@@ -1021,52 +1258,247 @@ const CotizacionDetalleOptimizado = () => {
 
       {/* Modal de Confirmación */}
       {modalConfirmacion.show && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Confirmar Acción</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setModalConfirmacion({ show: false, accion: null })}
-                ></button>
+        <div className="cotizacion-modal-overlay">
+          <div className="cotizacion-modal">
+            <div className="cotizacion-modal-header">
+              <h5>Confirmar Acción</h5>
+              <button
+                type="button"
+                className="cotizacion-modal-close"
+                onClick={() => setModalConfirmacion({ show: false, accion: null })}
+              >
+                ×
+              </button>
+            </div>
+            <div className="cotizacion-modal-body">
+              <p>¿Estás seguro de que quieres {modalConfirmacion.accion}?</p>
+              {modalConfirmacion.accion?.includes('eliminar') && (
+                <div className="cotizacion-modal-warning">
+                  <FaExclamationTriangle />
+                  <span>Esta acción no se puede deshacer.</span>
+                </div>
+              )}
+              <div className="cotizacion-modal-textarea">
+                <label>Observaciones (opcional)</label>
+                <textarea
+                  value={observacionesEstado}
+                  onChange={(e) => setObservacionesEstado(e.target.value)}
+                  placeholder="Agrega observaciones sobre este cambio..."
+                />
               </div>
-              <div className="modal-body">
-                <p>¿Estás seguro de que quieres {modalConfirmacion.accion}?</p>
-                {modalConfirmacion.accion?.includes('eliminar') && (
-                  <div className="alert alert-warning">
-                    <FaExclamationTriangle className="me-2" />
-                    Esta acción no se puede deshacer.
+            </div>
+            <div className="cotizacion-modal-footer">
+              <button
+                className="cotizacion-modal-btn cancel"
+                onClick={() => setModalConfirmacion({ show: false, accion: null })}
+              >
+                Cancelar
+              </button>
+              <button
+                className="cotizacion-modal-btn confirm"
+                onClick={confirmarAccion}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalle del Remito */}
+      {modalDetalleRemito.show && modalDetalleRemito.remito && (
+        <div className="cotizacion-modal-overlay" onClick={cerrarModalDetalleRemito}>
+          <div className="cotizacion-modal remito-detalle-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cotizacion-modal-header">
+              <h3>Detalle del Remito</h3>
+              <button className="cotizacion-modal-close" onClick={cerrarModalDetalleRemito}>
+                ×
+              </button>
+            </div>
+            <div className="cotizacion-modal-body">
+              {/* Layout en 2 columnas */}
+              <div className="remito-detalle-grid">
+                {/* Columna Izquierda */}
+                <div className="remito-detalle-columna">
+                  {/* Información del Remito */}
+                  <div className="remito-detalle-card">
+                    <h4 className="remito-detalle-card-title">Remito</h4>
+                    <div className="remito-detalle-card-body">
+                      <div className="remito-detalle-row">
+                        <span className="remito-detalle-label">Número</span>
+                        <span className="remito-detalle-value destacado">{modalDetalleRemito.remito.numero_documento}</span>
+                      </div>
+                      <div className="remito-detalle-row">
+                        <span className="remito-detalle-label">Emisión</span>
+                        <span className="remito-detalle-value">{formatearFechaHora(modalDetalleRemito.remito.fecha_emision)}</span>
+                      </div>
+                      <div className="remito-detalle-row">
+                        <span className="remito-detalle-label">Impresiones</span>
+                        <span className="remito-detalle-value">{modalDetalleRemito.remito.total_impresiones || 1}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="mb-3">
-                  <label className="form-label">Observaciones (opcional)</label>
-                  <textarea
-                    className="form-control"
-                    rows="3"
-                    value={observacionesEstado}
-                    onChange={(e) => setObservacionesEstado(e.target.value)}
-                    placeholder="Agrega observaciones sobre este cambio..."
-                  />
+
+                  {/* Cliente */}
+                  {modalDetalleRemito.remito.datos_snapshot?.cliente && (
+                    <div className="remito-detalle-card">
+                      <h4 className="remito-detalle-card-title">Cliente</h4>
+                      <div className="remito-detalle-card-body">
+                        <div className="remito-detalle-row">
+                          <span className="remito-detalle-label">Nombre</span>
+                          <span className="remito-detalle-value">{modalDetalleRemito.remito.datos_snapshot.cliente.nombre || modalDetalleRemito.remito.datos_snapshot.cliente}</span>
+                        </div>
+                        {modalDetalleRemito.remito.datos_snapshot.cliente.cuit && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">CUIT</span>
+                            <span className="remito-detalle-value">{modalDetalleRemito.remito.datos_snapshot.cliente.cuit}</span>
+                          </div>
+                        )}
+                        {modalDetalleRemito.remito.datos_snapshot.cliente.direccion && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">Dirección</span>
+                            <span className="remito-detalle-value">{modalDetalleRemito.remito.datos_snapshot.cliente.direccion}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Entrega */}
+                  {(modalDetalleRemito.remito.datos_snapshot?.plan || modalDetalleRemito.remito.datos_snapshot?.entrega) && (
+                    <div className="remito-detalle-card">
+                      <h4 className="remito-detalle-card-title">Entrega</h4>
+                      <div className="remito-detalle-card-body">
+                        {modalDetalleRemito.remito.datos_snapshot.plan?.numeroSemana && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">Semana</span>
+                            <span className="remito-detalle-value">Semana {modalDetalleRemito.remito.datos_snapshot.plan.numeroSemana}</span>
+                          </div>
+                        )}
+                        {modalDetalleRemito.remito.datos_snapshot.entrega?.fechaEntrega && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">Fecha</span>
+                            <span className="remito-detalle-value">{formatearFechaCorta(modalDetalleRemito.remito.datos_snapshot.entrega.fechaEntrega)}</span>
+                          </div>
+                        )}
+                        {modalDetalleRemito.remito.datos_snapshot.entrega?.tipoEntrega && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">Tipo</span>
+                            <span className="remito-detalle-value" style={{textTransform: 'capitalize'}}>{modalDetalleRemito.remito.datos_snapshot.entrega.tipoEntrega}</span>
+                          </div>
+                        )}
+                        {modalDetalleRemito.remito.datos_snapshot.entrega?.responsable_entrega && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">Entregó</span>
+                            <span className="remito-detalle-value">{modalDetalleRemito.remito.datos_snapshot.entrega.responsable_entrega}</span>
+                          </div>
+                        )}
+                        {modalDetalleRemito.remito.datos_snapshot.entrega?.responsable_recibe && (
+                          <div className="remito-detalle-row">
+                            <span className="remito-detalle-label">Recibió</span>
+                            <span className="remito-detalle-value">{modalDetalleRemito.remito.datos_snapshot.entrega.responsable_recibe}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Columna Derecha */}
+                <div className="remito-detalle-columna">
+                  {/* Detalle de Vacunas - Lógica unificada para todas las entregas */}
+                  {modalDetalleRemito.remito.datos_snapshot?.producto && (
+                    <div className="remito-detalle-card">
+                      <h4 className="remito-detalle-card-title">Detalle de Vacunas Entregadas</h4>
+                      <div className="remito-detalle-card-body p-0">
+                        <table className="remito-detalle-table">
+                          <thead>
+                            <tr>
+                              <th>Vacuna</th>
+                              <th>Lote</th>
+                              <th className="text-center">Dosis</th>
+                              <th>Vencimiento</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Si tiene lotes_entregados, mostrarlos */}
+                            {modalDetalleRemito.remito.datos_snapshot.producto.lotes_entregados?.length > 0 ? (
+                              modalDetalleRemito.remito.datos_snapshot.producto.lotes_entregados.map((item, idx) => (
+                                <tr key={idx}>
+                                  <td>
+                                    <div style={{fontWeight: 500}}>{item.vacuna || modalDetalleRemito.remito.datos_snapshot.producto.nombre || 'Vacuna'}</div>
+                                    {item.semana && <small className="text-muted">Semana {item.semana}</small>}
+                                  </td>
+                                  <td style={{fontFamily: 'monospace', fontSize: '0.85em'}}>{item.lote || '-'}</td>
+                                  <td className="text-center" style={{fontWeight: 600}}>{item.cantidad?.toLocaleString('es-AR') || 0}</td>
+                                  <td>{item.fecha_vencimiento ? formatearFechaCorta(item.fecha_vencimiento) : '-'}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              /* Si es entrega simple sin lotes_entregados, mostrar una fila con los datos del producto */
+                              <tr>
+                                <td>
+                                  <div style={{fontWeight: 500}}>{modalDetalleRemito.remito.datos_snapshot.producto.nombre || 'Vacuna'}</div>
+                                  {modalDetalleRemito.remito.datos_snapshot.producto.descripcion && (
+                                    <small className="text-muted">{modalDetalleRemito.remito.datos_snapshot.producto.descripcion}</small>
+                                  )}
+                                </td>
+                                <td style={{fontFamily: 'monospace', fontSize: '0.85em'}}>{modalDetalleRemito.remito.datos_snapshot.producto.lote || '-'}</td>
+                                <td className="text-center" style={{fontWeight: 600}}>
+                                  {(modalDetalleRemito.remito.datos_snapshot.producto.cantidad_entregada || 
+                                    modalDetalleRemito.remito.datos_snapshot.entrega?.cantidadEntregada || 0).toLocaleString('es-AR')}
+                                </td>
+                                <td>{modalDetalleRemito.remito.datos_snapshot.producto.fecha_vencimiento ? formatearFechaCorta(modalDetalleRemito.remito.datos_snapshot.producto.fecha_vencimiento) : '-'}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                          {/* Mostrar total solo si hay múltiples items */}
+                          {modalDetalleRemito.remito.datos_snapshot.producto.lotes_entregados?.length > 1 && (
+                            <tfoot>
+                              <tr style={{backgroundColor: '#f8f9fa', fontWeight: 600}}>
+                                <td colSpan="2">Total</td>
+                                <td className="text-center">
+                                  {modalDetalleRemito.remito.datos_snapshot.producto.lotes_entregados.reduce((sum, item) => sum + (item.cantidad || 0), 0).toLocaleString('es-AR')}
+                                </td>
+                                <td></td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observaciones */}
+                  {(modalDetalleRemito.remito.datos_snapshot?.entrega?.observaciones || modalDetalleRemito.remito.datos_snapshot?.entrega?.observaciones_entrega) && (
+                    <div className="remito-detalle-card">
+                      <h4 className="remito-detalle-card-title">Observaciones</h4>
+                      <div className="remito-detalle-observaciones">
+                        {modalDetalleRemito.remito.datos_snapshot.entrega.observaciones || modalDetalleRemito.remito.datos_snapshot.entrega.observaciones_entrega}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setModalConfirmacion({ show: false, accion: null })}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={confirmarAccion}
-                >
-                  Confirmar
-                </button>
-              </div>
+            </div>
+            <div className="cotizacion-modal-footer">
+              <button
+                className="cotizacion-modal-btn cancel"
+                onClick={cerrarModalDetalleRemito}
+              >
+                Cerrar
+              </button>
+              <button
+                className="cotizacion-modal-btn confirm"
+                onClick={() => {
+                  handleReimprimirRemito(modalDetalleRemito.remito);
+                  cerrarModalDetalleRemito();
+                }}
+                disabled={generandoRemitoPDF === modalDetalleRemito.remito.id_documento}
+              >
+                <FaDownload className="me-2" />
+                Descargar PDF
+              </button>
             </div>
           </div>
         </div>

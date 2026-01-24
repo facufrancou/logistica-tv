@@ -609,9 +609,186 @@ const getResumenEjecutivo = async (req, res) => {
   }
 };
 
+// GET /dashboard/graficos-principales
+const getGraficosPrincipales = async (req, res) => {
+  try {
+    const { periodo = '30d' } = req.query;
+    const fechaComparacion = obtenerFechaComparacion(periodo);
+
+    // 1. VACUNAS MÁS VENDIDAS (usadas en cotizaciones)
+    // Primero obtenemos los IDs de cotizaciones válidas
+    const cotizacionesValidas = await prisma.cotizacion.findMany({
+      where: {
+        created_at: { gte: fechaComparacion },
+        estado: { in: ['aceptada', 'en_proceso', 'enviada'] }
+      },
+      select: { id_cotizacion: true }
+    });
+    const cotizacionesIds = cotizacionesValidas.map(c => c.id_cotizacion);
+
+    const vacunasMasVendidas = await prisma.detalleCotizacion.groupBy({
+      by: ['id_producto'],
+      where: {
+        id_cotizacion: { in: cotizacionesIds }
+      },
+      _sum: {
+        cantidad_total: true,
+        subtotal: true
+      },
+      _count: {
+        id_cotizacion: true
+      },
+      orderBy: {
+        _sum: {
+          cantidad_total: 'desc'
+        }
+      },
+      take: 10
+    });
+
+    // Obtener nombres de vacunas (id_producto en detalle_cotizacion es en realidad id_vacuna)
+    const vacunasIds = vacunasMasVendidas.map(v => v.id_producto);
+    const vacunas = await prisma.vacuna.findMany({
+      where: { id_vacuna: { in: vacunasIds } },
+      select: { id_vacuna: true, nombre: true, codigo: true }
+    });
+    const vacunasMap = new Map(vacunas.map(v => [v.id_vacuna, v]));
+
+    const vacunasFormateadas = vacunasMasVendidas.map(v => {
+      const vacuna = vacunasMap.get(v.id_producto);
+      return {
+        id_producto: v.id_producto,
+        nombre: vacuna ? vacuna.nombre : 'Vacuna desconocida',
+        codigo: vacuna ? vacuna.codigo : '',
+        cantidad_total: v._sum.cantidad_total || 0,
+        monto_total: parseFloat(v._sum.subtotal || 0),
+        veces_cotizada: v._count.id_cotizacion
+      };
+    });
+
+    // 2. CANTIDAD DE COTIZACIONES POR CLIENTE
+    const cotizacionesPorCliente = await prisma.cotizacion.groupBy({
+      by: ['id_cliente'],
+      where: {
+        created_at: { gte: fechaComparacion }
+      },
+      _count: {
+        id_cotizacion: true
+      },
+      _sum: {
+        precio_total: true
+      },
+      orderBy: {
+        _count: {
+          id_cotizacion: 'desc'
+        }
+      },
+      take: 10
+    });
+
+    // Obtener nombres de clientes para cotizaciones
+    const clientesCotizacionesIds = cotizacionesPorCliente.map(c => c.id_cliente);
+    const clientesCotizaciones = await prisma.cliente.findMany({
+      where: { id_cliente: { in: clientesCotizacionesIds } },
+      select: { id_cliente: true, nombre: true }
+    });
+    const clientesCotizacionesMap = new Map(clientesCotizaciones.map(c => [c.id_cliente, c.nombre]));
+
+    const cotizacionesFormateadas = cotizacionesPorCliente.map(c => ({
+      id_cliente: c.id_cliente,
+      nombre: clientesCotizacionesMap.get(c.id_cliente) || 'Cliente desconocido',
+      cantidad_cotizaciones: c._count.id_cotizacion,
+      monto_total: parseFloat(c._sum.precio_total || 0)
+    }));
+
+    // 3. VENTAS DIRECTAS POR CLIENTE
+    const ventasDirectasPorCliente = await prisma.ventaDirecta.groupBy({
+      by: ['id_cliente'],
+      where: {
+        created_at: { gte: fechaComparacion }
+      },
+      _count: {
+        id_venta_directa: true
+      },
+      _sum: {
+        precio_total: true
+      },
+      orderBy: {
+        _sum: {
+          precio_total: 'desc'
+        }
+      },
+      take: 10
+    });
+
+    // Obtener nombres de clientes para ventas directas
+    const clientesVentasIds = ventasDirectasPorCliente.map(v => v.id_cliente);
+    const clientesVentas = await prisma.cliente.findMany({
+      where: { id_cliente: { in: clientesVentasIds } },
+      select: { id_cliente: true, nombre: true }
+    });
+    const clientesVentasMap = new Map(clientesVentas.map(c => [c.id_cliente, c.nombre]));
+
+    const ventasDirectasFormateadas = ventasDirectasPorCliente.map(v => ({
+      id_cliente: v.id_cliente,
+      nombre: clientesVentasMap.get(v.id_cliente) || 'Cliente desconocido',
+      cantidad_ventas: v._count.id_venta_directa,
+      monto_total: parseFloat(v._sum.precio_total || 0)
+    }));
+
+    // 4. TOTALES GENERALES
+    const [totalCotizaciones, totalVentasDirectas, totalClientes] = await Promise.all([
+      prisma.cotizacion.aggregate({
+        where: { created_at: { gte: fechaComparacion } },
+        _count: true,
+        _sum: { precio_total: true }
+      }),
+      prisma.ventaDirecta.aggregate({
+        where: { created_at: { gte: fechaComparacion } },
+        _count: true,
+        _sum: { precio_total: true }
+      }),
+      prisma.cliente.count({
+        where: {
+          OR: [
+            { cotizaciones: { some: { created_at: { gte: fechaComparacion } } } },
+            { ventas_directas: { some: { created_at: { gte: fechaComparacion } } } }
+          ]
+        }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        vacunas_mas_vendidas: vacunasFormateadas,
+        cotizaciones_por_cliente: cotizacionesFormateadas,
+        ventas_directas_por_cliente: ventasDirectasFormateadas,
+        totales: {
+          total_cotizaciones: totalCotizaciones._count,
+          monto_cotizaciones: parseFloat(totalCotizaciones._sum.precio_total || 0),
+          total_ventas_directas: totalVentasDirectas._count,
+          monto_ventas_directas: parseFloat(totalVentasDirectas._sum.precio_total || 0),
+          clientes_activos: totalClientes
+        }
+      },
+      periodo_analizado: periodo
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo gráficos principales:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getMetricasPlanes,
   getMetricasOperativas,
   getMetricasRendimiento,
-  getResumenEjecutivo
+  getResumenEjecutivo,
+  getGraficosPrincipales
 };

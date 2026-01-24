@@ -31,4 +31,11 @@ router.get('/metricas-rendimiento', validarSesion, dashboardController.getMetric
  */
 router.get('/resumen-ejecutivo', validarSesion, dashboardController.getResumenEjecutivo);
 
+/**
+ * @route GET /dashboard/graficos-principales
+ * @desc Obtener datos para gráficos del dashboard principal
+ * @access Private
+ */
+router.get('/graficos-principales', validarSesion, dashboardController.getGraficosPrincipales);
+
 module.exports = router;

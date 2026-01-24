@@ -1151,3 +1151,1516 @@ table.productos-table > thead > tr > th {
     font-size: 1.1rem;
   }
 }
+
+/* ========================================
+   COTIZACIÓN DETALLE - NUEVO DISEÑO UI/UX
+   ======================================== */
+
+/* Container Principal */
+.cotizacion-detalle-container {
+  padding: 1rem 1.5rem;
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Loading */
+.cotizacion-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.cotizacion-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--color-principal, #3D2113);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.cotizacion-loading-text {
+  color: var(--color-texto-muted, #6c757d);
+  font-size: 1rem;
+}
+
+/* Header Principal */
+.cotizacion-header-card {
+  background: linear-gradient(135deg, var(--color-principal, #3D2113) 0%, #5a3421 100%);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 20px rgba(61, 33, 19, 0.15);
+}
+
+.cotizacion-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.cotizacion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cotizacion-back-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cotizacion-back-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(-2px);
+}
+
+.cotizacion-header-info {
+  color: white;
+}
+
+.cotizacion-header-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.cotizacion-header-title h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+}
+
+.cotizacion-header-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.cotizacion-numero {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.cotizacion-separator {
+  opacity: 0.5;
+}
+
+.cotizacion-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.cotizacion-header-precio {
+  text-align: right;
+  color: white;
+}
+
+.cotizacion-precio-label {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cotizacion-precio-valor {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-acento, #CCB137);
+}
+
+.cotizacion-lista-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.cotizacion-pdf-btn {
+  background: white;
+  color: var(--color-principal, #3D2113);
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cotizacion-pdf-btn:hover:not(:disabled) {
+  background: var(--color-acento, #CCB137);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cotizacion-pdf-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Estado Badges */
+.cotizacion-estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 25px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cotizacion-estado-proceso {
+  background: linear-gradient(135deg, #f0ad4e, #ec971f);
+  color: #fff;
+}
+
+.cotizacion-estado-enviada {
+  background: linear-gradient(135deg, #5bc0de, #31b0d5);
+  color: #fff;
+}
+
+.cotizacion-estado-aceptada {
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+  color: #fff;
+}
+
+.cotizacion-estado-rechazada {
+  background: linear-gradient(135deg, #d9534f, #c9302c);
+  color: #fff;
+}
+
+/* Layout Principal */
+.cotizacion-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 1.5rem;
+}
+
+.cotizacion-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.cotizacion-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 80px;
+  height: fit-content;
+  min-width: 380px;
+}
+
+/* Cards de Información */
+.cotizacion-info-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cotizacion-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--color-principal, #3D2113);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cotizacion-card-header:hover {
+  background: #4a2a19;
+}
+
+.cotizacion-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cotizacion-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+}
+
+.cotizacion-card-icon.cliente {
+  background: linear-gradient(135deg, #4a90d9, #357abd);
+}
+
+.cotizacion-card-icon.plan {
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+}
+
+.cotizacion-card-icon.vacunas {
+  background: linear-gradient(135deg, #f0ad4e, #ec971f);
+}
+
+.cotizacion-card-icon.observaciones {
+  background: linear-gradient(135deg, #5bc0de, #31b0d5);
+}
+
+.cotizacion-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.cotizacion-badge-count {
+  background: var(--color-acento, #CCB137);
+  color: var(--color-principal, #3D2113);
+  padding: 0.15rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cotizacion-expand-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cotizacion-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.cotizacion-card-body {
+  padding: 1.25rem;
+}
+
+.cotizacion-card-body.p-0 {
+  padding: 0;
+}
+
+/* Grid de Cliente */
+.cotizacion-cliente-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.cotizacion-cliente-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.cotizacion-cliente-item.principal {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(61, 33, 19, 0.05), rgba(204, 177, 55, 0.05));
+  border: 1px solid rgba(61, 33, 19, 0.1);
+}
+
+.cotizacion-item-icon {
+  color: var(--color-principal, #3D2113);
+  font-size: 1rem;
+  margin-top: 0.2rem;
+  opacity: 0.7;
+}
+
+.cotizacion-item-content {
+  flex: 1;
+}
+
+.cotizacion-item-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.2rem;
+}
+
+.cotizacion-item-value {
+  display: block;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.cotizacion-item-value.destacado {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+}
+
+/* Grid del Plan */
+.cotizacion-plan-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cotizacion-plan-item.destacado {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(92, 184, 92, 0.1), rgba(68, 157, 68, 0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(92, 184, 92, 0.2);
+}
+
+.cotizacion-plan-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.cotizacion-plan-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cotizacion-plan-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+}
+
+.cotizacion-plan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.cotizacion-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.cotizacion-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+}
+
+.cotizacion-stat-icon.animales {
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+}
+
+.cotizacion-stat-icon.duracion {
+  background: linear-gradient(135deg, #5bc0de, #31b0d5);
+}
+
+.cotizacion-stat-icon.vacunas {
+  background: linear-gradient(135deg, #f0ad4e, #ec971f);
+}
+
+.cotizacion-stat-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-principal, #3D2113);
+}
+
+.cotizacion-stat-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+/* Fechas Row */
+.cotizacion-fechas-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.cotizacion-fecha-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 120px;
+}
+
+.cotizacion-fecha-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cotizacion-fecha-icon {
+  font-size: 1.25rem;
+}
+
+.cotizacion-fecha-icon.inicio {
+  color: #5cb85c;
+}
+
+.cotizacion-fecha-icon.fin {
+  color: #d9534f;
+}
+
+.cotizacion-fecha-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-transform: uppercase;
+}
+
+.cotizacion-fecha-value {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+}
+
+.cotizacion-fecha-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cotizacion-fecha-line {
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, #5cb85c, #d9534f);
+  border-radius: 1px;
+}
+
+.cotizacion-fecha-duracion {
+  font-size: 0.75rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+/* Tabla de Vacunas */
+.cotizacion-vacunas-table-container {
+  overflow-x: auto;
+}
+
+.cotizacion-vacunas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cotizacion-vacunas-table thead {
+  background: #f8f9fa;
+}
+
+.cotizacion-vacunas-table th {
+  padding: 0.875rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--color-principal, #3D2113);
+  border-bottom: 2px solid rgba(61, 33, 19, 0.1);
+}
+
+.cotizacion-vacunas-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.cotizacion-vacunas-table tbody tr:hover {
+  background: rgba(61, 33, 19, 0.02);
+}
+
+.cotizacion-vacuna-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cotizacion-vacuna-nombre {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.cotizacion-vacuna-desc {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.cotizacion-tipo-badge {
+  display: inline-block;
+  background: rgba(92, 184, 92, 0.1);
+  color: #449d44;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cotizacion-semana-badge {
+  display: inline-block;
+  background: var(--color-principal, #3D2113);
+  color: white;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cotizacion-precio {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.cotizacion-subtotal {
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+  font-size: 0.95rem;
+}
+
+.cotizacion-total-row {
+  background: #f8f9fa;
+}
+
+.cotizacion-total-row td {
+  padding: 1rem;
+  border-bottom: none;
+}
+
+.cotizacion-total-valor {
+  color: #449d44;
+  font-size: 1.1rem;
+}
+
+/* Observaciones */
+.cotizacion-observaciones-text {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Sidebar Cards */
+.cotizacion-sidebar-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cotizacion-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-principal, #3D2113);
+  color: white;
+}
+
+.cotizacion-sidebar-header.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cotizacion-sidebar-header.clickable:hover {
+  background: #4a2a19;
+}
+
+.cotizacion-sidebar-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.cotizacion-sidebar-icon {
+  font-size: 1.1rem;
+}
+
+.cotizacion-sidebar-icon.remitos {
+  color: var(--color-acento, #CCB137);
+}
+
+.cotizacion-sidebar-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.cotizacion-sidebar-body {
+  padding: 1.25rem;
+}
+
+/* Resumen de Estado */
+.cotizacion-estado-resumen {
+  text-align: center;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #f8f9fa, #fff);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  border: 1px solid #eee;
+}
+
+.cotizacion-precio-grande {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #449d44;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.cotizacion-lista-info {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Acciones Grid */
+.cotizacion-acciones-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cotizacion-accion-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cotizacion-accion-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cotizacion-accion-btn.primary {
+  background: linear-gradient(135deg, var(--color-principal, #3D2113), #5a3421);
+  color: white;
+}
+
+.cotizacion-accion-btn.secondary {
+  background: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.cotizacion-accion-btn.success {
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+  color: white;
+}
+
+.cotizacion-accion-btn.danger {
+  background: linear-gradient(135deg, #d9534f, #c9302c);
+  color: white;
+}
+
+.cotizacion-accion-btn.warning {
+  background: linear-gradient(135deg, #f0ad4e, #ec971f);
+  color: white;
+}
+
+.cotizacion-accion-btn.info {
+  background: linear-gradient(135deg, #5bc0de, #31b0d5);
+  color: white;
+}
+
+.cotizacion-accion-btn.delete {
+  background: transparent;
+  color: #d9534f;
+  border: 1px solid #d9534f;
+  margin-top: 0.5rem;
+}
+
+.cotizacion-accion-btn.delete:hover {
+  background: #d9534f;
+  color: white;
+}
+
+.cotizacion-estado-rechazada {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(217, 83, 79, 0.1);
+  color: #c9302c;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Info Sidebar */
+.cotizacion-info-item {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.cotizacion-info-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.cotizacion-info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.25rem;
+}
+
+.cotizacion-info-value {
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+}
+
+/* Timeline Mejorado */
+.cotizacion-timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+.cotizacion-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #e9ecef;
+}
+
+.cotizacion-timeline-item {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.cotizacion-timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.cotizacion-timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #e9ecef;
+}
+
+.cotizacion-timeline-dot.creada {
+  background: #4a90d9;
+  box-shadow: 0 0 0 2px #4a90d9;
+}
+
+.cotizacion-timeline-dot.enviada {
+  background: #5bc0de;
+  box-shadow: 0 0 0 2px #5bc0de;
+}
+
+.cotizacion-timeline-dot.aceptada {
+  background: #5cb85c;
+  box-shadow: 0 0 0 2px #5cb85c;
+}
+
+.cotizacion-timeline-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.cotizacion-timeline-date {
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+  font-size: 0.9rem;
+}
+
+/* Panel de Remitos */
+.cotizacion-remitos-card .cotizacion-sidebar-header {
+  background: linear-gradient(135deg, #449d44, #5cb85c);
+}
+
+.cotizacion-remitos-count {
+  background: var(--color-acento, #CCB137);
+  color: var(--color-principal, #3D2113);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cotizacion-remitos-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.cotizacion-remitos-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #6c757d;
+}
+
+.cotizacion-remitos-empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.3;
+  margin-bottom: 1rem;
+}
+
+.cotizacion-remitos-empty p {
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+}
+
+.cotizacion-remitos-empty small {
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.cotizacion-remitos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cotizacion-remito-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  transition: all 0.2s ease;
+}
+
+.cotizacion-remito-item:hover {
+  background: #fff;
+  border-color: var(--color-principal, #3D2113);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cotizacion-remito-info {
+  flex: 1;
+}
+
+.cotizacion-remito-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.cotizacion-remito-numero {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: var(--color-principal, #3D2113);
+  font-size: 0.9rem;
+}
+
+.cotizacion-remito-badge {
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+}
+
+.cotizacion-remito-fecha {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.cotizacion-remito-fecha-icon {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.cotizacion-remito-impresiones {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.cotizacion-remito-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.cotizacion-remito-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cotizacion-remito-btn.view {
+  background: linear-gradient(135deg, #5bc0de, #46b8da);
+  color: white;
+}
+
+.cotizacion-remito-btn.print {
+  background: linear-gradient(135deg, #5cb85c, #449d44);
+  color: white;
+}
+
+.cotizacion-remito-btn.download {
+  background: #f8f9fa;
+  color: var(--color-principal, #3D2113);
+  border: 1px solid #ddd;
+}
+
+.cotizacion-remito-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+.cotizacion-remito-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modal de Detalle del Remito - Ventana Principal */
+.remito-detalle-modal {
+  max-width: 1100px !important;
+  width: 95vw !important;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10001;
+}
+
+.remito-detalle-modal .cotizacion-modal-header {
+  flex-shrink: 0;
+}
+
+.remito-detalle-modal .cotizacion-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.remito-detalle-modal .cotizacion-modal-footer {
+  flex-shrink: 0;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+/* Grid de 2 columnas */
+.remito-detalle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.remito-detalle-columna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Cards dentro del modal */
+.remito-detalle-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.remito-detalle-card.destacado {
+  background: linear-gradient(135deg, #fffbf0, #fff8e1);
+  border-color: var(--color-acento, #CCB137);
+}
+
+.remito-detalle-card-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+  background: var(--color-principal, #3D2113);
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.remito-detalle-card.destacado .remito-detalle-card-title {
+  background: linear-gradient(135deg, #CCB137, #b89c2e);
+}
+
+.remito-detalle-card-body {
+  padding: 0.75rem;
+}
+
+.remito-detalle-card-body.p-0 {
+  padding: 0;
+}
+
+/* Producto destacado */
+.remito-detalle-producto-header {
+  text-align: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--color-acento, #CCB137);
+  margin-bottom: 0.75rem;
+}
+
+.remito-producto-nombre {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-principal, #3D2113);
+}
+
+.remito-producto-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+.remito-detalle-cantidad-box {
+  background: var(--color-principal, #3D2113);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.remito-cantidad-valor {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-acento, #CCB137);
+  line-height: 1;
+}
+
+.remito-cantidad-label {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
+}
+
+.remito-detalle-section {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.remito-detalle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.remito-detalle-row:last-child {
+  border-bottom: none;
+}
+
+.remito-detalle-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.remito-detalle-value {
+  font-weight: 500;
+  color: var(--color-principal, #3D2113);
+}
+
+.remito-detalle-value.destacado {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-acento, #CCB137);
+}
+
+.remito-detalle-subtitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-principal, #3D2113);
+  margin: 1rem 0 0.5rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-acento, #CCB137);
+}
+
+.remito-detalle-productos {
+  overflow-x: auto;
+}
+
+.remito-detalle-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.remito-detalle-table th {
+  background: var(--color-principal, #3D2113);
+  color: white;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 500;
+}
+
+.remito-detalle-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.remito-detalle-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.remito-detalle-observaciones {
+  background: #fffbf0;
+  border: 1px solid var(--color-acento, #CCB137);
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Modal Mejorado */
+.cotizacion-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.cotizacion-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cotizacion-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-principal, #3D2113);
+  color: white;
+}
+
+.cotizacion-modal-header h5 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.cotizacion-modal-close {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cotizacion-modal-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.cotizacion-modal-body {
+  padding: 1.5rem;
+}
+
+.cotizacion-modal-body p {
+  margin: 0 0 1rem;
+  color: #333;
+}
+
+.cotizacion-modal-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(240, 173, 78, 0.1);
+  border: 1px solid rgba(240, 173, 78, 0.3);
+  border-radius: 10px;
+  color: #ec971f;
+  margin-bottom: 1rem;
+}
+
+.cotizacion-modal-textarea {
+  margin-top: 1rem;
+}
+
+.cotizacion-modal-textarea label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.cotizacion-modal-textarea textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.cotizacion-modal-textarea textarea:focus {
+  outline: none;
+  border-color: var(--color-principal, #3D2113);
+  box-shadow: 0 0 0 3px rgba(61, 33, 19, 0.1);
+}
+
+.cotizacion-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8f9fa;
+  border-top: 1px solid #eee;
+}
+
+.cotizacion-modal-btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cotizacion-modal-btn.cancel {
+  background: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.cotizacion-modal-btn.cancel:hover {
+  background: #eee;
+}
+
+.cotizacion-modal-btn.confirm {
+  background: var(--color-principal, #3D2113);
+  color: white;
+  border: none;
+}
+
+.cotizacion-modal-btn.confirm:hover {
+  background: #4a2a19;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .cotizacion-layout {
+    grid-template-columns: 1fr 380px;
+  }
+  
+  .cotizacion-sidebar {
+    min-width: 360px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .cotizacion-layout {
+    grid-template-columns: 1fr 340px;
+  }
+  
+  .cotizacion-sidebar {
+    min-width: 320px;
+  }
+}
+
+@media (max-width: 992px) {
+  .cotizacion-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .cotizacion-sidebar {
+    position: static;
+  }
+  
+  .cotizacion-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .cotizacion-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .cotizacion-detalle-container {
+    padding: 0.75rem;
+  }
+  
+  .cotizacion-header-card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  
+  .cotizacion-header-title h2 {
+    font-size: 1.35rem;
+  }
+  
+  .cotizacion-precio-valor {
+    font-size: 1.5rem;
+  }
+  
+  .cotizacion-cliente-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .cotizacion-cliente-item.principal {
+    grid-column: span 1;
+  }
+  
+  .cotizacion-plan-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .cotizacion-fechas-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .cotizacion-fecha-divider {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .cotizacion-plan-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .cotizacion-header-left {
+    width: 100%;
+  }
+  
+  .cotizacion-pdf-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

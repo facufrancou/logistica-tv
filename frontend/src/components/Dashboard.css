@@ -211,3 +211,72 @@
 .animate-delay-2 { animation-delay: 0.2s; }
 .animate-delay-3 { animation-delay: 0.3s; }
 .animate-delay-4 { animation-delay: 0.4s; }
+
+/* Dashboard Charts Section */
+.dashboard-charts-section {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.dashboard-charts-section .card {
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.dashboard-charts-section .card-header {
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.dashboard-charts-section .card-body {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Summary Cards */
+.dashboard-charts-section .bg-primary.bg-gradient {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+}
+
+.dashboard-charts-section .bg-success.bg-gradient {
+  background: linear-gradient(135deg, #198754 0%, #146c43 100%) !important;
+}
+
+.dashboard-charts-section .bg-info.bg-gradient {
+  background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%) !important;
+}
+
+.dashboard-charts-section .bg-warning.bg-gradient {
+  background: linear-gradient(135deg, #ffc107 0%, #d39e00 100%) !important;
+}
+
+/* Spinner animation fix */
+.fa-spin {
+  animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Chart containers responsive */
+@media (max-width: 992px) {
+  .dashboard-charts-section .card-body {
+    min-height: 280px;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-charts-section .card-body {
+    min-height: 250px;
+  }
+  
+  .dashboard-charts-section .card-header h5 {
+    font-size: 0.9rem;
+  }
+}

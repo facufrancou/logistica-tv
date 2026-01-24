@@ -1,5 +1,6 @@
 import React from 'react';
-import { FaBoxOpen, FaSyringe, FaEdit, FaPlus, FaEye, FaClock, FaCheckCircle, FaExclamationTriangle, FaTrashAlt } from 'react-icons/fa';
+import { FaBoxOpen, FaSyringe, FaEdit, FaPlus, FaEye, FaCheckCircle, FaExclamationTriangle, FaTrashAlt, FaTimes, FaCalendarAlt } from 'react-icons/fa';
+import './ModalGestionLotes.css';
 
 const ModalGestionLotes = ({ 
   item, 
@@ -36,216 +37,193 @@ const ModalGestionLotes = ({
   };
 
   return (
-    <>
-      {/* Overlay */}
-      <div 
-        className="modal-backdrop fade show" 
-        style={{ zIndex: 1040 }}
-        onClick={onClose}
-      ></div>
-      
-      {/* Modal */}
-      <div 
-        className="modal fade show d-block" 
-        style={{ zIndex: 1050 }}
-        tabIndex="-1"
-      >
-        <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '600px' }}>
-          <div className="modal-content">
-            {/* Header minimalista */}
-            <div className="modal-header border-bottom py-2">
-              <h6 className="modal-title d-flex align-items-center mb-0 text-dark">
-                <FaBoxOpen className="me-2 text-muted" />
-                Gestión de Lotes
-              </h6>
-              <button 
-                type="button" 
-                className="btn-close btn-sm" 
-                onClick={onClose}
-                aria-label="Close"
-              ></button>
+    <div className="modal-gestion-lotes-overlay" onClick={onClose}>
+      <div className="modal-gestion-lotes" onClick={(e) => e.stopPropagation()}>
+        {/* Header profesional */}
+        <div className="modal-gestion-header">
+          <div className="modal-gestion-title">
+            <FaBoxOpen />
+            <span>Gestión de Lotes</span>
+          </div>
+          <button className="modal-gestion-close" onClick={onClose}>
+            <FaTimes />
+          </button>
+        </div>
+        
+        {/* Contenido */}
+        <div className="modal-gestion-body">
+          {/* Info de la vacuna */}
+          <div className="modal-gestion-vacuna-info">
+            <div className="vacuna-info-main">
+              <h4 className="vacuna-nombre">{item.vacuna_nombre}</h4>
+              <div className="vacuna-detalles">
+                <span className="vacuna-detalle">
+                  <FaCalendarAlt />
+                  Semana {item.semana_aplicacion}
+                </span>
+                <span className="vacuna-detalle-separator">•</span>
+                <span className="vacuna-detalle">
+                  {new Date(item.fecha_aplicacion_programada).toLocaleDateString('es-ES')}
+                </span>
+                <span className="vacuna-detalle-separator">•</span>
+                <span className="vacuna-detalle dosis-highlight">
+                  {item.cantidad_dosis?.toLocaleString()} dosis
+                </span>
+              </div>
             </div>
-            
-            {/* Body */}
-            <div className="modal-body p-3">
-              {/* Info condensada */}
-              <div className="d-flex justify-content-between align-items-start mb-3 p-2 bg-light rounded">
-                <div>
-                  <div className="fw-bold text-dark">{item.vacuna_nombre}</div>
-                  <small className="text-muted">
-                    Semana {item.semana_aplicacion} • {new Date(item.fecha_aplicacion_programada).toLocaleDateString('es-ES')} • {item.cantidad_dosis?.toLocaleString()} dosis
-                  </small>
-                </div>
-                <div className="text-end">
-                  {coberturaCompleta ? (
-                    <span className="badge bg-success">
-                      <FaCheckCircle className="me-1" />
-                      Cobertura completa
-                    </span>
-                  ) : (
-                    <span className="badge bg-secondary">Sin lote asignado</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Lote asignado - usar datos del item */}
-              <div className="mb-3">
-                <h6 className="text-muted mb-2 small">
-                  <FaBoxOpen className="me-1" />
-                  Lote Asignado
-                </h6>
-                
-                {!tieneLoteAsignado ? (
-                  <div className="alert alert-warning py-2 small mb-0">
-                    <FaExclamationTriangle className="me-1" />
-                    No hay lote asignado a esta aplicación
-                  </div>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table table-sm table-hover mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th>Lote</th>
-                          <th className="text-end">Dosis</th>
-                          <th className="text-end">Vencimiento</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>
-                            <strong className="text-primary">{item.lote_asignado}</strong>
-                          </td>
-                          <td className="text-end">
-                            <span className="badge bg-info">
-                              {item.cantidad_dosis?.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="text-end">
-                            <small className="text-muted">
-                              <FaClock className="me-1" />
-                              {formatearFecha(item.fecha_vencimiento_lote)}
-                            </small>
-                          </td>
-                        </tr>
-                      </tbody>
-                      <tfoot className="table-light">
-                        <tr>
-                          <th>Total</th>
-                          <th className="text-end">
-                            <span className="badge bg-success">
-                              {item.cantidad_dosis?.toLocaleString()} / {item.cantidad_dosis?.toLocaleString()}
-                            </span>
-                          </th>
-                          <th></th>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Alerta de faltante */}
-              {hayFaltante && (
-                <div className="alert alert-warning mb-3 py-2 px-3 d-flex align-items-center">
-                  <div className="me-auto">
-                    <strong>Entrega parcial detectada:</strong>
-                    <div className="small">
-                      Entregadas: {dosisEntregadas.toLocaleString()} | Faltantes: {dosisFaltantes.toLocaleString()} dosis
-                    </div>
-                  </div>
-                </div>
+            <div className="vacuna-estado">
+              {coberturaCompleta ? (
+                <span className="estado-badge estado-completo">
+                  <FaCheckCircle />
+                  Cobertura completa
+                </span>
+              ) : (
+                <span className="estado-badge estado-pendiente">
+                  Sin lote asignado
+                </span>
               )}
+            </div>
+          </div>
 
-              {/* Botones profesionales en grid */}
-              <div className="row g-2">
-                {hayFaltante && (
-                  <div className="col-12">
-                    <button 
-                      className="btn btn-warning w-100 py-2 text-center fw-bold"
-                      onClick={() => handleAction(() => onAsignarFaltante(item))}
-                      disabled={realizandoReasignacion}
-                      style={{ borderWidth: '2px' }}
-                    >
-                      <FaPlus className="me-2" style={{ fontSize: '1.2rem' }} />
-                      Asignar Faltante ({dosisFaltantes.toLocaleString()} dosis)
-                    </button>
-                  </div>
-                )}
-                
-                <div className="col-6">
-                  <button 
-                    className="btn btn-outline-primary w-100 py-2 text-center"
-                    onClick={() => handleAction(() => onReasignarAutomatico(item))}
-                    disabled={realizandoReasignacion}
-                  >
-                    <FaSyringe className="d-block mx-auto mb-1" style={{ fontSize: '1.2rem' }} />
-                    <div className="small fw-bold">Automático</div>
-                  </button>
-                </div>
-                
-                <div className="col-6">
-                  <button 
-                    className="btn btn-outline-secondary w-100 py-2 text-center"
-                    onClick={() => handleAction(() => onAsignarManual(item))}
-                    disabled={realizandoReasignacion}
-                  >
-                    <FaEdit className="d-block mx-auto mb-1" style={{ fontSize: '1.2rem' }} />
-                    <div className="small fw-bold">Manual</div>
-                  </button>
-                </div>
-                
-                <div className="col-6">
-                  <button 
-                    className="btn btn-outline-dark w-100 py-2 text-center"
-                    onClick={() => handleAction(() => onAsignarMultiples(item))}
-                    disabled={realizandoReasignacion}
-                  >
-                    <FaPlus className="d-block mx-auto mb-1" style={{ fontSize: '1.2rem' }} />
-                    <div className="small fw-bold">Múltiples</div>
-                  </button>
-                </div>
-                
-                <div className="col-6">
-                  <button 
-                    className="btn btn-outline-info w-100 py-2 text-center"
-                    onClick={() => handleAction(() => onVerStocks(item))}
-                    disabled={realizandoReasignacion}
-                  >
-                    <FaEye className="d-block mx-auto mb-1" style={{ fontSize: '1.2rem' }} />
-                    <div className="small fw-bold">Inventario</div>
-                  </button>
-                </div>
-
-                {/* Botón Liberar Lote - solo si tiene lote asignado */}
-                {tieneLoteAsignado && onLiberarLote && (
-                  <div className="col-12 mt-2">
-                    <button 
-                      className="btn btn-outline-danger w-100 py-2 text-center"
-                      onClick={() => handleAction(() => onLiberarLote(item))}
-                      disabled={realizandoReasignacion}
-                    >
-                      <FaTrashAlt className="me-2" style={{ fontSize: '1rem' }} />
-                      <span className="fw-bold">Liberar Lote Asignado</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Sección de lote asignado */}
+          <div className="modal-gestion-seccion">
+            <div className="seccion-titulo">
+              <FaBoxOpen />
+              Lote Asignado
             </div>
             
-            {/* Footer mínimo */}
-            <div className="modal-footer border-top py-2 px-3">
+            {!tieneLoteAsignado ? (
+              <div className="alerta-sin-lote">
+                <FaExclamationTriangle />
+                <span>No hay lote asignado a esta aplicación</span>
+              </div>
+            ) : (
+              <div className="lote-asignado-card">
+                <div className="lote-info-row">
+                  <div className="lote-info-item">
+                    <span className="lote-label">Número de Lote</span>
+                    <span className="lote-valor lote-numero">{item.lote_asignado}</span>
+                  </div>
+                  <div className="lote-info-item">
+                    <span className="lote-label">Dosis Asignadas</span>
+                    <span className="lote-valor lote-dosis">{item.cantidad_dosis?.toLocaleString()}</span>
+                  </div>
+                  <div className="lote-info-item">
+                    <span className="lote-label">Vencimiento</span>
+                    <span className="lote-valor lote-fecha">{formatearFecha(item.fecha_vencimiento_lote)}</span>
+                  </div>
+                </div>
+                <div className="lote-cobertura-bar">
+                  <div className="cobertura-texto">
+                    Cobertura: {item.cantidad_dosis?.toLocaleString()} / {item.cantidad_dosis?.toLocaleString()} dosis
+                  </div>
+                  <div className="cobertura-barra">
+                    <div className="cobertura-progreso" style={{ width: '100%' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Alerta de faltante */}
+          {hayFaltante && (
+            <div className="alerta-faltante">
+              <div className="alerta-faltante-icon">
+                <FaExclamationTriangle />
+              </div>
+              <div className="alerta-faltante-contenido">
+                <strong>Entrega parcial detectada</strong>
+                <div className="alerta-faltante-detalles">
+                  <span>Entregadas: {dosisEntregadas.toLocaleString()}</span>
+                  <span className="separator">|</span>
+                  <span className="faltantes-destaque">Faltantes: {dosisFaltantes.toLocaleString()} dosis</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Acciones */}
+          <div className="modal-gestion-seccion">
+            <div className="seccion-titulo">
+              Acciones Disponibles
+            </div>
+            
+            <div className="acciones-grid">
+              {hayFaltante && (
+                <button 
+                  className="accion-btn accion-faltante"
+                  onClick={() => handleAction(() => onAsignarFaltante(item))}
+                  disabled={realizandoReasignacion}
+                >
+                  <FaPlus className="accion-icon" />
+                  <span className="accion-texto">Asignar Faltante ({dosisFaltantes.toLocaleString()} dosis)</span>
+                </button>
+              )}
+              
               <button 
-                type="button" 
-                className="btn btn-sm btn-secondary" 
-                onClick={onClose}
+                className="accion-btn accion-automatico"
+                onClick={() => handleAction(() => onReasignarAutomatico(item))}
+                disabled={realizandoReasignacion}
               >
-                Cerrar
+                <FaSyringe className="accion-icon" />
+                <span className="accion-texto">Automático</span>
+                <span className="accion-desc">Asignar lote automáticamente</span>
               </button>
+              
+              <button 
+                className="accion-btn accion-manual"
+                onClick={() => handleAction(() => onAsignarManual(item))}
+                disabled={realizandoReasignacion}
+              >
+                <FaEdit className="accion-icon" />
+                <span className="accion-texto">Manual</span>
+                <span className="accion-desc">Seleccionar lote específico</span>
+              </button>
+              
+              <button 
+                className="accion-btn accion-multiples"
+                onClick={() => handleAction(() => onAsignarMultiples(item))}
+                disabled={realizandoReasignacion}
+              >
+                <FaPlus className="accion-icon" />
+                <span className="accion-texto">Múltiples</span>
+                <span className="accion-desc">Combinar varios lotes</span>
+              </button>
+              
+              <button 
+                className="accion-btn accion-inventario"
+                onClick={() => handleAction(() => onVerStocks(item))}
+                disabled={realizandoReasignacion}
+              >
+                <FaEye className="accion-icon" />
+                <span className="accion-texto">Inventario</span>
+                <span className="accion-desc">Ver stock disponible</span>
+              </button>
+
+              {/* Botón Liberar Lote - solo si tiene lote asignado */}
+              {tieneLoteAsignado && onLiberarLote && (
+                <button 
+                  className="accion-btn accion-liberar"
+                  onClick={() => handleAction(() => onLiberarLote(item))}
+                  disabled={realizandoReasignacion}
+                >
+                  <FaTrashAlt className="accion-icon" />
+                  <span className="accion-texto">Liberar Lote Asignado</span>
+                  <span className="accion-desc">Quitar asignación actual</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
+        
+        {/* Footer */}
+        <div className="modal-gestion-footer">
+          <button className="btn-cerrar" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 

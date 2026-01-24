@@ -199,7 +199,7 @@ function Navbar() {
                 {/* Vacunas - Submenú */}
                 <li className="dropdown-submenu">
                   <a className="dropdown-item dropdown-toggle d-flex align-items-center" href="#">
-                    <FaCog className="me-2" /> Configuración
+                    <FaCog className="me-2" /> Administración
                   </a>
                   <ul className="dropdown-menu">
                     <li><Link className="dropdown-item d-flex align-items-center" to="/admin-vacunas"><FaSyringe className="me-2" /> Administración de Vacunas</Link></li>

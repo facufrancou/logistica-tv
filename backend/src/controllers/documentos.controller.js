@@ -14,6 +14,7 @@ exports.getDocumentos = async (req, res) => {
       fecha_hasta,
       id_cliente,
       id_proveedor,
+      id_cotizacion,
       search,
       page = 1,
       limit = 20
@@ -31,6 +32,10 @@ exports.getDocumentos = async (req, res) => {
 
     if (id_proveedor) {
       where.id_proveedor = parseInt(id_proveedor);
+    }
+
+    if (id_cotizacion) {
+      where.id_cotizacion = parseInt(id_cotizacion);
     }
 
     if (fecha_desde || fecha_hasta) {
@@ -66,11 +71,26 @@ exports.getDocumentos = async (req, res) => {
       prisma.documentoImpreso.count({ where })
     ]);
 
-    const documentosFormatted = documentos.map(doc => ({
-      ...doc,
-      total_impresiones: doc._count.historial,
-      _count: undefined
-    }));
+    const documentosFormatted = documentos.map(doc => {
+      // Parsear datos_snapshot si existe
+      let datosSnapshot = null;
+      if (doc.datos_snapshot) {
+        try {
+          datosSnapshot = typeof doc.datos_snapshot === 'string' 
+            ? JSON.parse(doc.datos_snapshot) 
+            : doc.datos_snapshot;
+        } catch (e) {
+          console.error('Error parseando datos_snapshot:', e);
+        }
+      }
+      
+      return {
+        ...doc,
+        datos_snapshot: datosSnapshot,
+        total_impresiones: doc._count.historial,
+        _count: undefined
+      };
+    });
 
     res.json({
       success: true,

@@ -919,6 +919,14 @@ export const planesVacunalesApi = {
   
   // Orden de Compra
   generarOrdenCompra,
+
+  // === DASHBOARD PRINCIPAL ===
+  
+  // Gráficos principales del dashboard
+  getGraficosPrincipales: async (filtros = {}) => {
+    const params = new URLSearchParams(filtros);
+    return await fetchConSesion(`${API_BASE_URL}/dashboard/graficos-principales?${params}`);
+  },
   
   // === FACTURACIÓN API ===
   
